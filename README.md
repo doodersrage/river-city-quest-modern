@@ -9,15 +9,16 @@ It's the same game as the [PS1-style version](https://github.com/doodersrage/riv
 | | |
 |---|---|
 | ![Shockoe Bottom](screenshots/shockoe-bottom.jpg) | ![The Fan](screenshots/the-fan.jpg) |
+| ![Broad Street](screenshots/broad-street.jpg) | ![Capitol Square](screenshots/capitol-square.jpg) |
 | ![Byrd Park](screenshots/byrd-park.jpg) | ![Belle Isle at sunset](screenshots/belle-isle-sunset.jpg) |
-| ![Church Hill at night](screenshots/church-hill-night.jpg) | ![Capitol Square](screenshots/capitol-square.jpg) |
+| ![Church Hill at night](screenshots/church-hill-night.jpg) | |
 
 ## The look
 
-- **People at real proportions:** adults about 7.5 heads tall, with faces, hair, cloth, denim, leather and skin materials, dressed in muted real-world colors.
+- **Sculpted people:** bodies are modeled like a sculptor blocks out anatomy (shoulders, chest, hips, calves, hands, and faces with brows, cheekbones, nose, lips, ears and set-in eyes), blended into one smooth surface, at real adult proportions. Men and women have different builds, and clothes, skin and hair blend at their edges.
 - **Real trees and plants:** oaks, maples and pines with forked trunks and crowns built from thousands of leaves, which cast dappled shadows. Mulched flower beds, shrubs and lumpy boulders. The leaves follow the real calendar.
 - **Richmond's streets:** cobblestones in Shockoe Bottom and on Church Hill, asphalt with trolley rails on Broad Street, brick sidewalks with granite curbs in the old neighborhoods, and gravel paths in the parks.
-- **Buildings at real scale:** three-meter stories with framed windows, granite sills and lintels, paneled doors on stone stoops, shop fronts with awnings, belt courses and cornices, in red, dark and tawny brick or painted stucco.
+- **Buildings at real scale:** 3.3-meter stories. Windows and doors are real openings in the wall with reveals, set-back frames and glass, granite sills and lintels; doors are paneled with transoms over stone stoops; shop fronts have awnings and sign bands; walls have base courses, belt courses, bracketed cornices and downspouts. The buildings you can walk into and the big landmarks get the same treatment.
 - **Animals as they look:** Norway rats, gray squirrels, Canada geese, blue crabs, brown bats, rock pigeons and a snapping turtle, plus half-seen, translucent ghosts. Parked cars are proper sedans.
 
 - **Physically based materials:** brick, cobblestone, slate, wood, marble and grass are painted at full resolution with surface relief, roughness and metalness, and lit with real specular highlights.

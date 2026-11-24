@@ -5,8 +5,9 @@ const step=(o,n)=>{for(let i=0;i<(n||1);i++){clr();Object.assign(I,o||{});G.upda
 const talkThrough=(pick)=>{for(let k=0;k<200&&G.dlg;k++){G.dlg.n=999;if(G.dlg.choices&&G.dlg.i==G.dlg.lines.length-1)G.dlg.sel=pick||0;step({a:1});step({},2);}};
 const settle=()=>{for(let k=0;k<80&&(G.trans||G.dlg);k++){if(G.dlg)talkThrough(0);else step();}};
 const face=(x,z)=>{G.p.yaw=Math.atan2(x-G.p.x,z-G.p.z);};
-const talk=(n,pick)=>{G.p.x=n.x;G.p.z=n.z+1.6;face(n.x,n.z);step({a:1});talkThrough(pick);};
-const go=(id,x,z)=>{G.loadScene(id,x,z,0);step({},2);talkThrough();};
+const talk=(n,pick)=>{for(const [ox,oz] of [[0,1.6],[1.6,0],[-1.6,0],[0,-1.6]]){G.p.x=n.x+ox;G.p.z=n.z+oz;face(n.x,n.z);step({a:1});if(G.dlg||G.shop)break;}talkThrough(pick);};
+// keep the bot safe from wandering geese and night ghosts while it runs errands
+const go=(id,x,z)=>{G.loadScene(id,x,z,0);step({},2);talkThrough();G.p.inv=1e9;for(const e of G.enemies)e.dead=true;};
 G.startGame(null);settle();G.st.coins=300;
 
 ok(G.EXTRA_NPCS.length==4,'four new townspeople found a spot: '+G.EXTRA_NPCS.map(n=>n.who).join(', '));
