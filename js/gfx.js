@@ -26,13 +26,15 @@ function qualityTick(ms){if(!QUAL.auto)return;if(QUAL.cool>0){QUAL.cool--;return
 /* ---------- shaders ---------- */
 const VS=`#version 300 es
 precision highp float;
-in vec3 aPos;in vec2 aUV;in vec3 aCol;in float aSway;in vec3 aNrm;
-uniform mat4 uPV,uModel,uLVP;uniform float uTime,uWave;
+in vec3 aPos;in vec2 aUV;in vec3 aCol;in float aSway;in vec3 aNrm;in vec3 aBW;
+uniform mat4 uPV,uModel,uLVP;uniform float uTime,uWave,uSkin;uniform mat4 uBones[13];
 out vec3 vW;out vec3 vN;out vec2 vUV;out vec3 vCol;out vec4 vL;
-void main(){vec4 wp=uModel*vec4(aPos,1.);
+void main(){vec4 lp=vec4(aPos,1.);vec3 ln=aNrm;
+  if(uSkin>.5){mat4 A=uBones[int(aBW.x+.5)],Bm=uBones[int(aBW.y+.5)];lp=mix(A*lp,Bm*lp,aBW.z);ln=mix(mat3(A)*ln,mat3(Bm)*ln,aBW.z);}
+  vec4 wp=uModel*lp;
   wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));
   if(uWave>0.)wp.y+=uWave*(sin(wp.x*1.1+uTime*1.4)+cos(wp.z*.9+uTime*1.1))*.035;
-  vW=wp.xyz;vN=normalize(mat3(uModel)*aNrm);vUV=aUV;vCol=aCol;vL=uLVP*wp;gl_Position=uPV*wp;}`;
+  vW=wp.xyz;vN=mat3(uModel)*ln;vUV=aUV;vCol=aCol;vL=uLVP*wp;gl_Position=uPV*wp;}`;
 const SKYFN=`
 uniform vec3 uSunDir,uSunCol,uSkyCol,uHorCol;uniform float uNight,uTime,uCloud;
 float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -89,8 +91,8 @@ void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);
   c+=emis*uNight*lin(vec3(1.,.72,.38))*2.2*(1.-uIndoor*.5);
   c=fog(c);c=mix(c,vec3(1.),uFlash);o=vec4(c,uAlpha);}`;
 const SVS=`#version 300 es
-precision highp float;in vec3 aPos;in vec2 aUV;in float aSway;uniform mat4 uPV,uModel;uniform float uTime,uWave;out vec2 vUV;
-void main(){vec4 wp=uModel*vec4(aPos,1.);wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));vUV=aUV;gl_Position=uPV*wp;}`;
+precision highp float;in vec3 aPos;in vec2 aUV;in float aSway;in vec3 aBW;uniform mat4 uPV,uModel;uniform float uTime,uWave,uSkin;uniform mat4 uBones[13];out vec2 vUV;
+void main(){vec4 lp=vec4(aPos,1.);if(uSkin>.5){lp=mix(uBones[int(aBW.x+.5)]*lp,uBones[int(aBW.y+.5)]*lp,aBW.z);}vec4 wp=uModel*lp;wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));vUV=aUV;gl_Position=uPV*wp;}`;
 const SFS=`#version 300 es
 precision mediump float;precision mediump sampler2DArray;in vec2 vUV;uniform sampler2DArray uAlb;void main(){float l=floor(vUV.x);if(texture(uAlb,vec3(vUV.x-l,vUV.y,l)).a<.5)discard;}`;
 const QVS=`#version 300 es
@@ -134,7 +136,7 @@ function colorTex(w,h,hdrOK){const t=gl.createTexture();gl.bindTexture(gl.TEXTUR
 function fbFor(tex){const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);return f;}
 function initGL(canvas){gl=canvas.getContext('webgl2',{antialias:false,alpha:false,preserveDrawingBuffer:false,powerPreference:'high-performance'});if(!gl)return false;
   extCBF=gl.getExtension('EXT_color_buffer_float');aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-  const ALLU=['uPV','uModel','uLVP','uTime','uWave','uAlb','uNrm','uTex2','uShadow','uMode','uTint','uGndCol','uFogCol','uCam','uAlpha','uFlash','uAdd','uFogD','uShadowOn','uAmb','uIndoor','uOff','uL','uLC','uNL','uMetal','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uCloud','uRes','uFog','uSnap','uTex'];prog=mkProg(VS,FS);U=uniforms(prog,ALLU);
+  const ALLU=['uPV','uModel','uLVP','uTime','uWave','uAlb','uNrm','uTex2','uShadow','uMode','uTint','uGndCol','uFogCol','uCam','uAlpha','uFlash','uAdd','uFogD','uShadowOn','uAmb','uIndoor','uOff','uL','uLC','uNL','uMetal','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uCloud','uRes','uFog','uSnap','uTex','uSkin','uBones'];prog=mkProg(VS,FS);U=uniforms(prog,ALLU);
   sprog=mkProg(SVS,SFS);US=uniforms(sprog,ALLU);
   skyProg=mkProg(QVS,SKYFS);postProgs.sky=uniforms(skyProg,['uInvPV','uCam','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uTime','uCloud']);
   for(const [k,f] of [['down',DOWNFS],['up',UPFS],['fin',FINFS]]){const p=mkProg(QVS,f);postProgs[k]={p,u:uniforms(p,['uTex','uBloom','uPx','uThresh','uFade','uBloomK','uExpo','uFxaa'])};}
@@ -164,13 +166,13 @@ function resizeTargets(force){const c=gl.canvas,s=Q().scale,w=Math.max(160,Math.
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
 
 /* ---------- meshes ---------- */
-const ATTR=[['aPos',3,'pos'],['aUV',2,'uv'],['aCol',3,'col'],['aSway',1,'sw'],['aNrm',3,'nrm']];
+const ATTR=[['aPos',3,'pos'],['aUV',2,'uv'],['aCol',3,'col'],['aSway',1,'sw'],['aNrm',3,'nrm'],['aBW',3,'bw']];
 function attrData(m,key,size){const a=m[key];if(a&&a.length>=m.count*size)return new Float32Array(a);const o=new Float32Array(m.count*size);if(key=='nrm')for(let i=0;i<m.count;i++)o[i*3+1]=1;return o;}
 function mkVAO(m,dynamic){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const bufs=[];
-  for(const [name,size,key] of ATTR){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);if(m)gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.STATIC_DRAW);
+  for(const [name,size,key] of ATTR){if(key=='bw'&&!(m&&m.bw&&m.bw.length)){bufs.push(null);continue;}const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);if(m)gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.STATIC_DRAW);
     const l=ATTR.findIndex(a=>a[0]==name);gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,size,gl.FLOAT,false,0,0);bufs.push(b);}
   gl.bindVertexArray(null);return{vao,bufs,n:m?m.count:0};}
-function upload(o,m){gl.bindVertexArray(o.vao);ATTR.forEach(([,size,key],i)=>{gl.bindBuffer(gl.ARRAY_BUFFER,o.bufs[i]);gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.DYNAMIC_DRAW);});o.n=m.count;gl.bindVertexArray(null);}
+function upload(o,m){gl.bindVertexArray(o.vao);ATTR.forEach(([,size,key],i)=>{if(!o.bufs[i])return;gl.bindBuffer(gl.ARRAY_BUFFER,o.bufs[i]);gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.DYNAMIC_DRAW);});o.n=m.count;gl.bindVertexArray(null);}
 function meshGL(m){return m.gl||(m.gl=mkVAO(m));}
 let curSceneId=null;
 function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);sceneGL={lv,main:mkVAO(b.main),water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}

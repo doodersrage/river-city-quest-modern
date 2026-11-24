@@ -95,4 +95,5 @@ function sculptedHuman(o){const f=o.skirt||o.style=='long'||o.style=='bun',B={fe
     P.push({mesh:m,pivot:pivots[name],name});}
   // the eyes: whites, irises and a glint, set into the sockets
   const Hd=P[1].mesh;for(const sx of [-1,1]){Hd.sphere(sx*.033,.113,.087,.0122,10,6,'white',[.86,.84,.8]);Hd.sphere(sx*.033,.113,.0975,.0055,8,4,'white',cloth(o.eyes||['#4a3020','#3a5a7a','#2a2018','#4a6a3a'][Math.round(sk[0]*7)%4],.1));Hd.sphere(sx*.033,.113,.1012,.0024,6,3,'white',[.02,.02,.02]);}
+  for(const pt of P)pt.nSculpt=pt.mesh.count;
   return P;}

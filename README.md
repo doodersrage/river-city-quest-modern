@@ -16,6 +16,7 @@ It's the same game as the [PS1-style version](https://github.com/doodersrage/riv
 ## The look
 
 - **Sculpted people:** bodies are modeled like a sculptor blocks out anatomy (shoulders, chest, hips, calves, hands, and faces with brows, cheekbones, nose, lips, ears and set-in eyes), blended into one smooth surface, at real adult proportions. Men and women have different builds, and clothes, skin and hair blend at their edges.
+- **Motion-captured movement:** people are one skinned body on a 13-bone skeleton, so knees, elbows, hips and shoulders bend. Walking and running are real human motion from the Carnegie Mellon motion capture library; standing still has breathing and slow weight shifts.
 - **Real trees and plants:** oaks, maples and pines with forked trunks and crowns built from thousands of leaves, which cast dappled shadows. Mulched flower beds, shrubs and lumpy boulders. The leaves follow the real calendar.
 - **Richmond's streets:** cobblestones in Shockoe Bottom and on Church Hill, asphalt with trolley rails on Broad Street, brick sidewalks with granite curbs in the old neighborhoods, and gravel paths in the parks.
 - **Buildings at real scale:** 3.3-meter stories. Windows and doors are real openings in the wall with reveals, set-back frames and glass, granite sills and lintels; doors are paneled with transoms over stone stoops; shop fronts have awnings and sign bands; walls have base courses, belt courses, bracketed cornices and downspouts. The buildings you can walk into and the big landmarks get the same treatment.
@@ -73,3 +74,7 @@ node tests/run.js
 ```
 
 The tests load the game into Node without a screen. `playthrough.test.js` has a bot play the opening: get the lantern, walk to Belle Isle, clear the quarry, unlock the door, blow the wall, beat Old Snapper and bring the keystone home. `dungeons.test.js` checks that every door goes somewhere, every dungeon room connects to its entrance, and a bot beats all seven bosses through to the credits. `puzzles.test.js` uses each item on the puzzle it's for. `mini.test.js` has a bot play every mini-game to the end, and `life.test.js` covers the dog, cooking, fishing, photos, the bike, stashes, weather, frogs and First Friday. `camera.test.js` walks out of every building and checks the camera can see you. `modern.test.js` checks the normals, the contact shading and the automatic quality levels. `features.test.js` covers markers, all four challenges, bushes, nighttime, dying and the menu. GitHub Actions runs them on every push.
+
+## Credits
+
+The walk and run animations were baked from the CMU Graphics Lab Motion Capture Database by `tools/bake-mocap.js` (BVH conversion by Bruce Hahne). The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.

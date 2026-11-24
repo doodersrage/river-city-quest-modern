@@ -14,7 +14,9 @@ const M4={
   rz:a=>{const c=Math.cos(a),s=Math.sin(a);return[c,s,0,0,-s,c,0,0,0,0,1,0,0,0,0,1];},
   sc:s=>[s,0,0,0,0,s,0,0,0,0,s,0,0,0,0,1]};
 
-function drawModel(parts,base,pose,opt){for(const pt of parts){let m=M4.mul(base,M4.tr(pt.pivot[0],pt.pivot[1],pt.pivot[2]));const ps=pose&&pose[pt.name];
+function drawModel(parts,base,pose,opt){
+  if(parts.skel){const b=pose&&pose.body;if(b){if(b.t)base=M4.mul(base,M4.tr(b.t[0],b.t[1],b.t[2]));if(b.y)base=M4.mul(base,M4.ry(b.y));if(b.x)base=M4.mul(base,M4.rx(b.x));}
+    const bones=skelPose(parts.skel,pose,frame);parts.skel.last=bones;gl.uniformMatrix4fv(U.uBones,false,bones);gl.uniform1f(U.uSkin,1);for(const pt of parts)drawVAO(meshGL(pt.mesh),base,atlasTex,opt);gl.uniform1f(U.uSkin,0);return;}for(const pt of parts){let m=M4.mul(base,M4.tr(pt.pivot[0],pt.pivot[1],pt.pivot[2]));const ps=pose&&pose[pt.name];
   if(ps){if(ps.t)m=M4.mul(m,M4.tr(ps.t[0],ps.t[1],ps.t[2]));if(ps.y)m=M4.mul(m,M4.ry(ps.y));if(ps.x)m=M4.mul(m,M4.rx(ps.x));if(ps.z)m=M4.mul(m,M4.rz(ps.z));}
   drawVAO(meshGL(pt.mesh),m,atlasTex,opt);}}
 function envLook(){const e=envLook0();return typeof weatherLook=='function'?weatherLook(e):e;}
@@ -30,7 +32,8 @@ function lightsNow(){const L=[],dk=lv.room?1:dark();
 function lampLit(g){const L=lv.lamps.find(l=>l.tx==g[3]&&l.ty==g[4]);return!L||L.lit;}
 function shadowAt(x,z,s){if(PASS=='shadow'||Q().shadow&&!lv.room&&SUN.col[0]>.05)return;const sh=getModel('shadow',()=>propModel('shadow'));gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.uniform1f(U.uAlpha,.4);gl.depthMask(false);
   drawModel(sh,M4.mul(M4.tr(x,0,z),M4.sc(s||1)));gl.uniform1f(U.uAlpha,1);gl.depthMask(true);gl.disable(gl.BLEND);}
-function humanPose(walk,moving,extra){const s=moving?Math.sin(walk)*.7:0;return Object.assign({legL:{x:s},legR:{x:-s},armL:{x:-s*.8,z:-.12},armR:{x:s*.8,z:.12},body:{t:[0,moving?Math.abs(Math.cos(walk))*.06:0,0]}},extra||{});}
+// what a person is doing this frame: the stride counter and whether they're moving, plus any limbs the game wants placed by hand
+function humanPose(walk,moving,extra){return Object.assign({_walk:walk,_moving:moving},extra||{});}
 function npcModel(n){return getModel('npc:'+n.who+':'+n.tx+','+n.ty,()=>{const h=hash(n.tx,n.ty,n.who.length),skins=['#e0ac8a','#c68863','#8d5a3b','#f1c6a8','#a06a48','#5c3a26'],pants=['#3c3c54','#5a4a3a','#2e3a5e','#4a4a4a'];
   const ROLE={archivist:['glasses','book'],quiz:['clipboard'],rats:['apron'],henry:['tricorn','coat'],lamps:['pole','coat'],racer:['helmet'],kayaker:['helmet','vest'],cleanup:['gloves']},acc=ROLE[n.chal||n.talk]||[];
   const capless=(h%3!=1)||acc.includes('tricorn')||acc.includes('helmet')?!acc.includes('tricorn'):false,style=['short','long','bun','short','long'][(h>>7)%5];
@@ -45,9 +48,9 @@ function drawEntities(){
     if(!p.moving&&!ex.armR&&!ex.armL){ex.body={t:[0,Math.sin(frame*.05)*.008,0]};ex.head={y:Math.sin(frame*.011)*.25};}
     if(tAt(p.x,p.z)=='~'){base=M4.mul(M4.tr(0,-.35,0),base);const k=getModel('kayak',()=>propModel('kayak'));drawModel(k,M4.mul(M4.mul(M4.tr(p.x,-.15,p.z),M4.ry(p.yaw)),M4.rx(Math.PI/2)));ex.legL={x:-1.4};ex.legR={x:-1.4};}
     if(typeof riderPose=='function')base=riderPose(base,ex);
-    shadowAt(p.x,p.z);drawModel(P,base,humanPose(p.walk,p.moving,ex));
+    ex._run=true;shadowAt(p.x,p.z);drawModel(P,base,humanPose(p.walk,p.moving,ex));
     if(st.items.lantern&&(st.eq=='lantern'||dark()>.3||lv.room)){const L=getModel('lanternProp',()=>[part(m=>{m.box(-.12,-.3,-.12,.12,0,.12,{top:'black',side:'glass'});m.box(-.03,0,-.03,.03,.12,.03,'black');},[0,0,0])]);
-      const arm=p.raise>0||p.hold>0?M4.mul(M4.tr(-.37,1.5,0),M4.rx(-2.6)):M4.mul(M4.tr(-.37,1.5,0),M4.rx(p.moving?-Math.sin(p.walk)*.56:0));drawModel(L,M4.mul(M4.mul(base,arm),M4.tr(0,-.75,0)),null,{tint:[1.4,1.3,1.1]});}
+      if(P.skel&&P.skel.last){const bm=Array.from(P.skel.last.slice(B_FARML*16,B_FARML*16+16)),r=P.skel.rest[B_FARML];drawModel(L,M4.mul(M4.mul(base,bm),M4.tr(r[0],r[1]-.5,r[2]+.04)),null,{tint:[1.4,1.3,1.1]});}}
     if(p.hold>0&&p.holdIc){const HM={keystone:'keystone',key:'key',lantern:'lanternProp',powder:'bomb',ball:'ballpk',balls:'ballpk',heart:'container',hc:'container',piece:'piece',part:'part',bib:'bib',bug:'bug',hook:'hookhead',kayak:'kayak',melon:'melonpk',coins50:'coin',coins20:'coin',shield:'block',can:'sprout',shoes:'bib',music:'bib',map:'bib',fish:'fish',bike:'bike',camera:'camera',rod:'rod',basket:'basket'},k=HM[p.holdIc]||'coin';
       const im=getModel(k,()=>propModel(k));if(im&&im.length)drawModel(im,M4.mul(M4.tr(p.x,2.6+Math.sin(frame*.1)*.08,p.z),M4.ry(frame*.05)));}}
   if(hook){const hm=getModel('hookhead',()=>propModel('hookhead'));drawModel(hm,M4.mul(M4.tr(hook.x,1.2,hook.z),M4.ry(Math.atan2(hook.dx,hook.dz))));
