@@ -89,10 +89,10 @@ SHOPS.sally={title:'SALLY BELL\'S KITCHEN',who:'Sally Bell\'s Kitchen',items:[
 let dog=null;const DOGNAMES=['Biscuit','James','Peanut','Rosie'];
 function dogReset(){dog=st&&st.dog?{x:p.x-1.2,z:p.z+1,yaw:p.yaw,trail:[],t:0,cool:0,dig:0,bark:0,walk:0,moving:false}:null;}
 function dogUpdate(){if(!dog)return;const d=dog;d.t++;if(d.cool>0)d.cool--;if(d.bark>0)d.bark--;
-  d.trail.push([p.x,p.z]);if(d.trail.length>18)d.trail.shift();let tx=d.trail[0][0],tz=d.trail[0][1],sp=.19;d.moving=false;
+  d.trail.push([p.x,p.z]);if(d.trail.length>18)d.trail.shift();let tx=d.trail[0][0],tz=d.trail[0][1],sp=.085;d.moving=false;
   const sec=picks.find(k=>k.kind=='secret'&&Math.hypot(k.x-p.x,k.z-p.z)<11);
   const foe=enemies.find(e=>!e.dead&&!e.boss&&!EDEF[e.type].fly&&Math.hypot(e.x-d.x,e.z-d.z)<7&&Math.hypot(e.x-p.x,e.z-p.z)<11);
-  if(foe){tx=foe.x;tz=foe.z;sp=.25;const l=Math.hypot(foe.x-d.x,foe.z-d.z)||1;if(l<1.3&&d.cool<=0){d.cool=50;hitEnemy(foe,1,(foe.x-d.x)/l,(foe.z-d.z)/l,'dog');d.bark=20;sfx('bark');}}
+  if(foe){tx=foe.x;tz=foe.z;sp=.11;const l=Math.hypot(foe.x-d.x,foe.z-d.z)||1;if(l<1.3&&d.cool<=0){d.cool=50;hitEnemy(foe,1,(foe.x-d.x)/l,(foe.z-d.z)/l,'dog');d.bark=20;sfx('bark');}}
   else if(sec){tx=sec.x;tz=sec.z+.8;if(Math.hypot(sec.x-d.x,sec.z-d.z)<2&&d.t%50==0){d.bark=20;sfx('bark');}}
   else if(d.dig>0){d.dig--;if(d.dig==0){const r=Math.random(),k=r<.65?'coin':r<.85?'heart':'tomato',pk=mkPick(k,d.x,d.z+.6);picks.push(pk);burst(d.x,.3,d.z,8,'#8a6a3a');sfx('drop');}return;}
   else if(!lv.room&&d.t%2400==1200&&'.,'.includes(tAt(d.x,d.z))&&Math.hypot(d.x-p.x,d.z-p.z)<5){d.dig=70;return;}
@@ -161,7 +161,7 @@ function lifeOnLoad(id){dogReset();runners=[];lv.strings=null;
     toast('First Friday! Galleries open late.');}
   const ev=events();
   if((ev.includes('folk')||ev.includes('riverrock'))&&id=='ow:4,1')for(let i=0;i<6;i++){const c=FOLKC[i];addFolk(ev.includes('folk')?'Festivalgoer':'Riverrock Fan','folk',[['This band came all the way from Mali!','Free music on the river. Only in Richmond.','Have you tried the funnel cake?'][i%3]],c[0],c[1]);}
-  if(ev.includes('10k')&&id=='ow:1,1'){for(let i=0;i<7;i++){const c=FOLKC[i%6];runners.push({x:-2-i*5,z:(9+(i%3)*.6)*TS,v:.11+Math.random()*.05,walk:i,m:{hat:c[0],shirt:c[1]}});}
+  if(ev.includes('10k')&&id=='ow:1,1'){for(let i=0;i<7;i++){const c=FOLKC[i%6];runners.push({x:-2-i*5,z:(9+(i%3)*.6)*TS,v:.055+Math.random()*.02,walk:i,m:{hat:c[0],shirt:c[1]}});}
     if(!st.f['ev10k'+today().getFullYear()]){st.f['ev10k'+today().getFullYear()]=1;toast('It\'s Monument Avenue 10K season! Runners everywhere.');}}
   if(ev.includes('lights')&&(id=='ow:1,1'||id=='ow:0,1')&&!st.f['evlights'+today().getFullYear()]){st.f['evlights'+today().getFullYear()]=1;toast('Holiday lights are up! They look best after dark.');}}
 

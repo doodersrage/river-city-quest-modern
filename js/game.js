@@ -113,10 +113,11 @@ function playerUpdate(){
   const cy=cam.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let mx=inp.x*rx+(-inp.z)*fx,mz=inp.x*rz+(-inp.z)*fz;const ml=Math.hypot(mx,mz);
   const onRiver=tAt(p.x,p.z)=='~';
-  let sp=(p.swing>0?.035:onRiver?.08:.095)*TS;p.moving=ml>.15||p.dash>0;if(typeof lifeSpeed=='function')sp*=lifeSpeed();
-  if(p.dash>0){p.dash--;const f=fwd(p.yaw);mx=f[0];mz=f[1];sp=.24*TS;
+  // a real running pace (about 4 m/s), matched to the stride of the motion capture so feet don't slide
+  let sp=(p.swing>0?.02:onRiver?.03:.034)*TS;p.moving=ml>.15||p.dash>0;if(typeof lifeSpeed=='function')sp*=lifeSpeed();
+  if(p.dash>0){p.dash--;const f=fwd(p.yaw);mx=f[0];mz=f[1];sp=.1*TS;
     for(const e of enemies)if(!e.dead&&!e.boss&&Math.hypot(e.x-p.x,e.z-p.z)<1.2)hitEnemy(e,1,f[0],f[1],'dash');}
-  else if(p.moving){mx/=Math.max(1,ml);mz/=Math.max(1,ml);p.yaw+=ang(p.yaw,Math.atan2(mx,mz))*.35;p.walk+=ml*.22;}
+  else if(p.moving){mx/=Math.max(1,ml);mz/=Math.max(1,ml);p.yaw+=ang(p.yaw,Math.atan2(mx,mz))*.35;p.walk+=ml*.251*(typeof lifeSpeed=='function'?lifeSpeed():1);}
   let dx=(p.moving?mx*sp:0)+p.kx,dz=(p.moving?mz*sp:0)+p.kz;p.kx*=.8;p.kz*=.8;
   const bx=!blockedCircle(p.x+dx,p.z,PR)&&!npcBlock(p.x+dx,p.z),bz=!blockedCircle(p.x,p.z+dz,PR)&&!npcBlock(p.x,p.z+dz);
   const hitX=bx?null:blockedCircle(p.x+dx,p.z,PR),hitZ=bz?null:blockedCircle(p.x,p.z+dz,PR);
@@ -215,7 +216,7 @@ function useItem(){if(!st.eq){toast('Nothing on B yet.');return;}if(typeof lifeU
         L.lit=true;sfx('light');burst(x,3,z,12,'#fff2a8');chalProgress();return;}}
       return;}
     case'powder':if(st.ammo.powder<=0){toast('Out of powder. The Carytown shop sells kegs.');sfx('no');return;}if(bombs.length>=2)return;st.ammo.powder--;{const [fx,fz]=front(1.1);bombs.push({x:fx,z:fz,t:110});}sfx('drop');return;
-    case'balls':if(st.ammo.balls<=0){toast('Out of baseballs.');sfx('no');return;}st.ammo.balls--;shots.push({x:p.x+f[0]*.6,z:p.z+f[1]*.6,y:1.2,vx:f[0]*.42,vz:f[1]*.42,life:70,k:'ball',pl:true});sfx('throw');return;
+    case'balls':if(st.ammo.balls<=0){toast('Out of baseballs.');sfx('no');return;}st.ammo.balls--;shots.push({x:p.x+f[0]*.6,z:p.z+f[1]*.6,y:1.2,vx:f[0]*.28,vz:f[1]*.28,life:105,k:'ball',pl:true});sfx('throw');return;
     case'bug':if(bug)return;bug={x:p.x,z:p.z,y:1.2,vx:f[0]*.5,vz:f[1]*.5,t:0,ret:false,carry:[],hit:new Set()};sfx('bug');return;
     case'hook':{if(hook)return;const c=cardinal(),a2=Math.atan2(c[0],c[1]),use=Math.abs(ang(p.yaw,a2))<.45?c:f;hook={x:p.x,z:p.z,dx:use[0],dz:use[1],d:0,st:'out',carry:[]};sfx('hook');return;}
     case'shoes':if(p.dash>0)return;p.dash=22;sfx('dash');return;
@@ -260,6 +261,8 @@ const EDEF={rat:{hp:1,sp:.06,r:.5,dmg:1},squirrel:{hp:1,sp:.05,r:.45,dmg:1},scoo
   crab:{hp:2,sp:.04,r:.6,dmg:1},ghost:{hp:2,sp:.035,r:.6,dmg:2,fly:1},turtle:{hp:8,sp:.04,r:1.5,dmg:2,boss:1},wraith:{hp:6,r:1.2,dmg:2,fly:1,boss:1},raven:{hp:7,r:1.1,dmg:2,fly:1,boss:1},
   bell:{hp:8,r:1.6,dmg:2,fly:1,boss:1},foreman:{hp:9,r:1.4,dmg:2,boss:1},arum:{hp:8,r:1.6,dmg:2,boss:1},vampire:{hp:14,r:1.1,dmg:2,fly:1,boss:1}};
 const BOSSNAME={turtle:'OLD SNAPPER',wraith:'THE PYRAMID WRAITH',raven:'THE RAVEN',bell:'THE GREAT BELL',foreman:'THE IRON FOREMAN',arum:'THE TITAN ARUM',vampire:'THE RICHMOND VAMPIRE'};
+// everything that chases you moves at this fraction of its old arcade speed, to match the player's real pace
+const PACE=.45;
 function mkEnemy(t,x,z){const d=EDEF[t]||EDEF.rat;return{type:t,x,z,y:d.fly?1.4:0,hx:x,hz:z,hp:d.hp,max:d.hp,yaw:Math.random()*6,t:Math.floor(Math.random()*120),kx:0,kz:0,flash:0,state:t=='bell'?'float':'idle',st:0,dead:false,boss:!!d.boss,stun:0,vis:0};}
 function enemiesUpdate(){
   for(const e of enemies){if(e.dead)continue;const d=EDEF[e.type];e.t++;if(e.flash>0)e.flash--;
@@ -272,7 +275,7 @@ function enemiesUpdate(){
       else if(e.type=='scooter'){if(e.t%120<2||!e.vx){e.vx=Math.sin(e.yaw)*1.4;e.vz=Math.cos(e.yaw)*1.4;}mx=e.vx;mz=e.vz;}
       else{mx=dx/dist;mz=dz/dist;}}
     else if(e.t%180<60){mx=Math.sin(e.t*.05+e.hx);mz=Math.cos(e.t*.05+e.hz);e.yaw=Math.atan2(mx,mz);}
-    const sp=d.sp*TS;let nx=e.x+mx*sp+e.kx,nz=e.z+mz*sp+e.kz;e.kx*=.82;e.kz*=.82;
+    const sp=d.sp*TS*PACE;let nx=e.x+mx*sp+e.kx,nz=e.z+mz*sp+e.kz;e.kx*=.82;e.kz*=.82;
     if(d.fly){e.x=nx;e.z=nz;e.y=1.3+Math.sin(e.t*.12)*.4;}else{let moved=false;if(!blockedCircle(nx,e.z,d.r*.7)){e.x=nx;moved=true;}if(!blockedCircle(e.x,nz,d.r*.7)){e.z=nz;moved=true;}if(!moved&&e.type=='scooter'){e.yaw+=Math.PI/2;e.vx=0;}}
     e.x=Math.max(.5,Math.min(lv.w*TS-.5,e.x));e.z=Math.max(.5,Math.min(lv.h*TS-.5,e.z));
     if(dist<d.r+.45&&p.inv==0&&p.dash==0)hurtPlayer(d.dmg,e.x,e.z);}
@@ -301,7 +304,7 @@ function hitEnemy(e,dmg,nx,nz,src){
     const r=Math.random();if(r<.3)picks.push(mkPick('coin',e.x,e.z));else if(r<.44)picks.push(mkPick('heart',e.x,e.z));else if(r<.52&&st.items.balls)picks.push(mkPick('ballpk',e.x,e.z));else if(r<.57&&st.items.powder)picks.push(mkPick('powpk',e.x,e.z));}}
 
 /* ---------- enemy shots, and your baseballs ---------- */
-function shoot(e,sp,a,k,y){shots.push({x:e.x,z:e.z,y:y||e.y+.8,vx:Math.sin(a)*sp,vz:Math.cos(a)*sp,life:240,k});sfx('shoot');}
+function shoot(e,sp,a,k,y){sp*=.55;shots.push({x:e.x,z:e.z,y:y||e.y+.8,vx:Math.sin(a)*sp,vz:Math.cos(a)*sp,life:430,k});sfx('shoot');}
 function aimAt(e){return Math.atan2(p.x-e.x,p.z-e.z);}
 function reflect(s){s.refl=true;s.life=200;const w=enemies.find(e=>e.type=='wraith'&&!e.dead);
   if(s.k=='orb'&&w){const a=Math.atan2(w.x-s.x,w.z-s.z),v=Math.hypot(s.vx,s.vz)*1.6;s.vx=Math.sin(a)*v;s.vz=Math.cos(a)*v;}else{s.vx*=-1.3;s.vz*=-1.3;}sfx('clank');burst(s.x,s.y,s.z,5,'#ffffff');}
@@ -316,10 +319,10 @@ function shotsUpdate(){for(const s of shots){s.x+=s.vx;s.z+=s.vz;s.life--;const 
 const BOSSUPD={
   turtle(e){e.st++;const dx=p.x-e.x,dz=p.z-e.z,dist=Math.hypot(dx,dz);
     if(e.state=='idle'){if(e.st>60||dist<10){e.state='walk';e.st=0;}}
-    else if(e.state=='walk'){e.yaw+=ang(e.yaw,Math.atan2(dx,dz))*.05;const f=fwd(e.yaw),s=.025*TS;const nx=e.x+f[0]*s,nz=e.z+f[1]*s;if(!blockedCircle(nx,nz,1.2)){e.x=nx;e.z=nz;}if(e.st>110){e.state='wind';e.st=0;sfx('growl');}}
+    else if(e.state=='walk'){e.yaw+=ang(e.yaw,Math.atan2(dx,dz))*.05;const f=fwd(e.yaw),s=.014*TS;const nx=e.x+f[0]*s,nz=e.z+f[1]*s;if(!blockedCircle(nx,nz,1.2)){e.x=nx;e.z=nz;}if(e.st>110){e.state='wind';e.st=0;sfx('growl');}}
     else if(e.state=='wind'){e.yaw+=ang(e.yaw,Math.atan2(dx,dz))*.12;if(e.st>40){e.state='charge';e.st=0;}}
-    else if(e.state=='charge'){const f=fwd(e.yaw),s=.17*TS,nx=e.x+f[0]*s,nz=e.z+f[1]*s;
-      if(blockedCircle(nx,nz,1.3)||e.st>90){e.state='stun';e.st=0;shake=16;sfx('boom');burst(e.x+f[0]*1.5,.5,e.z+f[1]*1.5,16,'#9a9aa4');}else{e.x=nx;e.z=nz;}}
+    else if(e.state=='charge'){const f=fwd(e.yaw),s=.085*TS,nx=e.x+f[0]*s,nz=e.z+f[1]*s;
+      if(blockedCircle(nx,nz,1.3)||e.st>180){e.state='stun';e.st=0;shake=16;sfx('boom');burst(e.x+f[0]*1.5,.5,e.z+f[1]*1.5,16,'#9a9aa4');}else{e.x=nx;e.z=nz;}}
     else if(e.state=='stun'){if(e.st>150){e.state='walk';e.st=0;}}
     if(e.state!='stun'&&dist<2.2&&p.inv==0)hurtPlayer(2,e.x,e.z);},
   wraith(e){if(e.vis>0)e.vis--;e.yaw=aimAt(e);const tx=Math.max(4,Math.min(lv.w*TS-4,p.x)),tz=Math.max(4,Math.min(lv.h*TS-6,p.z-6));
@@ -329,8 +332,8 @@ const BOSSUPD={
     if(e.vis>0&&Math.hypot(p.x-e.x,p.z-e.z)<1.5&&p.inv==0)hurtPlayer(2,e.x,e.z);
     if(e.t==30&&!st.f.wraithTip){st.f.wraithTip=1;toast('It fades in and out. Swing at its orbs to knock them back!');}},
   raven(e){const ph=e.t%120;e.y=2.4;
-    if(ph<70){const tx=p.x,tz=p.z-5,dx=tx-e.x,dz=tz-e.z,l=Math.hypot(dx,dz)||1;if(l>.3){e.x+=dx/l*.09;e.z+=dz/l*.09;}e.yaw=aimAt(e);if(ph==35)shoot(e,.22,aimAt(e),'feather');}
-    else{if(ph==70||e.vx==null){const a=aimAt(e);e.vx=Math.sin(a)*.3;e.vz=Math.cos(a)*.3;sfx('growl');}e.x+=e.vx;e.z+=e.vz;e.y=Math.max(1,2.4-(ph-70)*.06);}
+    if(ph<70){const tx=p.x,tz=p.z-5,dx=tx-e.x,dz=tz-e.z,l=Math.hypot(dx,dz)||1;if(l>.3){e.x+=dx/l*.05;e.z+=dz/l*.05;}e.yaw=aimAt(e);if(ph==35)shoot(e,.22,aimAt(e),'feather');}
+    else{if(ph==70||e.vx==null){const a=aimAt(e);e.vx=Math.sin(a)*.16;e.vz=Math.cos(a)*.16;sfx('growl');}e.x+=e.vx;e.z+=e.vz;e.y=Math.max(1,2.4-(ph-70)*.06);}
     e.x=Math.max(1.5,Math.min(lv.w*TS-1.5,e.x));e.z=Math.max(1.5,Math.min(lv.h*TS-1.5,e.z));
     if(Math.hypot(p.x-e.x,p.z-e.z)<1.3&&e.y<2&&p.inv==0)hurtPlayer(2,e.x,e.z);},
   bell(e){const dx=p.x-e.x,dz=p.z-e.z,d=Math.hypot(dx,dz)||1;
@@ -338,12 +341,12 @@ const BOSSUPD={
     if(e.state=='rise'){e.y=Math.min(5,e.y+.15);if(e.y>=5)e.state='float';return;}
     if(e.state=='drop'){e.y-=.5;if(e.y<=0){e.y=0;e.state='stun';e.st=0;shake=14;sfx('boom');sfx('bell');for(let i=0;i<8;i++)shoot(e,.2,i*Math.PI/4,'ring',.6);burst(e.x,.5,e.z,16,'#e8b070');
       if(Math.hypot(p.x-e.x,p.z-e.z)<2.2)hurtPlayer(2,e.x,e.z);}return;}
-    e.y=5;if(d>.5){e.x+=dx/d*.1;e.z+=dz/d*.1;}if(e.t%140==139){e.state='drop';sfx('bell');}
+    e.y=5;if(d>.5){e.x+=dx/d*.05;e.z+=dz/d*.05;}if(e.t%140==139){e.state='drop';sfx('bell');}
     if(e.t==40&&!st.f.bellTip){st.f.bellTip=1;toast('When it slams down, it\'s stunned. Hit it then!');}},
   foreman(e){const dx=p.x-e.x,dz=p.z-e.z,d=Math.hypot(dx,dz)||1;
     if(e.state=='stun'){if(++e.st>170){e.state='walk';e.st=0;sfx('growl');}return;}
     if(e.state=='wind'){if(++e.st>40){e.state='walk';e.st=0;shake=10;sfx('boom');for(let i=0;i<8;i++)shoot(e,.19,i*Math.PI/4+(e.hp<5?Math.PI/8:0),'spark',.8);burst(e.x,1,e.z,14,'#f8a030');}return;}
-    e.state='walk';e.yaw+=ang(e.yaw,Math.atan2(dx,dz))*.1;if(d>1.6){const nx=e.x+dx/d*.055,nz=e.z+dz/d*.055;if(!blockedCircle(nx,nz,1)){e.x=nx;e.z=nz;}}
+    e.state='walk';e.yaw+=ang(e.yaw,Math.atan2(dx,dz))*.1;if(d>1.6){const nx=e.x+dx/d*.03,nz=e.z+dz/d*.03;if(!blockedCircle(nx,nz,1)){e.x=nx;e.z=nz;}}
     if(e.t%150==149){e.state='wind';e.st=0;sfx('growl');}if(e.hp<=5&&e.t%90==45)shoot(e,.21,aimAt(e),'spark',1.4);
     if(d<1.9&&p.inv==0)hurtPlayer(2,e.x,e.z);},
   arum(e){if(e.state=='bloom'){if(++e.st>230){e.state='closed';e.st=0;sfx('growl');}return;}
@@ -416,7 +419,7 @@ function birdsUpdate(){for(const b of birds){b.t++;
 /* ---------- townspeople ---------- */
 function npcUpdate(){for(const n of npcs){n.t++;if(n.look>0){n.look--;continue;}
   if(n.wander){const tx=n.hx+Math.sin(n.t*.006+n.i)*2.2,tz=n.hz+Math.cos(n.t*.0045+n.i*2)*1.6,dx=tx-n.x,dz=tz-n.z,l=Math.hypot(dx,dz);
-    if(l>.1){const nx=n.x+dx/l*.03,nz=n.z+dz/l*.03;if(!blockedCircle(nx,nz,.4)&&Math.hypot(nx-p.x,nz-p.z)>1){n.x=nx;n.z=nz;n.walk+=.12;n.yaw+=ang(n.yaw,Math.atan2(dx,dz))*.1;}}}
+    if(l>.1){const nx=n.x+dx/l*.03,nz=n.z+dz/l*.03;if(!blockedCircle(nx,nz,.4)&&Math.hypot(nx-p.x,nz-p.z)>1){n.x=nx;n.z=nz;n.walk+=.15;n.yaw+=ang(n.yaw,Math.atan2(dx,dz))*.1;}}}
   else{n.yaw+=ang(n.yaw,Math.hypot(p.x-n.x,p.z-n.z)<6?Math.atan2(p.x-n.x,p.z-n.z):0)*.05;}}}
 const AREAHINT={'ow:0,0':'There\'s a path north to Bryan Park now. The botanical garden is past it.','ow:3,0':'Chimborazo Park is just east. Great view of the river.','ow:1,2':'Hear that clanking? It comes from the old Tredegar works, down in the corner of the cemetery.','ow:0,2':'The naturalist by the lake is counting frogs. Rainy days are best for that.'};
 function folkContext(){const o=[];if(AREAHINT[lv.id])o.push(AREAHINT[lv.id]);if(st.f.won)o.push('The lamps are back on all over town. People say it was you who did it!');else if(nKeys()>0)o.push('Word is somebody\'s been finding the old tunnel keystones. '+nKeys()+' so far!');
@@ -430,7 +433,7 @@ function startChal(id,n){const d=RCQ.chal[id];
   if(d.needs=='bug'&&!st.items.bug){say(['You\'d need something that can fly over the water and bring things back.'],null,n.who);return;}
   if(d.type=='light'&&!st.items.lantern){say(['You\'ll need a lantern for this one. The archivist by the Capitol has one.'],null,n.who);return;}
   if(d.type=='quiz'){runQuiz(n);return;}
-  chal={id,d,type:d.type,t:d.time*60,got:0,need:0,who:n.who,scene:lv.id,set:new Set()};const sp=lv.spots;
+  chal={id,d,type:d.type,t:Math.round(d.time*60*2.3),got:0,need:0,who:n.who,scene:lv.id,set:new Set()};const sp=lv.spots;
   if(d.type=='collect'){chal.need=sp.length;for(const [x,y] of sp){const k=mkPick({ball:'ballfly',tap:'tap',melon:'melonpk',lure:'lure',trash:'trash'}[d.ic]||'token',x*TS+TS/2,y*TS+TS/2);k.chal=1;picks.push(k);}}
   else if(d.type=='race'){chal.need=1;const [x,y]=sp[0];const k=mkPick('flag',x*TS+TS/2,y*TS+TS/2);k.chal=1;picks.push(k);}
   else if(d.type=='defeat'){chal.need=d.n;for(let i=0;i<d.n;i++){const [x,y]=sp[i%sp.length]||[16,10],e=mkEnemy(d.foe,x*TS+TS/2+(i>=sp.length?1:0),y*TS+TS/2);e.chal=1;enemies.push(e);}}

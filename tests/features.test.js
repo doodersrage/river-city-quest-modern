@@ -21,7 +21,7 @@ G.p.inv=0;ok(G.st.pins.rats,'clearing the rats wins the pin');
 // river cleanup on Belle Isle
 go('ow:2,2',16,8);talk('cleanup');talkThrough(0);const tr=G.picks.filter(k=>k.kind=='trash');ok(tr.length==6,'six pieces of trash');for(const k of tr){G.p.x=k.x;G.p.z=k.z;step({},12);talkThrough();}ok(G.st.pins.cleanup,'picking it all up wins the pin');
 // time runs out
-go('ow:3,1',16,10);talk('rats');talkThrough(0);G.p.inv=1e9;step({},41*60);G.p.inv=0;talkThrough();ok(!G.chal&&G.enemies.filter(e=>e.chal).length==0,'running out of time ends the challenge');
+go('ow:3,1',16,10);talk('rats');talkThrough(0);G.p.inv=1e9;step({},G.chal.t+60);G.p.inv=0;talkThrough();ok(!G.chal&&G.enemies.filter(e=>e.chal).length==0,'running out of time ends the challenge');
 // the history quiz: answer with your journal
 for(const id in G.RCQ.lore)G.st.lore[id]=1;go('ow:2,1',16,9);talk('quiz');for(let k=0;k<20&&G.dlg&&G.dlg.who=='Richmond History Quiz';k++){if(G.dlg.choices&&G.dlg.i==G.dlg.lines.length-1){G.dlg.n=999;G.dlg.sel=0;}step({a:1});step({},2);}
 for(let q=0;q<3&&G.dlg;q++){for(let k=0;k<10&&G.dlg&&!(G.dlg.choices&&G.dlg.i==G.dlg.lines.length-1);k++){step({a:1});step({},2);}
