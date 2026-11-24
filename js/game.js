@@ -453,11 +453,12 @@ function runQuiz(n){const read=Object.keys(st.lore);if(read.length<3){say(['Find
   ask();}
 
 /* ---------- the camera: trails behind you, swing it with the right stick, Q/E or a drag ---------- */
-function camUpdate(){if(!lv)return;const tx=p.x,ty=1.4,tz=p.z;
+const CAMD=5.8,CAMP=.36;
+function camUpdate(){if(!lv)return;const tx=p.x,ty=1.25,tz=p.z;
   if(lv.room){cam.yaw+=ang(cam.yaw,inp.camX*.5)*.08;}
   else{if(Math.abs(inp.camX)>.05){cam.yaw-=inp.camX*.045;cam.manual=90;}else if(cam.manual>0)cam.manual--;
   if(cam.manual==0&&p.moving){const want=p.yaw+Math.PI;cam.yaw+=ang(cam.yaw,want)*.018;}}
-  const pitch=lv.room?.92:.42,want=lv.room?12:8.2;let dist=want;
+  const pitch=lv.room?.85:CAMP,want=lv.room?9.5:CAMD;let dist=want;
   if(!lv.room)for(let d=1;d<=want;d+=.25){const x=tx+Math.sin(cam.yaw)*d*Math.cos(pitch),z=tz+Math.cos(cam.yaw)*d*Math.cos(pitch),y=ty+d*Math.sin(pitch),c=tAt(x,z);
     if(c&&tallAt(c,y,Math.floor(z/TS))){dist=Math.max(1.6,d-.4);break;}}
   if(!lv.room&&cam.manual==0&&!p.moving&&dist<want*.5){cam.blocked=(cam.blocked||0)+1;if(cam.blocked>30){const y=bestYaw(cam.yaw);cam.yaw+=ang(cam.yaw,y)*.06;}}else cam.blocked=0;
@@ -469,10 +470,10 @@ function camClear(yaw,pitch,want){for(let d=1;d<=want;d+=.25){const x=p.x+Math.s
 // the angle with the clearest view nearest the one we'd like, so stepping out of a door doesn't bury the camera in the building
 function camRoom(x,z,y){let m=4;for(let dz=-2;dz<=2;dz++)for(let dx=-2;dx<=2;dx++){const tx=Math.floor(x/TS)+dx,tz=Math.floor(z/TS)+dz,c=tileAt(lv,tx,tz);
     if(c&&tallAt(c,y,tz)){const ex=Math.max(0,Math.abs(x-(tx+.5)*TS)-TS/2),ez=Math.max(0,Math.abs(z-(tz+.5)*TS)-TS/2);m=Math.min(m,Math.hypot(ex,ez));}}return m;}
-function bestYaw(want){let best=want,bs=-1e9;for(let k=0;k<=12;k++)for(const sgn of k?[1,-1]:[1]){const y=want+sgn*k*Math.PI/12,d=camClear(y,.42,8.2);
+function bestYaw(want){let best=want,bs=-1e9;for(let k=0;k<=12;k++)for(const sgn of k?[1,-1]:[1]){const y=want+sgn*k*Math.PI/12,d=camClear(y,CAMP,CAMD);
     const cx=p.x+Math.sin(y)*d*Math.cos(.42),cz=p.z+Math.cos(y)*d*Math.cos(.42),room=camRoom(cx,cz,1.4+d*Math.sin(.42));
-    const sc=d/8.2*3+Math.min(room,4)*1.2-k*.03;if(sc>bs){bs=sc;best=y;}}return best;}
-function tallAt(c,y,tz){if(c=='B'||c=='e')return y<8;if('%LH'.includes(c))return y<3.2;if(c=='X'||c=='D')return y<9;if(c=='W')return y<(tz==lv.h-1?.8:4);if(c=='T')return y<3.6&&y>1;if(c=='U')return y<2.4;return false;}
+    const sc=d/CAMD*3+Math.min(room,4)*1.2-k*.03;if(sc>bs){bs=sc;best=y;}}return best;}
+function tallAt(c,y,tz){if(c=='B'||c=='e')return y<14;if('%LH'.includes(c))return y<3.2;if(c=='X'||c=='D')return y<9;if(c=='W')return y<(tz==lv.h-1?.8:4);if(c=='T')return y<3.6&&y>1;if(c=='U')return y<2.4;return false;}
 
 /* ---------- pause menu: items, journal, map (and the bus) ---------- */
 const MTABS=['ITEMS','JOURNAL','MAP','ALBUM','SYSTEM'];

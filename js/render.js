@@ -31,11 +31,11 @@ function lampLit(g){const L=lv.lamps.find(l=>l.tx==g[3]&&l.ty==g[4]);return!L||L
 function shadowAt(x,z,s){if(PASS=='shadow'||Q().shadow&&!lv.room&&SUN.col[0]>.05)return;const sh=getModel('shadow',()=>propModel('shadow'));gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.uniform1f(U.uAlpha,.4);gl.depthMask(false);
   drawModel(sh,M4.mul(M4.tr(x,0,z),M4.sc(s||1)));gl.uniform1f(U.uAlpha,1);gl.depthMask(true);gl.disable(gl.BLEND);}
 function humanPose(walk,moving,extra){const s=moving?Math.sin(walk)*.7:0;return Object.assign({legL:{x:s},legR:{x:-s},armL:{x:-s*.8,z:-.12},armR:{x:s*.8,z:.12},body:{t:[0,moving?Math.abs(Math.cos(walk))*.06:0,0]}},extra||{});}
-function npcModel(n){return getModel('npc:'+n.who+':'+n.tx+','+n.ty,()=>{const h=hash(n.tx,n.ty,n.who.length),skins=['#e8b890','#c08860','#8a5a3a','#f0c8a0'],pants=['#3c3c54','#5a4a3a','#2e3a5e','#4a4a4a'];
+function npcModel(n){return getModel('npc:'+n.who+':'+n.tx+','+n.ty,()=>{const h=hash(n.tx,n.ty,n.who.length),skins=['#e0ac8a','#c68863','#8d5a3b','#f1c6a8','#a06a48','#5c3a26'],pants=['#3c3c54','#5a4a3a','#2e3a5e','#4a4a4a'];
   const ROLE={archivist:['glasses','book'],quiz:['clipboard'],rats:['apron'],henry:['tricorn','coat'],lamps:['pole','coat'],racer:['helmet'],kayaker:['helmet','vest'],cleanup:['gloves']},acc=ROLE[n.chal||n.talk]||[];
   const capless=(h%3!=1)||acc.includes('tricorn')||acc.includes('helmet')?!acc.includes('tricorn'):false,style=['short','long','bun','short','long'][(h>>7)%5];
-  if(acc.includes('tricorn')||acc.includes('helmet'))return humanoid({hat:'#1e1c24',shirt:n.shirt?n.shirt[0]:'#58a850',skin:skins[h%4],pants:pants[(h>>3)%4],hair:['#3a2414','#1a1410','#c89048','#7a4a24','#8a8a90'][(h>>5)%5],capless:true,style:'short',acc,coat:n.talk=='henry'?'#2a3a6a':'#4a3a2a',helm:n.talk=='racer'?'#e83048':'#f2c14e',wide:1});
-  return humanoid({acc,coat:'#4a3a2a',hat:n.hat?n.hat[0]:'#6a4020',shirt:n.shirt?n.shirt[0]:'#58a850',skin:skins[h%4],pants:pants[(h>>3)%4],hair:['#3a2414','#1a1410','#c89048','#7a4a24','#8a8a90'][(h>>5)%5],capless,style,skirt:style!='short'&&(h>>9)%2==0,wide:.92+((h>>11)%4)*.05});});}
+  if(acc.includes('tricorn')||acc.includes('helmet'))return humanoid({hat:'#1e1c24',shirt:n.shirt?n.shirt[0]:'#58a850',skin:skins[h%6],pants:pants[(h>>3)%4],hair:['#3a2414','#1a1410','#c89048','#7a4a24','#8a8a90'][(h>>5)%5],capless:true,style:'short',acc,coat:n.talk=='henry'?'#2a3a6a':'#4a3a2a',helm:n.talk=='racer'?'#e83048':'#f2c14e',wide:1});
+  return humanoid({acc,coat:'#4a3a2a',hat:n.hat?n.hat[0]:'#6a4020',shirt:n.shirt?n.shirt[0]:'#58a850',skin:skins[h%6],pants:pants[(h>>3)%4],hair:['#3a2414','#1a1410','#c89048','#7a4a24','#8a8a90'][(h>>5)%5],capless,style,skirt:style!='short'&&(h>>9)%2==0,wide:.92+((h>>11)%4)*.05});});}
 function drawEntities(){
   // the player
   const P=getModel('player:'+(st.gold?1:0),()=>humanoid({hat:'#e83048',shirt:'#3d63c8',skin:'#e8b890',pants:'#3c3c54',hair:'#6a3a1e',paddle:true,acc:['pack']}));
@@ -69,6 +69,7 @@ function drawEntities(){
     if(t=='bell'&&e.state=='stun')base=M4.mul(base,M4.rz(Math.sin(e.st*.6)*.15*Math.max(0,1-e.st/40)));if(t=='arum'&&e.state=='bloom')base=M4.mul(base,M4.sc(1.15));
     if(t=='foreman'&&e.state=='wind')base=M4.mul(base,M4.tr(0,Math.sin(e.st*.5)*.1,0));if(e.stun>0&&!e.boss)base=M4.mul(base,M4.rz(Math.sin(frame*.5)*.2));
     if(e.dead)base=M4.mul(base,M4.sc(Math.max(.01,e.fade/40)));
+    if(t=='ghost'&&PASS!='shadow'){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.uniform1f(U.uAlpha,.42+.08*Math.sin(frame*.07+e.x));drawModel(m,base,pose,{tint:[1.4,1.5,1.7]});gl.uniform1f(U.uAlpha,1);gl.depthMask(true);gl.disable(gl.BLEND);continue;}
     if(t=='wraith'&&e.vis<=0){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.uniform1f(U.uAlpha,.18+.1*Math.sin(frame*.2));drawModel(m,base,pose);gl.uniform1f(U.uAlpha,1);gl.disable(gl.BLEND);continue;}
     if(!EDEF[t]||!EDEF[t].fly||t=='bell')shadowAt(e.x,e.z,t=='turtle'||t=='bell'||t=='arum'?2.6:t=='foreman'?1.6:.9);else shadowAt(e.x,e.z,.6);drawModel(m,base,pose,e.flash>0&&(e.flash>>1)&1?{flash:.8}:null);}
   for(const c of chests){if(!chestVisible(c))continue;const m=getModel('chest',()=>propModel('chest'));drawModel(m,M4.tr(c.x,0,c.z),{lid:{x:c.open?-1.9:0}});}
@@ -99,7 +100,7 @@ function drawBillboards(env){if(PASS=='shadow')return;const m=new Mesh(),rx=Math
       const ox=x+(q%7-3)*.2,oz=z+((q>>3)%7-3)*.2,w=.5+(q%4)*.12,d=.05,k=.35*dk;g.quad([ox-w,-.28,oz+d],[ox+w,-.28,oz+d],[ox+w,-.28,oz-d],[ox-w,-.28,oz-d],'lampglow',[k*.8,k*.85,k]);}
     for(const gg of lv.glows){if(!lampLit(gg))continue;for(const [tx,ty] of lv.waterPts){const x=tx*TS+TS/2,z=ty*TS+TS/2;if(Math.hypot(x-gg[0],z-gg[2])>5)continue;
       for(let k=0;k<3;k++){const wob=Math.sin(frame*.08+k*2+tx)*.15,zz=z-.5+k*.5,w=.35-k*.06;g.quad([x-w+wob,-.27,zz+.08],[x+w+wob,-.27,zz+.08],[x+w+wob,-.27,zz-.08],[x-w+wob,-.27,zz-.08],'lampglow',[dk*.7,dk*.55,dk*.3]);}}}}
-  if(st.items.lantern&&(dk>.3||lv.room)){const s=.7,x=p.x,y=1.2,z=p.z;g.quad([x-rx*s,y-s,z-rz*s],[x+rx*s,y-s,z+rz*s],[x+rx*s,y+s,z+rz*s],[x-rx*s,y+s,z-rz*s],'lampglow',[.8,.7,.5]);}
+  if(st.items.lantern&&(dk>.3||lv.room)){const s=.32,x=p.x,y=1.0,z=p.z;g.quad([x-rx*s,y-s,z-rz*s],[x+rx*s,y-s,z+rz*s],[x+rx*s,y+s,z+rz*s],[x-rx*s,y+s,z-rz*s],'lampglow',[.3,.24,.14]);}
   for(const b of bombs)if(b.t<6){const s=3,x=b.x,y=1,z=b.z;g.quad([x-rx*s,y-s,z-rz*s],[x+rx*s,y-s,z+rz*s],[x+rx*s,y+s,z+rz*s],[x-rx*s,y+s,z-rz*s],'lampglow',[1,.7,.3]);}
   if(typeof lifeGlow=='function')lifeGlow(g,rx,rz,dk);
   if(g.count){gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.depthMask(false);gl.uniform1f(U.uAdd,1);gl.uniform2f(U.uFog,999,1000);upload(dynBuf,g);drawVAO(dynBuf);gl.uniform1f(U.uAdd,0);gl.depthMask(true);gl.disable(gl.BLEND);gl.uniform2f(U.uFog,env.fog[0],env.fog[1]);}}

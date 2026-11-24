@@ -4,16 +4,21 @@
 
 The modern 3D version of [River City Quest](https://github.com/doodersrage/river-city-quest), the Zelda-like adventure set in Richmond, Virginia. A cold fog has rolled up off the James and the gas lamps are going dark. The archivist at the Capitol needs four keystones to open the old Church Hill Tunnel, where something is waiting under the hill.
 
-It's the same game as the [PS1-style version](https://github.com/doodersrage/river-city-quest-3d) (all 24 neighborhoods, seven dungeons and bosses, the mini-games, the dog, fishing, weather and events) with a new, semi-realistic renderer.
+It's the same game as the [PS1-style version](https://github.com/doodersrage/river-city-quest-3d) (all 24 neighborhoods, seven dungeons and bosses, the mini-games, the dog, fishing, weather and events) rebuilt to look real: real-world proportions and materials, and a physically based renderer.
 
 | | |
 |---|---|
-| ![Shockoe Bottom](screenshots/shockoe-bottom.jpg) | ![Belle Isle](screenshots/belle-isle.jpg) |
-| ![The James](screenshots/the-james.jpg) | ![The Fan](screenshots/the-fan.jpg) |
-| ![Church Hill at night](screenshots/church-hill-night.jpg) | ![Byrd Park in the fall](screenshots/byrd-park-dog.jpg) |
-| ![Batting practice](screenshots/batting.jpg) | ![The soapbox derby](screenshots/soapbox-derby.jpg) |
+| ![Shockoe Bottom](screenshots/shockoe-bottom.jpg) | ![The Fan](screenshots/the-fan.jpg) |
+| ![Byrd Park](screenshots/byrd-park.jpg) | ![Belle Isle at sunset](screenshots/belle-isle-sunset.jpg) |
+| ![Church Hill at night](screenshots/church-hill-night.jpg) | ![Capitol Square](screenshots/capitol-square.jpg) |
 
 ## The look
+
+- **People at real proportions:** adults about 7.5 heads tall, with faces, hair, cloth, denim, leather and skin materials, dressed in muted real-world colors.
+- **Real trees and plants:** oaks, maples and pines with forked trunks and crowns built from thousands of leaves, which cast dappled shadows. Mulched flower beds, shrubs and lumpy boulders. The leaves follow the real calendar.
+- **Richmond's streets:** cobblestones in Shockoe Bottom and on Church Hill, asphalt with trolley rails on Broad Street, brick sidewalks with granite curbs in the old neighborhoods, and gravel paths in the parks.
+- **Buildings at real scale:** three-meter stories with framed windows, granite sills and lintels, paneled doors on stone stoops, shop fronts with awnings, belt courses and cornices, in red, dark and tawny brick or painted stucco.
+- **Animals as they look:** Norway rats, gray squirrels, Canada geese, blue crabs, brown bats, rock pigeons and a snapping turtle, plus half-seen, translucent ghosts. Parked cars are proper sedans.
 
 - **Physically based materials:** brick, cobblestone, slate, wood, marble and grass are painted at full resolution with surface relief, roughness and metalness, and lit with real specular highlights.
 - **A sun that moves:** it rises and sets with the game clock and casts soft real-time shadows. At night the moon takes over, windows glow, and the lantern and gas lamps light the streets.

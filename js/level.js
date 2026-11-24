@@ -48,7 +48,7 @@ function scatterProps(lv){const rows=lv.d.rows,out=[],busy=new Set(),avoid=new S
   let cars=0;for(let y=1;y<lv.h-1&&cars<4;y++)for(let x=2;x<lv.w-3&&cars<4;x++){if(av1.has(x+','+y)||av1.has((x+1)+','+y))continue;
     const curbN=c(x,y-1)=='s'&&c(x+1,y-1)=='s',curbS=c(x,y+1)=='s'&&c(x+1,y+1)=='s';if(c(x,y)!='p'||c(x+1,y)!='p'||!(curbN||curbS))continue;
     if(c(x,y+(curbN?1:-1))!='p'||c(x,y+(curbN?2:-2))!='p')continue;if(hash(x,y,seed+9)%3||out.some(p=>p.kind=='car'&&Math.abs(p.ty-y)<2&&Math.abs(p.tx-x)<6))continue;
-    out.push({kind:'car',tx:x,ty:y,x:(x+1)*TS,z:y*TS+TS/2+(curbN?-.35:.35),yaw:Math.PI/2,solid:[1.75,.85],col:['#e83048','#3d63c8','#f2c14e','#2e9d6b','#e8e4dc','#7a4a8a'][hash(x,y,3)%6]});cars++;}
+    out.push({kind:'car',tx:x,ty:y,x:(x+1)*TS,z:y*TS+TS/2+(curbN?-.35:.35),yaw:Math.PI/2,solid:[1.75,.85],col:['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30'][hash(x,y,3)%7]});cars++;}
   return out;}
 function propMesh(M,pr){const {x,z}=pr,R=(a,b,c,d,e,f,cells,col)=>{const cs=Math.cos(pr.yaw),sn=Math.sin(pr.yaw);const pts=[[a,c],[d,c],[a,f],[d,f]].map(([u,v])=>[x+u*cs+v*sn,z-u*sn+v*cs]);
     M.box(Math.min(...pts.map(p=>p[0])),b,Math.min(...pts.map(p=>p[1])),Math.max(...pts.map(p=>p[0])),e,Math.max(...pts.map(p=>p[1])),cells,col);};
@@ -58,9 +58,8 @@ function propMesh(M,pr){const {x,z}=pr,R=(a,b,c,d,e,f,cells,col)=>{const cs=Math
     case'news':R(-.25,.0,-.2,.25,.95,.2,{top:'white',side:'white',south:'glass'},rgb('#3d63c8'));R(-.22,.95,-.18,.22,1.0,.18,'white',rgb('#2a4aa0'));break;
     case'mailbox':R(-.04,0,-.04,.04,.35,.04,'black');R(-.27,.35,-.22,.27,.95,.22,'white',rgb('#2a4aa0'));M.lathe(x,.95,z,[[0,.27],[.12,.2],[.18,0]],8,'white',rgb('#2a4aa0'),1,.82);R(-.12,.62,.2,.12,.68,.24,'white',rgb('#e8e4dc'));break;
     case'sign':M.lathe(x,0,z,[[0,.06],[2.9,.04]],5,'black');R(-.65,2.55,-.03,.65,2.85,.03,{top:'black',side:'sign2'});{const cs=Math.cos(pr.yaw+Math.PI/2),sn=Math.sin(pr.yaw+Math.PI/2);M.box(x-.03-Math.abs(sn)*.55,2.2,z-.03-Math.abs(cs)*.55,x+.03+Math.abs(sn)*.55,2.48,z+.03+Math.abs(cs)*.55,{top:'black',side:'sign2'});}break;
-    case'car':{const c=rgb(pr.col),dk=[c[0]*.6,c[1]*.6,c[2]*.6];R(-1.7,.3,-.8,1.7,.9,.8,'white',c);R(1.7,.4,-.62,1.74,.84,.62,'grille');R(-1.74,.32,-.82,-1.7,.48,.82,'white',[.75,.75,.8]);R(-.85,.9,-.72,.8,1.45,.72,{top:'white',side:'glass'},c);R(-.8,1.42,-.68,.75,1.5,.68,'white',c);
-      R(1.7,.35,-.8,1.78,.55,.8,'white',[.75,.75,.8]);R(-1.78,.35,-.8,-1.7,.55,.8,'white',[.75,.75,.8]);R(-1.72,.62,-.7,-1.69,.78,-.45,'white',[.9,.1,.1]);R(-1.72,.62,.45,-1.69,.78,.7,'white',[.9,.1,.1]);
-      for(const [u,v] of [[-1.1,-.82],[1.1,-.82],[-1.1,.82],[1.1,.82]]){const cs=Math.cos(pr.yaw),sn=Math.sin(pr.yaw),wx=x+u*cs+v*sn,wz=z-u*sn+v*cs,ex=x+u*cs+(v*.8)*sn,ez=z-u*sn+(v*.8)*cs;M.tube([ex,.33,ez],[wx,.33,wz],.33,.33,8,'white',[.12,.12,.14]);M.disc(wx,.33,wz,.18,6,'white',[.7,.7,.75]);}break;}
+    case'car':{const t=sedan(pr.col,hash(Math.round(x*7),Math.round(z*7),3)),cs=Math.cos(pr.yaw),sn=Math.sin(pr.yaw);
+      for(let k=0;k<t.count;k++){const u=t.pos[k*3],v=t.pos[k*3+2];t.pos[k*3]=x+u*cs+v*sn;t.pos[k*3+2]=z-u*sn+v*cs;const nu=t.nrm[k*3],nv=t.nrm[k*3+2];t.nrm[k*3]=nu*cs+nv*sn;t.nrm[k*3+2]=-nu*sn+nv*cs;}M.add(t);break;}
   }}
 /* ---------- static geometry ---------- */
 const BLOCKS='BX';
@@ -70,11 +69,15 @@ function compOf(lv){const comp=[],id={},rows=lv.d.rows;let n=0;
     while(q.length){const [a,b]=q.pop();for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const k=(a+dx)+','+(b+dy);if(id[k]==null&&isB(rows,a+dx,b+dy)){id[k]=n;q.push([a+dx,b+dy]);}}}n++;}
   return id;}
 function lmAt(lv,x,y){return(lv.d.lm||[]).find(L=>x>=L.x&&x<L.x+L.w&&y>=L.y&&y<L.y+L.h);}
-function groundCell(lv,c,x,y){if(GROUND[c])return c=='.'&&hash(x,y,3)%3==0?'grass2':GROUND[c];const b=lv.base;return GROUND[b]?(b=='.'&&hash(x,y,3)%3==0?'grass2':GROUND[b]):'grass';}
+// streets the way Richmond has them: cobbles in Shockoe and on Church Hill, asphalt elsewhere in town,
+// brick sidewalks in the old neighborhoods, gravel and concrete paths in the parks
+function streetKind(lv){if(lv._st)return lv._st;const n=lv.d.rows.join('').split('B').length-1,id=lv.d.id||'';
+  return lv._st=['ow:3,1','ow:3,0'].includes(id)?'cobble':n>=30?'asphalt':'park';}
+function groundCell(lv,c,x,y){if(!lv.room&&(c=='p'||c=='s')){const k=streetKind(lv);if(c=='p')return k=='park'?'gravel':k;return k=='park'?'sidewalk':'bricksw';}if(GROUND[c])return c=='.'&&hash(x,y,3)%3==0?'grass2':GROUND[c];const b=lv.base;return GROUND[b]?(b=='.'&&hash(x,y,3)%3==0?'grass2':GROUND[b]):'grass';}
 function buildMesh(lv){
   const M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh(),rows=lv.d.rows,comp=compOf(lv),H={};
   const src=(x,y)=>x<0||y<0||x>=lv.w||y>=lv.h?null:rows[y][x];
-  const bh=(x,y)=>{const c=src(x,y);if(comp[x+','+y]!=null){const k=comp[x+','+y],v=hash(k,lv.d.ax*7+lv.d.ay,11)%3;return(2+v)*TS;}if(c=='X'||c=='D'&&!lmAt(lv,x,y))return 2*TS;return 0;};
+  const bh=(x,y)=>{const c=src(x,y);if(comp[x+','+y]!=null){const k=comp[x+','+y],v=hash(k,lv.d.ax*7+lv.d.ay,11)%3;return(2+v)*FLOOR_H;}if(c=='X'||c=='D'&&!lmAt(lv,x,y))return 2*TS;return 0;};
   const room=lv.room,sty=lv.d.style||{},lit=room&&!lv.dungeon,tint=(h,base)=>{const c=rgb(h||'#808080');return c.map(v=>Math.min(1.35,v/base));};
   const flC=room?tint((sty.fl||[])[0],lit?.86:.37):null,wlC=room?tint((sty.wl||[])[0],lit?.86:.42):null,flCell=lit?(sty.wood?'woodfl':'tilefl'):'floor',wlCell=lit?(lv.d.area=='conserv'?'glass':'plaster'):'qwall';
   lv.flC=flC;
@@ -83,10 +86,10 @@ function buildMesh(lv){
     if(WATER.includes(c)){(c=='~'?Fm:Wm).floor(X0,Z0,X1,Z1,-.35,'white');
       for(const [dx,dy,a,b] of [[0,-1,[X1,Z0],[X0,Z0]],[0,1,[X0,Z1],[X1,Z1]],[-1,0,[X0,Z0],[X0,Z1]],[1,0,[X1,Z1],[X1,Z0]]]){const n=src(x+dx,y+dy);if(n!=null&&!WATER.includes(n)&&n!='='&&n!='-')M.wall(a[0],a[1],b[0],b[1],-1.2,0,room?'qwall':'dirt',null,.7);}
       M.floor(X0,Z0,X1,Z1,-1.2,room?'floor':'dirt',[.5,.5,.6]);
-      if(!room){for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]){const n=src(x+dx,y+dy);if(n==null||WATER.includes(n)||n=='='||n=='-')continue;const w=.32;
-          const q=dy==-1?[X0,Z0,X1,Z0+w]:dy==1?[X0,Z1-w,X1,Z1]:dx==-1?[X0,Z0,X0+w,Z1]:[X1-w,Z0,X1,Z1];Fr.floor(q[0],q[1],q[2],q[3],-.31,'foam',[.85,.92,.95]);}
+      if(!room){for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]){const n=src(x+dx,y+dy);if(n==null||WATER.includes(n)||n=='='||n=='-')continue;const w=.16;
+          const q=dy==-1?[X0,Z0,X1,Z0+w]:dy==1?[X0,Z1-w,X1,Z1]:dx==-1?[X0,Z0,X0+w,Z1]:[X1-w,Z0,X1,Z1];Fr.floor(q[0],q[1],q[2],q[3],-.31,'foam',[.62,.66,.68]);}
         const bridgeNear=[[0,-1],[0,1],[-1,0],[1,0]].some(([dx,dy])=>'=-'.includes(src(x+dx,y+dy)||'.'));
-        if(!bridgeNear&&(c=='~'?h%3==0:h%11==0)){const ox=cx+((h>>4)%5-2)*.18,oz=cz+((h>>7)%5-2)*.18,r=.45+(h%3)*.15;M.cone(ox,-1,oz,r*1.2,-.2,r*.8,6,'rock',null,h);M.cone(ox,-.2,oz,r*.8,.18+(h%4)*.06,r*.15,6,'rock',null,h+1);
+        if(!bridgeNear&&(c=='~'?h%3==0:h%11==0)){const ox=cx+((h>>4)%5-2)*.18,oz=cz+((h>>7)%5-2)*.18,r=.45+(h%3)*.15;const bm=new Mesh();boulder(bm,ox,oz,h,r*1.2);for(let i=1;i<bm.pos.length;i+=3)bm.pos[i]-=.55;M.add(bm);
           Fr.disc(ox,-.3,oz,r*1.35,8,'foam',[.95,.98,1]);}}
       continue;}
     if(c=='='||c=='-'){M.floor(X0,Z0,X1,Z1,.06,'planks');M.box(X0+.1,-1.2,Z0+.1,X0+.4,.06,Z0+.4,'wood');
@@ -97,20 +100,16 @@ function buildMesh(lv){
     if(!room)groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h);
     // things standing on the tile
     switch(c){
-      case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4;
-        for(const [dx,dy,a,b] of [[0,1,[X0,Z1],[X1,Z1]],[0,-1,[X1,Z0],[X0,Z0]],[1,0,[X1,Z1],[X1,Z0]],[-1,0,[X0,Z0],[X0,Z1]]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;
-          M.wall(a[0],a[1],b[0],b[1],nh,ht,'brick',null,dy==1?.88:dy==-1?.6:.74,(i,j)=>facadeCell(x,y,dx,dy,j,nh,kind));}
-        M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.25,Z1,{top:'stone',side:'stone'},null,{bottom:1});
-        facade(M,lv,x,y,ht,bh,kind,h);if(hash(k,x,y)%9==0){const ox=X0+.5+(h%3)*.3,oz=Z0+.5+((h>>3)%3)*.3;M.box(ox,ht,oz,ox+.55,ht+1.3,oz+.45,'brick');M.box(ox-.06,ht+1.3,oz-.06,ox+.61,ht+1.42,oz+.51,'stone');}
+      case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4,look=wallLook(k,lv);
+        for(const [dx,dy,a,b] of [[0,1,[X0,Z1],[X1,Z1]],[0,-1,[X1,Z0],[X0,Z0]],[1,0,[X1,Z1],[X1,Z0]],[-1,0,[X0,Z0],[X0,Z1]]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;M.wall(a[0],a[1],b[0],b[1],nh,ht,look[0],look[1]);}
+        M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});
+        facade(M,lv,x,y,ht,bh,kind,h,look);if(hash(k,x,y)%9==0){const ox=X0+.5+(h%3)*.3,oz=Z0+.5+((h>>3)%3)*.3;M.box(ox,ht,oz,ox+.55,ht+1.5,oz+.45,'brick');M.box(ox-.06,ht+1.5,oz-.06,ox+.61,ht+1.6,oz+.51,'granite');}
         break;}
       case'X':case'D':{if(lmAt(lv,x,y))break;const ht=bh(x,y);M.box(X0,0,Z0,X1,ht,Z1,{top:'roof',side:room?'qwall':'stone'},null,{bottom:1},true);break;}
       case'W':{const edge=x==0||y==0||x==lv.w-1||y==lv.h-1,wh=y==lv.h-1?.8:edge?(lit?3.4:4):2.2;M.box(X0,0,Z0,X1,wh,Z1,{top:wh<1||!edge?wlCell:'black',side:wlCell},wlC,{bottom:1},wh>1);
         if(lit&&edge&&wh>1)M.box(X0-.01,wh-.2,Z0-.01,X1+.01,wh,Z1+.01,'white',[wlC[0]*.8,wlC[1]*.8,wlC[2]*.8],{bottom:1});break;}
-      case'T':{const r=.95+(h%5)*.08,kind=h%5;
-        M.swayV=0;if(kind<2){M.tube([cx,0,cz],[cx,1.4,cz],.2,.15,6,'bark');M.swayV=.06;M.cone(cx,.9,cz,r*1.25,2.0,r*.5,7,'leaves',null,h);M.cone(cx,1.7,cz,r*1.05,2.9,r*.3,7,'leaves',null,h+1);M.cone(cx,2.6,cz,r*.75,4.1,0,7,'leaves',null,h+2);}
-        else{M.tube([cx,0,cz],[cx,1.9,cz],.2,.13,6,'bark');M.tube([cx,1.3,cz],[cx+.5,2.2,cz+.2],.09,.05,5,'bark');M.tube([cx,1.4,cz],[cx-.45,2.3,cz-.25],.09,.05,5,'bark');
-          const lc=kind==4?'leaves2':'leaves';M.swayV=.08;M.sphere(cx,2.5,cz,r*.95,8,5,lc,null,.85);M.sphere(cx+.55,2.25,cz+.2,r*.62,7,4,lc,null,.85);M.sphere(cx-.5,2.35,cz-.25,r*.66,7,4,lc,null,.85);M.sphere(cx+.1,3.05,cz-.1,r*.55,7,4,lc,null,.9);}M.swayV=0;break;}
-      case'r':{const s=.55+(h%4)*.12;M.cone(cx,0,cz,s*1.4,s*.9,s*.7,5,'rock',null,h);M.cone(cx,s*.9,cz,s*.7,s*1.2,0,5,'rock',null,h);break;}
+      case'T':{const kind=h%5;if(kind<2)conifer(M,cx+((h>>3)%5-2)*.08,cz+((h>>6)%5-2)*.08,h,.95+(h>>9)%4*.06);else deciduous(M,cx,cz,h,.9+(h>>9)%4*.07);break;}
+      case'r':{const sz=.55+(h%4)*.14;boulder(M,cx,cz,h,sz);break;}
       case'R':M.box(X0,0,Z0,X1,1,Z1,{top:'stonewall',side:'stone'},null,{bottom:1});break;
       case'f':{const n=(dx,dy)=>src(x+dx,y+dy)=='f',ew=n(1,0)||n(-1,0),ns=n(0,1)||n(0,-1);
         const run=(ax0,az0,ax1,az1)=>{M.box(Math.min(ax0,ax1)-.04,1.05,Math.min(az0,az1)-.04,Math.max(ax0,ax1)+.04,1.13,Math.max(az0,az1)+.04,'black');M.box(Math.min(ax0,ax1)-.04,.18,Math.min(az0,az1)-.04,Math.max(ax0,ax1)+.04,.25,Math.max(az0,az1)+.04,'black');
@@ -129,9 +128,9 @@ function buildMesh(lv){
       case'x':M.box(cx-.3,0,cz-.15,cx+.3,.9,cz+.15,'stone');break;
       case'E':M.box(X0,-.02,Z0,X1,.02,Z1,'steps');break;
       case'U':M.box(X0,0,Z0,X1,2.4,Z1,{top:'concrete',side:'concrete'},null,{bottom:1},true);break;
-      case'e':if(comp[x+','+y]!=null){const ht=bh(x,y);for(const [dx,dy,a,b] of [[0,1,[X0,Z1],[X1,Z1]],[0,-1,[X1,Z0],[X0,Z0]],[1,0,[X1,Z1],[X1,Z0]],[-1,0,[X0,Z0],[X0,Z1]]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;M.wall(a[0],a[1],b[0],b[1],nh,ht,'brick',null,.86,(i,j)=>j==0&&nh==0?'mural':'brickwin');}M.floor(X0,Z0,X1,Z1,ht,'roof');}
+      case'e':if(comp[x+','+y]!=null){const ht=bh(x,y);for(const [dx,dy,a,b] of [[0,1,[X0,Z1],[X1,Z1]],[0,-1,[X1,Z0],[X0,Z0]],[1,0,[X1,Z1],[X1,Z0]],[-1,0,[X0,Z0],[X0,Z1]]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;M.wall(a[0],a[1],b[0],b[1],nh,ht,'brick',null,.86,(i,j)=>j==0&&nh==0?'mural':'brick');}M.floor(X0,Z0,X1,Z1,ht,'roof');}
         else M.box(X0,0,Z0,X1,2.4,Z1,{top:'concrete',side:'mural'},null,{bottom:1});break;
-      case't':M.box(cx-.4,0,cz-.4,cx+.4,.55,cz+.4,{top:'dirt',side:'stone'});M.tube([cx,.5,cz],[cx,1.5,cz],.08,.06,5,'bark');M.swayV=.05;M.sphere(cx,1.9,cz,.6,7,4,'leaves',null,.9);M.swayV=0;break;
+      case't':M.box(cx-.45,0,cz-.45,cx+.45,.12,cz+.45,{top:'mulch',side:'granite'});deciduous(M,cx,cz,h,.5,.1);break;
       case'q':M.box(cx-.25,0,cz-.2,cx+.25,1,cz+.2,{top:'white',side:'white',south:'glass'},rgb('#d83030'));break;
       case'u':M.box(cx-.45,0,cz-.45,cx+.45,.6,cz+.45,{top:'dirt',side:'wood'});for(let k=0;k<4;k++)tuftAt(M,cx-.2+(k%2)*.4,cz-.2+(k>>1)*.4,.45,'bloom',h+k);break;
       case'G':M.box(cx-.5,0,cz-.5,cx+.5,.6,cz+.5,'stone');M.box(cx-.3,.6,cz-.3,cx+.3,3.2,cz+.3,{top:'stone',side:'marble'},[.85,.85,.85]);M.cone(cx,3.2,cz,.42,3.8,0,4,'marble',[.85,.85,.85],.785);break;
@@ -159,25 +158,34 @@ function buildMesh(lv){
   return{main:M,water:Wm,foam:Fm,froth:Fr};}
 function tuftAt(M,x,z,s,cell,yaw){const c=Math.cos(yaw)*s,n=Math.sin(yaw)*s;M.swayV=.035;M.quad([x-c,0,z-n],[x+c,0,z+n],[x+c,s*.9,z+n],[x-c,s*.9,z-n],cell);M.quad([x+n,0,z-c],[x-n,0,z+c],[x-n,s*.9,z+c],[x+n,s*.9,z-c],cell);M.swayV=0;}
 function groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h){
-  if(c=='.'&&h%3==0)for(let k=0;k<1+h%2;k++){const q=hash(x,y,k+40);tuftAt(M,X0+.3+(q%14)/10,Z0+.3+((q>>4)%14)/10,.32+(q%3)*.06,'tuft',q);}
-  if(c==',')for(let k=0;k<3;k++){const q=hash(x,y,k+60);tuftAt(M,X0+.3+(q%14)/10,Z0+.3+((q>>4)%14)/10,.3+(q%3)*.05,'bloom',q);}
-  if(c=='.'&&h%3==1){const pth=[[0,-1],[0,1],[-1,0],[1,0]].find(([dx,dy])=>'ps'.includes(src(x+dx,y+dy)||'#'));if(pth){const ox=cx+pth[0]*.45,oz=cz+pth[1]*.45,r=.85;M.quad([ox-r,.012,oz+r],[ox+r,.012,oz+r],[ox+r,.012,oz-r],[ox-r,.012,oz-r],'worn');}}
+  if(c==',')flowerbed(M,X0,Z0,X1,Z1,h);
+  if(false){const pth=[[0,-1],[0,1],[-1,0],[1,0]].find(([dx,dy])=>'ps'.includes(src(x+dx,y+dy)||'#'));if(pth){const ox=cx+pth[0]*.45,oz=cz+pth[1]*.45,r=.85;M.quad([ox-r,.012,oz+r],[ox+r,.012,oz+r],[ox+r,.012,oz-r],[ox-r,.012,oz-r],'worn');}}
   if(c=='s')for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]){const n=src(x+dx,y+dy);if(n!='p'&&n!='K')continue;const w=.16,cr=[.86,.84,.8];
-    const q=dy==-1?[X0,Z0,X1,Z0+w]:dy==1?[X0,Z1-w,X1,Z1]:dx==-1?[X0,Z0,X0+w,Z1]:[X1-w,Z0,X1,Z1];M.box(q[0],0,q[1],q[2],.14,q[3],'stone',cr,{bottom:1});
+    const q=dy==-1?[X0,Z0,X1,Z0+w]:dy==1?[X0,Z1-w,X1,Z1]:dx==-1?[X0,Z0,X0+w,Z1]:[X1-w,Z0,X1,Z1];M.box(q[0],0,q[1],q[2],.15,q[3],'curb',null,{bottom:1});
     const g=dy==-1?[X0,Z0-.28,X1,Z0]:dy==1?[X0,Z1,X1,Z1+.28]:dx==-1?[X0-.28,Z0,X0,Z1]:[X1,Z0,X1+.28,Z1];if(n=='p')M.floor(g[0],g[1],g[2],g[3],.008,'cobble',[.55,.53,.56]);}}
-function facadeCell(x,y,dx,dy,j,nh,kind){if(j==0&&nh==0){if(kind==0&&dy==1)return'storefront';if(hash(x,y,dx+3*dy+7)%3==0)return'door';}return hash(x+j,y,dx+dy*5+j)%9==0?'brickwin2':'brickwin';}
-// window sills and lintels, cornices, awnings, stoops and iron balconies on the outside walls of a building tile
-function facade(M,lv,x,y,ht,bh,kind,h){const X0=x*TS,Z0=y*TS,st=[.82,.78,.7],cr=[.88,.85,.78];
+const FLOOR_H=3.3;
+// each building gets its own masonry: red, dark or tawny brick, or painted stucco
+function wallLook(k,lv){const v=hash(k,lv.d.ax*13+lv.d.ay,17)%7;
+  return[[ 'brick',[1,1,1]],['brick',[.82,.76,.74]],['brick',[1.04,.9,.8]],['brick',[.9,.84,.86]],['plaster',[.95,.9,.78]],['plaster',[.78,.8,.78]],['brick',[.96,.94,.9]]][v];}
+function facadeCell(x,y,dx,dy,f,nh,kind){if(f==0&&nh==0){if(kind==0&&dy==1)return'storefront';if(hash(x,y,dx+3*dy+7)%3==0)return'door';}return hash(x+f,y,dx+dy*5+f)%5==0?'panelit':'pane';}
+// real window units, doors with stoops, shop fronts, belt courses and cornices on the outside walls of a building tile
+function facade(M,lv,x,y,ht,bh,kind,h,look){const X0=x*TS,Z0=y*TS,trim=kind==2?[.18,.24,.2]:[.93,.92,.88],stone=[.92,.9,.86],k=hash(x,y,5);
+  const doorCol=[[.16,.22,.18],[.08,.08,.09],[.42,.12,.1],[.15,.2,.32],[.35,.25,.16]][k%5];
   for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;
-    // a box on this face: u runs along the wall (0..TS), d sticks out from it
-    const fb=(u0,u1,y0,y1,d0,d1,cells,col)=>{let ax,az,bx,bz;if(dy){const zf=dy>0?Z0+TS:Z0;ax=X0+u0;bx=X0+u1;az=zf+dy*d0;bz=zf+dy*d1;}else{const xf=dx>0?X0+TS:X0;az=Z0+u0;bz=Z0+u1;ax=xf+dx*d0;bx=xf+dx*d1;}
+    const fb=(u0,u1,y0,y1,d0,d1,cells,col)=>{let ax,az,bx,bz;if(dy){const zf=dy>0?Z0+TS:Z0;ax=X0+(dy>0?u0:TS-u0);bx=X0+(dy>0?u1:TS-u1);az=zf+dy*d0;bz=zf+dy*d1;}else{const xf=dx>0?X0+TS:X0;az=Z0+(dx>0?TS-u0:u0);bz=Z0+(dx>0?TS-u1:u1);ax=xf+dx*d0;bx=xf+dx*d1;}
       M.box(Math.min(ax,bx),y0,Math.min(az,bz),Math.max(ax,bx),y1,Math.max(az,bz),cells,col);};
-    fb(-.05,TS+.05,ht-.32,ht,0,.32,'stone',cr);for(let k=0;k<4;k++)fb(.15+k*.5,.35+k*.5,ht-.52,ht-.32,0,.16,'stone',cr);
-    for(let j=Math.round(nh/TS);j<Math.round(ht/TS);j++){const yb=j*TS,c=facadeCell(x,y,dx,dy,j,nh,kind);
-      if(c=='brickwin'||c=='brickwin2'){fb(.42,1.58,yb+.3,yb+.38,0,.14,'stone',st);fb(.45,1.55,yb+1.62,yb+1.74,0,.09,'stone',st);}
-      if(c=='storefront'){const aw=hash(x,y,1)%2?'awning':'awning2';if(dy){const zf=dy>0?Z0+TS:Z0,o=.9*dy;M.quad([X0,2.05,zf],[X0+TS,2.05,zf],[X0+TS,1.62,zf+o],[X0,1.62,zf+o],aw);M.quad([X0,1.62,zf+o],[X0+TS,1.62,zf+o],[X0+TS,1.42,zf+o],[X0,1.42,zf+o],aw);}}
-      if(c=='door'&&nh==0){fb(.35,1.65,0,.17,0,.62,'stone',st);fb(.35,1.65,.17,.34,0,.34,'stone',st);fb(.38,1.62,2.0,2.1,0,.12,'stone',cr);}
-      if(kind==1&&j==1&&nh==0&&dy==1){fb(0,TS,yb,yb+.08,0,.6,'stone',[.3,.3,.34]);fb(0,TS,yb+.08,yb+.95,.56,.6,{top:'black',side:'fence'});fb(-.02,.04,yb+.08,yb+.95,0,.6,{top:'black',side:'fence'});fb(TS-.04,TS+.02,yb+.08,yb+.95,0,.6,{top:'black',side:'fence'});}}}}
+    const win=(y0,y1,cell,shut)=>{const u0=.5,u1=1.5;fb(u0,u1,y0,y1,.004,.012,cell);
+      fb(u0-.07,u0,y0-.04,y1+.04,0,.07,'white',trim);fb(u1,u1+.07,y0-.04,y1+.04,0,.07,'white',trim);fb(u0,u1,(y0+y1)/2-.025,(y0+y1)/2+.025,0,.045,'white',trim);fb(.985,1.015,y0,y1,0,.04,'white',trim);
+      fb(u0-.12,u1+.12,y0-.1,y0-.02,0,.16,'granite',stone);fb(u0-.1,u1+.1,y1+.04,y1+.22,0,.08,'granite',stone);
+      if(shut){fb(u0-.42,u0-.1,y0,y1,.02,.07,'planks',[.2,.3,.22]);fb(u1+.1,u1+.42,y0,y1,.02,.07,'planks',[.2,.3,.22]);}};
+    const floors=Math.round(ht/FLOOR_H);fb(-.06,TS+.06,ht-.55,ht-.1,0,.32,'white',stone);for(let q=0;q<5;q++)fb(.1+q*.4,.24+q*.4,ht-.72,ht-.55,0,.14,'white',stone);
+    for(let f=Math.round(nh/FLOOR_H);f<floors;f++){const yb=f*FLOOR_H,c=facadeCell(x,y,dx,dy,f,nh,kind);if(f>0)fb(-.02,TS+.02,yb-.06,yb+.06,0,.05,'granite',stone);
+      if(c=='storefront'){fb(.15,1.85,.45,2.7,.004,.012,'pane');fb(.08,.15,0,2.85,0,.08,'white',doorCol);fb(1.85,1.92,0,2.85,0,.08,'white',doorCol);fb(.08,1.92,0,.45,0,.08,'white',doorCol);fb(.08,1.92,2.7,2.85,0,.08,'white',doorCol);
+        fb(.05,1.95,2.85,3.25,0,.12,'sign2',[.9,.88,.82]);const ac=rgb(['#6a2a2a','#2a4a3a','#2a3a5a','#5a4a2a'][k%4]);if(dy){const zf=dy>0?Z0+TS:Z0,o=1.1*dy;M.quad([X0,3.0,zf],[X0+TS,3.0,zf],[X0+TS,2.55,zf+o],[X0,2.55,zf+o],'cloth',ac);M.quad([X0,2.55,zf+o],[X0+TS,2.55,zf+o],[X0+TS,2.35,zf+o],[X0,2.35,zf+o],'cloth',ac);}}
+      else if(c=='door'){fb(.45,1.55,.0,.18,0,.75,'granite',stone);fb(.45,1.55,.18,.36,0,.45,'granite',stone);fb(.62,1.38,.36,2.55,.004,.03,'planks',doorCol);fb(.66,1.34,2.6,2.95,.004,.012,'pane');
+        fb(.55,.62,.36,3.0,0,.1,'white',trim);fb(1.38,1.45,.36,3.0,0,.1,'white',trim);fb(.52,1.48,2.55,2.6,0,.1,'white',trim);fb(.5,1.5,2.95,3.12,0,.14,'white',trim);fb(1.22,1.27,1.4,1.47,.03,.07,'brass');}
+      else win(yb+(f==0?1.0:.95),yb+(f==0?2.75:2.7),c,kind==3);
+      if(kind==1&&f==1&&nh==0&&dy==1){fb(0,TS,yb,yb+.1,0,.75,'granite',[.4,.4,.42]);fb(0,TS,yb+1.0,yb+1.05,.7,.75,'black',[.08,.08,.08]);for(let q=0;q<9;q++)fb(q*.24,q*.24+.025,yb+.1,yb+1.0,.71,.74,'black',[.08,.08,.08]);}}}}
 function faceDir(lv,x,y){for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const c=lv.d.rows[y+dy]&&lv.d.rows[y+dy][x+dx];if(c&&WALK.includes(c))return[dx,dy];}return[0,1];}
 function statue(M,x,y,z){const s=[.62,.62,.66];M.box(x-.25,y,z-.15,x-.05,y+.9,z+.15,'stone',s);M.box(x+.05,y,z-.15,x+.25,y+.9,z+.15,'stone',s);M.box(x-.32,y+.9,z-.2,x+.32,y+1.7,z+.2,'stone',s);
   M.box(x-.45,y+.95,z-.12,x-.32,y+1.6,z+.12,'stone',s);M.box(x+.32,y+1.3,z-.12,x+.45,y+2.1,z+.12,'stone',s);M.box(x-.18,y+1.7,z-.18,x+.18,y+2.1,z+.18,'stone',s);}
@@ -233,3 +241,19 @@ function landmark(M,lv,L){const X0=L.x*TS,Z0=L.y*TS,X1=X0+L.w*TS,Z1=Z0+L.h*TS,cx
     case'stage':{M.box(X0,0,Z0,X1,1.2,Z1,'wood');for(const x of [X0+.2,X1-.4])M.box(x,1.2,Z0+.2,x+.2,5,Z0+.4,'black');M.box(X0,5,Z0,X1,5.4,Z0+1.4,'black');M.box(X0+.3,1.2,Z0+.1,X1-.3,5,Z0+.3,'white',[.15,.1,.25]);break;}
     default:M.box(X0,0,Z0,X1,4,Z1,{top:'roof',side:'stone'},null,{bottom:1},true);
   }}
+
+// a mid-size sedan, about 4.5 m long, lofted from cross sections along its length (x forward)
+function sedan(col,seed){const M=new Mesh(),c=cloth(col,.25),k=c;
+  const loft=(S,cellTop,cellSide,colr,cap)=>{for(let i=0;i<S.length-1;i++){const [x0,w0,b0,t0]=S[i],[x1,w1,b1,t1]=S[i+1];
+      M.quad([x0,t0,w0],[x1,t1,w1],[x1,t1,-w1],[x0,t0,-w0],typeof cellTop=='function'?cellTop(i):cellTop,colr);
+      M.quad([x0,b0,w0],[x1,b1,w1],[x1,t1,w1],[x0,t0,w0],cellSide,colr);M.quad([x1,b1,-w1],[x0,b0,-w0],[x0,t0,-w0],[x1,t1,-w1],cellSide,colr);M.quad([x0,b0,-w0],[x1,b1,-w1],[x1,b1,w1],[x0,b0,w0],'black',[.05,.05,.05]);}
+    if(cap)for(const S0 of [S[0],S[S.length-1]]){const [x,w,b,t]=S0;M.quad([x,b,w],[x,b,-w],[x,t,-w],[x,t,w],cap,colr);}};
+  loft([[-2.28,.76,.4,.78],[-2.2,.86,.32,.9],[-1.7,.9,.3,.98],[-.9,.91,.28,1.0],[1.1,.91,.28,.98],[1.75,.89,.3,.9],[2.18,.82,.34,.8],[2.27,.74,.4,.72]],'paint','paint',k,'paint');
+  loft([[1.05,.82,.97,1.0],[.25,.74,.97,1.42],[-.85,.74,.97,1.45],[-1.5,.8,.97,1.02]],i=>i==1?'paint':'pane','pane',[1,1,1]);
+  M.box(-.9,1.43,-.74,.25,1.45,.74,'paint',k);M.box(2.24,.45,-.6,2.29,.68,.6,'grille',[.5,.5,.5]);
+  for(const s of [-1,1]){M.box(2.2,.66,s*.5,2.28,.76,s*.78,'chrome');M.box(-2.29,.6,s*.48,-2.24,.72,s*.76,'white',[.7,.05,.05]);M.box(.3,.82,s*.92,.4,.86,s*.94,'chrome');
+    M.box(-1.9,.5,s*.91,1.95,.54,s*.915,'chrome');}
+  M.box(-2.3,.28,-.86,-2.18,.42,.86,'black',[.08,.08,.09]);M.box(2.2,.28,-.86,2.32,.42,.86,'black',[.08,.08,.09]);
+  for(const [u,v] of [[-1.38,1],[1.38,1],[-1.38,-1],[1.38,-1]]){M.tube([u,.33,v*.72],[u,.33,v*.93],.33,.33,14,'tire',null,false);M.disc(u,.33,0,.01,4,'white');const r=new Mesh();r.disc(0,0,0,.2,12,'chrome');r.disc(0,-.005,0,.32,14,'tire');
+    for(let i=0;i<r.count;i++){const a=r.pos[i*3],b=r.pos[i*3+1],cz=r.pos[i*3+2];r.pos[i*3]=u+a;r.pos[i*3+1]=.33+cz;r.pos[i*3+2]=v*.935+b*v;const n1=r.nrm[i*3+1];r.nrm[i*3]=0;r.nrm[i*3+1]=0;r.nrm[i*3+2]=v*Math.abs(n1);}M.add(r);}
+  return M;}

@@ -48,7 +48,7 @@ precision highp float;precision highp sampler2DArray;precision highp sampler2DSh
 in vec3 vW;in vec3 vN;in vec2 vUV;in vec3 vCol;in vec4 vL;
 uniform sampler2DArray uAlb,uNrm;uniform sampler2D uTex2;uniform sampler2DShadow uShadow;
 uniform int uMode;uniform vec3 uTint,uGndCol,uFogCol,uCam;uniform float uAlpha,uFlash,uAdd,uFogD,uShadowOn,uAmb,uIndoor;uniform vec2 uOff;
-uniform vec4 uL[16];uniform vec3 uLC[16];uniform int uNL;uniform float uMetal[80];
+uniform vec4 uL[16];uniform vec3 uLC[16];uniform int uNL;uniform float uMetal[96];
 ${SKYFN}
 out vec4 o;
 const float PI=3.14159265;
@@ -89,10 +89,10 @@ void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);
   c+=emis*uNight*lin(vec3(1.,.72,.38))*2.2*(1.-uIndoor*.5);
   c=fog(c);c=mix(c,vec3(1.),uFlash);o=vec4(c,uAlpha);}`;
 const SVS=`#version 300 es
-precision highp float;in vec3 aPos;in float aSway;uniform mat4 uPV,uModel;uniform float uTime,uWave;
-void main(){vec4 wp=uModel*vec4(aPos,1.);wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));gl_Position=uPV*wp;}`;
+precision highp float;in vec3 aPos;in vec2 aUV;in float aSway;uniform mat4 uPV,uModel;uniform float uTime,uWave;out vec2 vUV;
+void main(){vec4 wp=uModel*vec4(aPos,1.);wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));vUV=aUV;gl_Position=uPV*wp;}`;
 const SFS=`#version 300 es
-precision mediump float;void main(){}`;
+precision mediump float;precision mediump sampler2DArray;in vec2 vUV;uniform sampler2DArray uAlb;void main(){float l=floor(vUV.x);if(texture(uAlb,vec3(vUV.x-l,vUV.y,l)).a<.5)discard;}`;
 const QVS=`#version 300 es
 in vec2 aP;out vec2 vU;void main(){vU=aP*.5+.5;gl_Position=vec4(aP,0.,1.);}`;
 const SKYFS=`#version 300 es
@@ -116,7 +116,7 @@ void main(){vec3 c=texture(uTex,vU).rgb;
     float ln=lu(n),ls=lu(s),le=lu(e),lw=lu(w),lc=lu(c),mn=min(lc,min(min(ln,ls),min(le,lw))),mx=max(lc,max(max(ln,ls),max(le,lw)));
     if(mx-mn>max(.04,mx*.12)){vec2 dir=vec2(-((ln)-(ls)),(le)-(lw));dir=dir/(min(abs(dir.x),abs(dir.y))+.05)*uPx;dir=clamp(dir,-uPx*3.,uPx*3.);
       c=(texture(uTex,vU+dir*.17).rgb+texture(uTex,vU-dir*.17).rgb+texture(uTex,vU+dir*.5).rgb+texture(uTex,vU-dir*.5).rgb)*.25;}}
-  c+=texture(uBloom,vU).rgb*uBloomK;vec3 r=tone(c);vec2 q=vU-.5;r*=1.-dot(q,q)*.35;o=vec4(mix(r,vec3(0.),uFade),1.);}`;
+  c+=texture(uBloom,vU).rgb*uBloomK;vec3 r=tone(c);float L=dot(r,vec3(.2126,.7152,.0722));r=mix(vec3(L),r,1.06);r=r*r*(3.-2.*r)*.18+r*.82;r*=mix(vec3(.98,1.,1.03),vec3(1.03,1.,.96),smoothstep(.2,.8,L));vec2 q=vU-.5;r*=1.-dot(q,q)*.35;o=vec4(mix(r,vec3(0.),uFade),1.);}`;
 
 /* ---------- set-up ---------- */
 function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
@@ -140,7 +140,7 @@ function initGL(canvas){gl=canvas.getContext('webgl2',{antialias:false,alpha:fal
   for(const [k,f] of [['down',DOWNFS],['up',UPFS],['fin',FINFS]]){const p=mkProg(QVS,f);postProgs[k]={p,u:uniforms(p,['uTex','uBloom','uPx','uThresh','uFade','uBloomK','uExpo','uFxaa'])};}
   const L=makeLayers(Q().tex);atlasTex=texArray(L.alb,L.S,L.N);nrmTex=texArray(L.nrm,L.S,L.N);waterTex=texFrom(makeWaterTex(),true);foamTex=texFrom(makeFoamTex(),true);
   gl.useProgram(prog);gl.uniform1i(U.uAlb,0);gl.uniform1i(U.uNrm,1);gl.uniform1i(U.uTex2,2);gl.uniform1i(U.uShadow,3);
-  gl.uniform1fv(U.uMetal,new Float32Array(80).map((_,i)=>CELLS[i]?matOf(CELLS[i])[1]:0));
+  gl.uniform1fv(U.uMetal,new Float32Array(96).map((_,i)=>CELLS[i]?matOf(CELLS[i])[1]:0));
   quadVAO=gl.createVertexArray();gl.bindVertexArray(quadVAO);const qb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,qb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,1,1,-1,-1,1,1,-1,1]),gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.bindVertexArray(null);
   dynBuf=mkVAO(null,true);resizeTargets(true);return true;}
@@ -193,11 +193,11 @@ function sunUniforms(u){gl.uniform3fv(u.uSunDir,SUN.dir);gl.uniform3fv(u.uSunCol
 function updateSun(indoor){const h=typeof hour=='function'&&st?hour():12,dk=typeof dark=='function'&&st&&!indoor?dark():0,wx=typeof wxNow=='function'&&lv?wxNow():0,wet=wx&&st&&st.wx!='clear'?wx:0;
   const day=h>=5.5&&h<19.5,t=day?(h-5.5)/14:((h-19.5+24)%24)/10,elev=Math.max(.12,Math.sin(t*Math.PI))*(day?1:.8),az=(day?-1:1)*(t-.5)*2.6+.6;
   const dir=[Math.cos(az)*Math.cos(Math.asin(elev)),elev,Math.sin(az)*Math.cos(Math.asin(elev))],l=Math.hypot(...dir);SUN.dir=dir.map(v=>v/l);
-  const low=1-Math.min(1,elev*2.2),cl=Math.min(1,wet*1.2);let col=day?[3.2,2.95,2.6].map((v,i)=>v*(1-low*[.1,.4,.7][i])):[.25,.3,.45];col=col.map(v=>v*(1-cl*.85));
-  const skyD=[.25,.45,.85],skyN=[.01,.015,.04],horD=[.62,.72,.85],horS=[.95,.55,.35],horN=[.03,.04,.08],gray=[.45,.48,.52];
+  const low=1-Math.min(1,elev*2.2),cl=Math.min(1,wet*1.2);let col=day?[3.2,2.95,2.6].map((v,i)=>v*(1-low*[.1,.4,.7][i])):[.42,.5,.75];col=col.map(v=>v*(1-cl*.85));
+  const skyD=[.25,.45,.85],skyN=[.025,.035,.075],horD=[.62,.72,.85],horS=[.95,.55,.35],horN=[.03,.04,.08],gray=[.45,.48,.52];
   let sky=day?skyD.map((v,i)=>v*(1-low*.5)+[.2,.15,.25][i]*low*.5):skyN,hor=day?horD.map((v,i)=>v*(1-low)+horS[i]*low):horN;
   if(cl){sky=sky.map((v,i)=>v*(1-cl*.7)+gray[i]*(day?1:.08)*cl*.7);hor=hor.map((v,i)=>v*(1-cl*.7)+gray[i]*(day?1.1:.1)*cl*.7);}
-  SUN.col=indoor?[0,0,0]:col;SUN.sky=indoor?[1.5,1.32,1.12]:sky.map(v=>v*.9);SUN.hor=indoor?[.5,.44,.38]:hor;SUN.gnd=indoor?[.55,.45,.36]:[.22,.2,.16].map(v=>v*(day?1:.08));SUN.night=indoor?0:Math.max(dk,day?0:1);SUN.cloud=Math.min(1,.35+cl);SUN.indoor=indoor?1:0;SUN.up=day;}
+  SUN.col=indoor?[0,0,0]:col;SUN.sky=indoor?[1.5,1.32,1.12]:sky.map(v=>v*.9);SUN.hor=indoor?[.5,.44,.38]:hor;SUN.gnd=indoor?[.55,.45,.36]:[.22,.2,.16].map(v=>v*(day?1:.15));SUN.night=indoor?0:Math.max(dk,day?0:1);SUN.cloud=Math.min(1,.35+cl);SUN.indoor=indoor?1:0;SUN.up=day;}
 function lightVP(cx,cz){const R=QUAL.lvl==2?34:28,d=SUN.dir,ss=Q().shadow||1024,texel=2*R/ss;
   const up=Math.abs(d[1])>.99?[1,0,0]:[0,1,0];let V=M4.look([cx+d[0]*60,d[1]*60,cz+d[2]*60],[cx,0,cz],up);
   // keep the shadow from shimmering as you walk: snap the light's view to whole shadow texels
@@ -222,7 +222,7 @@ function worldPass(sceneFn,shadowFocus){
   // shadows first, from the sun's side
   const useSh=Q().shadow&&shadowFocus&&SUN.col[0]+SUN.col[1]+SUN.col[2]>.05;
   if(useSh){LVP=lightVP(shadowFocus[0],shadowFocus[1]);gl.bindFramebuffer(gl.FRAMEBUFFER,shadowFB);gl.viewport(0,0,Q().shadow,Q().shadow);gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);gl.useProgram(sprog);const saveU=U;U=US;PASS='shadow';gl.uniformMatrix4fv(US.uPV,false,LVP);gl.uniform1f(US.uTime,frame/60);gl.uniform1f(US.uWave,0);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1.5,2);
+    gl.enable(gl.DEPTH_TEST);gl.useProgram(sprog);const saveU=U;U=US;PASS='shadow';gl.uniformMatrix4fv(US.uPV,false,LVP);gl.uniform1i(US.uAlb,0);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D_ARRAY,atlasTex);gl.uniform1f(US.uTime,frame/60);gl.uniform1f(US.uWave,0);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1.5,2);
     try{sceneFn(true);}finally{gl.disable(gl.POLYGON_OFFSET_FILL);PASS='main';U=saveU;}}
   // then the scene into the HDR buffer
   gl.bindFramebuffer(gl.FRAMEBUFFER,hdr.msFB||hdr.fb);gl.viewport(0,0,hdr.w,hdr.h);gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -238,7 +238,7 @@ function post(fade){gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.bindVertex
     gl.disable(gl.BLEND);}
   const F=postProgs.fin;gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,gl.canvas.width,gl.canvas.height);gl.useProgram(F.p);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,hdr.tex);gl.uniform1i(F.u.uTex,0);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,B?bloomT[0].t:hdr.tex);gl.uniform1i(F.u.uBloom,1);gl.activeTexture(gl.TEXTURE0);
-  gl.uniform1f(F.u.uBloomK,B?.09:0);gl.uniform1f(F.u.uExpo,.9);gl.uniform1f(F.u.uFade,fade||0);gl.uniform1f(F.u.uFxaa,hdr.msFB?0:1);gl.uniform2f(F.u.uPx,1/hdr.w,1/hdr.h);
+  gl.uniform1f(F.u.uBloomK,B?.055:0);gl.uniform1f(F.u.uExpo,.9);gl.uniform1f(F.u.uFade,fade||0);gl.uniform1f(F.u.uFxaa,hdr.msFB?0:1);gl.uniform2f(F.u.uPx,1/hdr.w,1/hdr.h);
   gl.drawArrays(gl.TRIANGLES,0,6);gl.bindVertexArray(null);}
 let lastT=0;
 function render(fade){const now=performance.now();if(lastT)qualityTick(now-lastT);lastT=now;resizeTargets(false);
@@ -247,7 +247,7 @@ function render(fade){const now=performance.now();if(lastT)qualityTick(now-lastT
     const [eye,tg]=miniCam(mini);camPos=eye;PV=M4.mul(M4.persp(1.0,gl.canvas.width/gl.canvas.height,.3,160),M4.look(eye,tg,[0,1,0]));
     worldPass(sh=>{if(!sh){gl.uniformMatrix4fv(U.uPV,false,PV);}renderMini(sh);},indoor?null:[ (eye[0]+tg[0])/2,(eye[2]+tg[2])/2 ]);}
   else if(lv&&st&&cam){updateSun(!!lv.room);const env=envLook(),sx=shake>0?(Math.random()-.5)*shake*.03:0,sy=shake>0?(Math.random()-.5)*shake*.03:0;camPos=[cam.x+sx,cam.y+sy,cam.z];
-    PV=M4.mul(M4.persp(1.0,gl.canvas.width/gl.canvas.height,.25,200),M4.look(camPos,[cam.tx,cam.ty,cam.tz],[0,1,0]));
+    PV=M4.mul(M4.persp(.9,gl.canvas.width/gl.canvas.height,.2,220),M4.look(camPos,[cam.tx,cam.ty,cam.tz],[0,1,0]));
     worldPass(shp=>{if(!shp){setCommon(env.fogCol,env.fog,env.amb,lightsNow());if(flash>0)gl.uniform1f(U.uFlash,flash/12);}
       const S=sceneMeshes();drawVAO(S.main);gl.uniform1f(U.uWave,1);drawVAO(S.water,null,waterTex,{off:[frame*.0012,frame*.0007]});drawVAO(S.foam,null,foamTex,{off:[0,-frame*.012]});if(S.froth)drawVAO(S.froth);gl.uniform1f(U.uWave,0);
       if(!shp&&S.grass&&Q().grass&&typeof drawGrass=='function')drawGrass(S.grass);
@@ -262,7 +262,7 @@ function skirt(lv,b){const M=20,wy=b.water.count?b.water.pos[1]:-.3,cl=(v,n)=>Ma
     // rolling hills that start a few tiles out, continuous from tile to tile
     const Y=(vx,vz)=>{if(flat)return 0;const d=Math.max(-vx,-vz,vx-lv.w,vz-lv.h);return d<3?0:Math.min(6,(d-3)*.35)*(.6+.4*Math.sin(vx*.31)*Math.cos(vz*.27));};
     b.main.quad([X0,Y(x,z+1),Z0+TS],[X0+TS,Y(x+1,z+1),Z0+TS],[X0+TS,Y(x+1,z),Z0],[X0,Y(x,z),Z0],far>3&&cell!='sand'?'grass':cell);
-    if(far>2&&hash(x,z,9)%5==0&&!flat){const r=1+hash(x,z,2)%10/10,tx=X0+1,tz=Z0+1,y=Y(x+.5,z+.5);b.main.lathe(tx,y,tz,[[0,.2],[1.4*r,.18]],5,'bark');b.main.sphere(tx,y+2.3*r,tz,1.3*r,7,4,'leaves');}}}
+    if(far>1&&hash(x,z,9)%3==0&&!flat){const r=1+hash(x,z,2)%10/10,tx=X0+1,tz=Z0+1,y=Y(x+.5,z+.5);if(hash(x,z,4)%3==0)conifer(b.main,tx,tz,hash(x,z,7),r,y);else deciduous(b.main,tx,tz,hash(x,z,7),r,y);}}}
 /* ---------- contact shading: darken the ground where it meets walls, and the feet of walls ---------- */
 function bakeAO(lv,m){const tall=c=>c!=null&&'BXDWe'.includes(c),T=(x,z)=>tall(tileAt(lv,x,z));
   for(let i=0;i<m.count;i++){const x=m.pos[i*3],y=m.pos[i*3+1],z=m.pos[i*3+2],ny=m.nrm[i*3+1];let ao=1;
@@ -282,10 +282,10 @@ const GFS=`#version 300 es
 precision highp float;in vec3 vC;in vec3 vW;in float vH;uniform vec3 uSunCol,uSkyCol,uFogCol,uCam;uniform float uFogD,uAmb;out vec4 o;
 void main(){vec3 c=vC*vC*(uSunCol*.35+uSkyCol*uAmb*.5);float d=distance(vW,uCam);float f=1.-exp(-d*uFogD);o=vec4(mix(c,uFogCol,f),1.);}`;
 function buildGrass(lv){if(lv.room)return null;const inst=[];
-  for(let z=0;z<lv.h;z++)for(let x=0;x<lv.w;x++){const c=lv.d.rows[z][x];if(c!='.'&&c!=',')continue;const n=c==','?10:26;
-    for(let k=0;k<n;k++){const h=hash(x*7+k,z*13,91);inst.push((x+(h%1000)/1000)*TS,(z+((h>>10)%1000)/1000)*TS,((h>>4)%628)/100,.45+((h>>12)%60)/100,((h>>20)%100)/100);}}
+  for(let z=0;z<lv.h;z++)for(let x=0;x<lv.w;x++){const c=lv.d.rows[z][x];if(c!='.'&&c!=',')continue;const n=c==','?10:44;
+    for(let k=0;k<n;k++){const h=hash(x*7+k,z*13,91);inst.push((x+(h%1000)/1000)*TS,(z+((h>>10)%1000)/1000)*TS,((h>>4)%628)/100,.24+((h>>12)%30)/100,((h>>20)%100)/100);}}
   if(!inst.length)return null;if(!gprog){gprog=mkProg(GVS,GFS);GU=uniforms(gprog,['uPV','uTime','uCam','uFocus','uSunCol','uSkyCol','uFogCol','uFogD','uAmb']);
-    bladeBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);const w=.06;gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-w,0,0,w,0,0,-w*.7,.4,0, w,0,0,w*.7,.4,0,-w*.7,.4,0, -w*.7,.4,0,w*.7,.4,0,0,.8,0]),gl.STATIC_DRAW);}
+    bladeBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);const w=.032;gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-w,0,0,w,0,0,-w*.7,.4,0, w,0,0,w*.7,.4,0,-w*.7,.4,0, -w*.7,.4,0,w*.7,.4,0,0,.8,0]),gl.STATIC_DRAW);}
   const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,0,0);
   const ib=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,ib);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(inst),gl.STATIC_DRAW);
   gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,4,gl.FLOAT,false,20,0);gl.vertexAttribDivisor(1,1);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,1,gl.FLOAT,false,20,16);gl.vertexAttribDivisor(2,1);
