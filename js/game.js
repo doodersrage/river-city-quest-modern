@@ -454,7 +454,7 @@ function runQuiz(n){const read=Object.keys(st.lore);if(read.length<3){say(['Find
 
 /* ---------- the camera: trails behind you, swing it with the right stick, Q/E or a drag ---------- */
 const CAMD=5.8,CAMP=.36;
-function camUpdate(){if(!lv)return;const tx=p.x,ty=1.25,tz=p.z;
+function camUpdate(){if(!lv||typeof window!='undefined'&&window.__camLock)return;const tx=p.x,ty=1.25,tz=p.z;
   if(lv.room){cam.yaw+=ang(cam.yaw,inp.camX*.5)*.08;}
   else{if(Math.abs(inp.camX)>.05){cam.yaw-=inp.camX*.045;cam.manual=90;}else if(cam.manual>0)cam.manual--;
   if(cam.manual==0&&p.moving){const want=p.yaw+Math.PI;cam.yaw+=ang(cam.yaw,want)*.018;}}

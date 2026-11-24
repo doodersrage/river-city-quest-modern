@@ -54,7 +54,7 @@ out vec4 o;
 const float PI=3.14159265;
 vec3 lin(vec3 c){return pow(c,vec3(2.2));}
 vec3 perturb(vec3 N,vec3 p,vec2 uv,vec3 tn){vec3 dp1=dFdx(p),dp2=dFdy(p);vec2 du1=dFdx(uv),du2=dFdy(uv);vec3 a=cross(dp2,N),b=cross(N,dp1);vec3 T=a*du1.x+b*du2.x,B=a*du1.y+b*du2.y;
-  float inv=inversesqrt(max(1e-12,max(dot(T,T),dot(B,B))));return normalize(mat3(T*inv,-B*inv,N)*tn);}
+  float inv=inversesqrt(max(1e-12,max(dot(T,T),dot(B,B))));vec3 r=mat3(T*inv,-B*inv,N)*tn;return dot(r,r)>1e-8?normalize(r):N;}
 float shadowAt(vec3 N){if(uShadowOn<.5)return 1.;vec3 p=vL.xyz/vL.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;
   float b=.0015+.003*(1.-abs(dot(N,uSunDir)));vec2 t=1./vec2(textureSize(uShadow,0));float s=0.;
   for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)s+=texture(uShadow,vec3(p.xy+vec2(i,j)*t*1.2,p.z-b));return s/9.;}
@@ -78,7 +78,7 @@ void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);
   if(uAdd>.5){o=vec4(lin(t.rgb)*vCol*uTint*t.a*.7,1.);return;}
   if(t.a<.5)discard;
   vec3 alb=lin(t.rgb)*lin(vCol)*uTint;
-  vec3 N=normalize(vN);vec3 V=normalize(uCam-vW);if(dot(N,V)<0.)N=-N;
+  vec3 N=dot(vN,vN)>1e-8?normalize(vN):vec3(0,1,0);vec3 V=normalize(uCam-vW);if(dot(N,V)<0.)N=-N;
   float rough=.6,metal=0.,emis=0.;
   if(uMode!=3){vec4 nt=texture(uNrm,vec3(uv,layer));vec3 tn=vec3(nt.rg*2.-1.,0.);tn.z=sqrt(max(0.,1.-dot(tn.xy,tn.xy)));N=perturb(N,vW,uv,tn);rough=clamp(nt.b,.04,1.);metal=uMetal[int(layer)];emis=nt.a;}
   vec3 c=vec3(0.);
@@ -101,7 +101,7 @@ void main(){vec4 a=uInvPV*vec4(vU*2.-1.,1.,1.);vec3 d=normalize(a.xyz/a.w-uCam);
 const DOWNFS=`#version 300 es
 precision highp float;in vec2 vU;uniform sampler2D uTex;uniform vec2 uPx;uniform float uThresh;out vec4 o;
 void main(){vec3 c=(texture(uTex,vU+uPx*vec2(-1,-1)).rgb+texture(uTex,vU+uPx*vec2(1,-1)).rgb+texture(uTex,vU+uPx*vec2(-1,1)).rgb+texture(uTex,vU+uPx*vec2(1,1)).rgb)*.25;
-  if(uThresh>0.){float l=max(c.r,max(c.g,c.b));c*=max(0.,l-uThresh)/max(l,1e-4);}o=vec4(min(c,vec3(60.)),1.);}`;
+  if(uThresh>0.){float l=max(c.r,max(c.g,c.b));c*=max(0.,l-uThresh)/max(l,1e-4);}if(any(isnan(c)))c=vec3(0.);o=vec4(min(c,vec3(60.)),1.);}`;
 const UPFS=`#version 300 es
 precision highp float;in vec2 vU;uniform sampler2D uTex;uniform vec2 uPx;out vec4 o;
 void main(){vec3 c=texture(uTex,vU).rgb*4.;c+=texture(uTex,vU+uPx*vec2(1,0)).rgb*2.+texture(uTex,vU-uPx*vec2(1,0)).rgb*2.+texture(uTex,vU+uPx*vec2(0,1)).rgb*2.+texture(uTex,vU-uPx*vec2(0,1)).rgb*2.;
@@ -111,7 +111,7 @@ precision highp float;in vec2 vU;uniform sampler2D uTex,uBloom;uniform float uFa
 vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
 vec3 tone(vec3 c){return pow(aces(c*uExpo),vec3(1./2.2));}
 float lu(vec3 c){return dot(c,vec3(.299,.587,.114));}
-void main(){vec3 c=texture(uTex,vU).rgb;
+void main(){vec3 c=texture(uTex,vU).rgb;if(any(isnan(c))||any(isinf(c)))c=vec3(0.);
   if(uFxaa>.5){vec3 n=texture(uTex,vU+vec2(0,uPx.y)).rgb,s=texture(uTex,vU-vec2(0,uPx.y)).rgb,e=texture(uTex,vU+vec2(uPx.x,0)).rgb,w=texture(uTex,vU-vec2(uPx.x,0)).rgb;
     float ln=lu(n),ls=lu(s),le=lu(e),lw=lu(w),lc=lu(c),mn=min(lc,min(min(ln,ls),min(le,lw))),mx=max(lc,max(max(ln,ls),max(le,lw)));
     if(mx-mn>max(.04,mx*.12)){vec2 dir=vec2(-((ln)-(ls)),(le)-(lw));dir=dir/(min(abs(dir.x),abs(dir.y))+.05)*uPx;dir=clamp(dir,-uPx*3.,uPx*3.);
@@ -138,6 +138,7 @@ function initGL(canvas){gl=canvas.getContext('webgl2',{antialias:false,alpha:fal
   sprog=mkProg(SVS,SFS);US=uniforms(sprog,ALLU);
   skyProg=mkProg(QVS,SKYFS);postProgs.sky=uniforms(skyProg,['uInvPV','uCam','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uTime','uCloud']);
   for(const [k,f] of [['down',DOWNFS],['up',UPFS],['fin',FINFS]]){const p=mkProg(QVS,f);postProgs[k]={p,u:uniforms(p,['uTex','uBloom','uPx','uThresh','uFade','uBloomK','uExpo','uFxaa'])};}
+  if(typeof BODY_RES!='undefined')BODY_RES=[1.8,1.3,1][QUAL.lvl];
   const L=makeLayers(Q().tex);atlasTex=texArray(L.alb,L.S,L.N);nrmTex=texArray(L.nrm,L.S,L.N);waterTex=texFrom(makeWaterTex(),true);foamTex=texFrom(makeFoamTex(),true);
   gl.useProgram(prog);gl.uniform1i(U.uAlb,0);gl.uniform1i(U.uNrm,1);gl.uniform1i(U.uTex2,2);gl.uniform1i(U.uShadow,3);
   gl.uniform1fv(U.uMetal,new Float32Array(96).map((_,i)=>CELLS[i]?matOf(CELLS[i])[1]:0));

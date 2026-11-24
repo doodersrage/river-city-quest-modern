@@ -11,7 +11,7 @@ function cloth(h,k){const c=typeof h=='string'?rgb(h):h,g=(c[0]+c[1]+c[2])/3,m=k
 function humanoid(o){const sk=rgb(o.skin||'#d9a57e'),sh=cloth(o.shirt||'#3d63c8'),pa=cloth(o.pants||'#3c3c54',.25),ha=cloth(o.hat||'#6a4020'),hair=cloth(o.hair||'#3a2414',.1),shoe=cloth(o.shoe||'#2a2228',.1),N=12,w=(o.wide||1)*.96;
   const skD=sk.map(v=>v*.82),lip=[sk[0]*.86,sk[1]*.62,sk[2]*.6],A=o.acc||[];
   const shirtCell=A.includes('coat')?'knit':'cloth',pantCell=o.skirt?'cloth':'denim';
-  const P=[
+  const P=typeof sculptedHuman=='function'?sculptedHuman(o):[
     part(m=>{// pelvis, torso and neck
       if(o.skirt)m.lathe(0,0,0,[[.5,.25],[.7,.22],[.9,.19],[1.0,.165]],N,pantCell,pa,w,.8,true);
       else m.lathe(0,0,0,[[.84,.15],[.92,.17],[1.0,.165],[1.06,.155]],N,pantCell,pa,w,.72,true);

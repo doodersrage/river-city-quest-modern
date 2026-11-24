@@ -14,7 +14,7 @@ const ATLAS_N=16,ATLAS_PX=32;
 // round things get this many times more segments than the PS1 version gave them
 const DETAIL={k:2};
 function cellUV(name){const i=CELL[name]==null?CELL.white:CELL[name],e=.002;return[i+e,e,i+1-e,1-e];}
-const nrm3=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];};
+const nrm3=v=>{const l=Math.hypot(v[0],v[1],v[2]);return l<1e-9?[0,1,0]:[v[0]/l,v[1]/l,v[2]/l];};
 const faceN=(a,b,c)=>nrm3([(b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1]),(b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]),(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])]);
 const segs=n=>Math.max(3,Math.round(n*DETAIL.k));
 class Mesh{

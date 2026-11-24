@@ -9,7 +9,7 @@ const MAT={// roughness, metalness, bump strength
   brick:[.85,0,2.2],brickwin:[.8,0,2.2],brickwin2:[.8,0,2.2],storefront:[.75,0,1.6],cobble:[.75,0,2.8],stone:[.85,0,2.4],stonewall:[.85,0,2.4],qwall:[.9,0,2.4],floor:[.8,0,2],
   roof:[.7,0,2],planks:[.75,0,1.6],wood:[.7,0,1.2],woodfl:[.45,0,1],tilefl:[.3,0,1.2],grass:[.95,0,1.4],grass2:[.95,0,1.4],flowers:[.9,0,1.4],dirt:[.95,0,1.6],sand:[.95,0,1.2],
   sidewalk:[.85,0,1.2],concrete:[.88,0,1],rock:[.8,0,2.4],bark:[.9,0,2.4],leaves:[.7,0,1.6],leaves2:[.7,0,1.6],plaster:[.85,0,.6],steps:[.8,0,1.6],rubble:[.9,0,2.4],
-  rails:[.85,0,1.6],cloth:[.85,0,.9],knit:[.9,0,1.4],denim:[.8,0,1.1],leather:[.45,0,1],skin:[.5,0,.35],hairs:[.55,0,1.3],brass:[.3,1,.4],asphalt:[.85,0,1.3],gravel:[.9,0,2.6],bricksw:[.85,0,2],curb:[.7,0,1.4],leafcard:[.6,0,1.4],needles:[.7,0,1.4],pane:[.05,0,.2],fur:[.8,0,1.2],feather:[.6,0,1],carapace:[.4,0,1.6],paint:[.22,.15,.1],tire:[.85,0,1.4],chrome:[.12,1,.2],panelit:[.12,0,.2],mulch:[.95,0,2],granite:[.55,0,.8],column:[.45,0,.8],clock:[.4,0,.5],case:[.2,0,.3],arcade:[.4,0,.4],engine:[.55,.6,1.2],hair:[.6,0,.8],shell:[.5,0,1.6]};
+  rails:[.85,0,1.6],cloth:[.85,0,.18],knit:[.9,0,.3],denim:[.8,0,.25],leather:[.45,0,.3],skin:[.55,0,.08],hairs:[.55,0,1.3],brass:[.3,1,.4],asphalt:[.85,0,1.3],gravel:[.9,0,2.6],bricksw:[.85,0,2],curb:[.7,0,1.4],leafcard:[.6,0,1.4],needles:[.7,0,1.4],pane:[.05,0,.2],fur:[.8,0,1.2],feather:[.6,0,1],carapace:[.4,0,1.6],paint:[.22,.15,.1],tire:[.85,0,1.4],chrome:[.12,1,.2],panelit:[.12,0,.2],mulch:[.95,0,2],granite:[.55,0,.8],column:[.45,0,.8],clock:[.4,0,.5],case:[.2,0,.3],arcade:[.4,0,.4],engine:[.55,.6,1.2],hair:[.6,0,.8],shell:[.5,0,1.6]};
 const matOf=n=>MAT[n]||[.7,0,.8];
 function makeLayers(S){
   const legacy=makeAtlas(),N=CELLS.length,alb=new Uint8Array(S*S*4*N),nrm=new Uint8Array(S*S*4*N);
@@ -91,7 +91,7 @@ const HI={
   column(D,H,E,S){each(D,H,S,(u,v)=>{const fl=Math.pow(Math.abs(Math.sin(u*8*Math.PI)),.5),n=fbm(u,v,8,4,241);return[mix(hex('#d8d2c4'),hex('#f2eee4'),fl*.6+n*.4),fl];});},
 };
 Object.assign(HI,{
-  cloth(D,H,E,S){each(D,H,S,(u,v)=>{const w=(Math.sin(u*S*1.6)*.5+.5)*(Math.sin(v*S*1.6+1.5)*.5+.5),n=fbm(u,v,8,3,301);return[mix([200,200,198],[236,236,232],n*.6+w*.4),w*.6+n*.4];});},
+  cloth(D,H,E,S){each(D,H,S,(u,v)=>{const w=(Math.sin(u*S*2.9)*.5+.5)*(Math.sin(v*S*2.9+1.5)*.5+.5),n=fbm(u,v,4,4,301),fold=fbm(u*.5,v*2,4,3,303);return[mix([206,206,204],[238,238,234],n*.5+w*.15+fold*.35),fold*.7+w*.3];});},
   knit(D,H,E,S){each(D,H,S,(u,v)=>{const row=v*S/4,col=u*S/3,k=Math.abs(Math.sin(col*Math.PI+(Math.floor(row)&1)*1.5))*Math.abs(Math.sin(row*Math.PI)),n=fbm(u,v,8,3,311);return[mix([170,170,168],[232,232,228],k*.7+n*.3),k];});},
   denim(D,H,E,S){each(D,H,S,(u,v)=>{const tw=Math.sin((u+v)*S*1.1)*.5+.5,n=fbm(u,v,4,4,321),fade=fbm(u,v,2,3,322);return[mix([150,160,178],[220,226,236],tw*.35+n*.35+fade*.3),tw*.5+n*.5];});},
   leather(D,H,E,S){each(D,H,S,(u,v)=>{const n=fbm(u,v,16,4,331),c=cells(u,v,10,332),cr=c[1]-c[0]<.05?.3:0;return[mix([150,146,142],[210,206,200],n-cr),n-cr];});},
