@@ -64,10 +64,10 @@ function drawEntities(){
     if(talking)ex.head={x:Math.sin(frame*.28)*.1+.05};else if(!mv)ex.head={y:Math.sin(n.t*.013+n.i*2)*.35};
     drawModel(npcModel(n),M4.mul(M4.tr(n.x,0,n.z),M4.ry(n.yaw)),humanPose(n.walk,mv,ex));
     if(n.chal&&!st.pins[n.chal]&&(frame>>4)&1){const im=getModel('coin',()=>propModel('coin'));drawModel(im,M4.mul(M4.tr(n.x,2.7,n.z),M4.mul(M4.ry(frame*.06),M4.sc(.7))));}}
-  for(const e of enemies){const t=e.type,m=getModel('en:'+t,()=>enemyModel(t)),pose={};let base=M4.mul(M4.tr(e.x,e.y,e.z),M4.ry(e.yaw));
+  for(const e of enemies){const t=e.type,m=getModel('en:'+t,()=>enemyModel(t)),pose={_g:e.gait||0,_s:e.spd||0,_t:e.t,_al:e.al||0,_lg:e.lg||0,_seed:((e.hx||0)*7+(e.hz||0)*13)%6.28,_st:e.state,_stt:e.st,_y:e.y};let base=M4.mul(M4.tr(e.x,e.y,e.z),M4.ry(e.yaw));
     if(t=='rat')pose.tail={y:Math.sin(e.t*.3)*.5};if(t=='bat'){pose.wingL={z:Math.sin(e.t*.5)*.8};pose.wingR={z:-Math.sin(e.t*.5)*.8};}if(t=='goose')pose.neck={x:Math.sin(e.t*.1)*.3};
     if(t=='crab'){pose.clawL={x:Math.sin(e.t*.2)*.4};pose.clawR={x:-Math.sin(e.t*.2)*.4};}
-    if(t=='turtle'){base=M4.mul(base,M4.sc(1.25));if(e.state=='stun')base=M4.mul(M4.mul(base,M4.tr(0,1.4,0)),M4.rz(Math.PI));pose.head={t:[0,0,e.state=='stun'?-.6:0]};if(e.state=='wind')base=M4.mul(base,M4.tr(Math.sin(e.st)*.08,0,0));}
+    if(t=='turtle'){base=M4.mul(base,M4.sc(1.25));if(e.state=='stun')base=M4.mul(M4.mul(base,M4.tr(0,1.4,0)),M4.rz(Math.PI));if(e.state=='wind')base=M4.mul(base,M4.tr(Math.sin(e.st)*.08,0,0));}
     if(t=='vampire'&&e.gone)continue;if(t=='raven'){pose.wingL={z:Math.sin(e.t*.3)*.7};pose.wingR={z:-Math.sin(e.t*.3)*.7};}if(t=='squirrel')pose.tail={x:Math.sin(e.t*.2)*.3};
     if(t=='bell'&&e.state=='stun')base=M4.mul(base,M4.rz(Math.sin(e.st*.6)*.15*Math.max(0,1-e.st/40)));if(t=='arum'&&e.state=='bloom')base=M4.mul(base,M4.sc(1.15));
     if(t=='foreman'&&e.state=='wind')base=M4.mul(base,M4.tr(0,Math.sin(e.st*.5)*.1,0));if(e.stun>0&&!e.boss)base=M4.mul(base,M4.rz(Math.sin(frame*.5)*.2));

@@ -263,20 +263,31 @@ const EDEF={rat:{hp:1,sp:.06,r:.5,dmg:1},squirrel:{hp:1,sp:.05,r:.45,dmg:1},scoo
 const BOSSNAME={turtle:'OLD SNAPPER',wraith:'THE PYRAMID WRAITH',raven:'THE RAVEN',bell:'THE GREAT BELL',foreman:'THE IRON FOREMAN',arum:'THE TITAN ARUM',vampire:'THE RICHMOND VAMPIRE'};
 // everything that chases you moves at this fraction of its old arcade speed, to match the player's real pace
 const PACE=.45;
+// how far through its stride an animal gets for each metre it covers
+const GAIT={rat:12,squirrel:7,goose:9,crab:12,turtle:2.9};
 function mkEnemy(t,x,z){const d=EDEF[t]||EDEF.rat;return{type:t,x,z,y:d.fly?1.4:0,hx:x,hz:z,hp:d.hp,max:d.hp,yaw:Math.random()*6,t:Math.floor(Math.random()*120),kx:0,kz:0,flash:0,state:t=='bell'?'float':'idle',st:0,dead:false,boss:!!d.boss,stun:0,vis:0};}
 function enemiesUpdate(){
   for(const e of enemies){if(e.dead)continue;const d=EDEF[e.type];e.t++;if(e.flash>0)e.flash--;
     if(e.stun>0){e.stun--;continue;}
-    if(e.boss){BOSSUPD[e.type](e);continue;}
-    const dx=p.x-e.x,dz=p.z-e.z,dist=Math.hypot(dx,dz)||1;let mx=0,mz=0;
-    if(dist<9){const a=Math.atan2(dx,dz);e.yaw+=ang(e.yaw,a)*.15;
-      if(e.type=='crab'){const side=Math.sin(e.t*.04)>0?1:-1;mx=Math.cos(a)*side*.6+dx/dist*.4;mz=-Math.sin(a)*side*.6+dz/dist*.4;}
-      else if(e.type=='goose'||e.type=='squirrel'){if(e.t%150<50){mx=0;mz=0;}else{mx=dx/dist*1.6;mz=dz/dist*1.6;}}
-      else if(e.type=='scooter'){if(e.t%120<2||!e.vx){e.vx=Math.sin(e.yaw)*1.4;e.vz=Math.cos(e.yaw)*1.4;}mx=e.vx;mz=e.vz;}
-      else{mx=dx/dist;mz=dz/dist;}}
-    else if(e.t%180<60){mx=Math.sin(e.t*.05+e.hx);mz=Math.cos(e.t*.05+e.hz);e.yaw=Math.atan2(mx,mz);}
-    const sp=d.sp*TS*PACE;let nx=e.x+mx*sp+e.kx,nz=e.z+mz*sp+e.kz;e.kx*=.82;e.kz*=.82;
-    if(d.fly){e.x=nx;e.z=nz;e.y=1.3+Math.sin(e.t*.12)*.4;}else{let moved=false;if(!blockedCircle(nx,e.z,d.r*.7)){e.x=nx;moved=true;}if(!blockedCircle(e.x,nz,d.r*.7)){e.z=nz;moved=true;}if(!moved&&e.type=='scooter'){e.yaw+=Math.PI/2;e.vx=0;}}
+    const ox=e.x,oz=e.z,ease=(k,to,r)=>{e[k]=(e[k]||0)+(to-(e[k]||0))*r;};
+    if(e.boss){BOSSUPD[e.type](e);const dd=Math.hypot(e.x-ox,e.z-oz);e.gait=(e.gait||0)+dd*(GAIT[e.type]||0);ease('spd',dd>.002?1:0,.15);continue;}
+    const dx=p.x-e.x,dz=p.z-e.z,dist=Math.hypot(dx,dz)||1,ty=e.type,sp=d.sp*TS*PACE;let mx=0,mz=0,alert=0,lunge=0,face=null;
+    if(dist<9){const a=Math.atan2(dx,dz),ux=dx/dist,uz=dz/dist,weave=k=>{const w=Math.sin(e.t*.045+(e.hx||0)*3)*(dist>2.2?k:0),l=Math.hypot(1,w);mx=(ux-uz*w)/l;mz=(uz+ux*w)/l;};
+      // each animal closes in the way its kind does
+      if(ty=='crab'){const side=Math.sin(e.t*.04)>0?1:-1;mx=Math.cos(a)*side*.6+ux*.4;mz=-Math.sin(a)*side*.6+uz*.4;face=a;alert=dist<4.5?1:.3;}// sidles, claws up
+      else if(ty=='goose'||ty=='squirrel'){if(e.t%150<50){alert=1;face=a;}else{weave(ty=='squirrel'?.6:0);mx*=1.6;mz*=1.6;lunge=1;}}// stands tall and stares, then rushes
+      else if(ty=='scooter'){e.yaw+=ang(e.yaw,a)*.15;if(e.t%120<2||!e.vx){e.vx=Math.sin(e.yaw)*1.4;e.vz=Math.cos(e.yaw)*1.4;}mx=e.vx;mz=e.vz;}
+      else if(ty=='rat'){if(e.t%70<58){weave(.4);mx*=1.2;mz*=1.2;}else{alert=1;face=a;}}// scurries in bursts, stops to sniff
+      else if(ty=='bat'){weave(.8);lunge=dist<3.5?1:0;}// flutters side to side, then swoops
+      else{weave(ty=='ghost'?.3:0);}}
+    else if(e.t%180<60){mx=Math.sin(e.t*.05+(e.hx||0));mz=Math.cos(e.t*.05+(e.hz||0));}
+    // nothing alive starts or turns in an instant
+    if(ty=='scooter'){e.mvx=mx*sp;e.mvz=mz*sp;if(dist>=9&&(mx||mz))e.yaw=Math.atan2(mx,mz);}
+    else{ease('mvx',mx*sp,.14);ease('mvz',mz*sp,.14);const v=Math.hypot(e.mvx,e.mvz);
+      if(ty=='crab'&&face!=null)e.yaw+=ang(e.yaw,face)*.15;else if(v>sp*.25)e.yaw+=ang(e.yaw,Math.atan2(e.mvx,e.mvz))*.22;else if(face!=null)e.yaw+=ang(e.yaw,face)*.12;}
+    let nx=e.x+e.mvx+e.kx,nz=e.z+e.mvz+e.kz;e.kx*=.82;e.kz*=.82;
+    if(d.fly){e.x=nx;e.z=nz;if(ty=='bat')ease('y',lunge?1.05:1.85+Math.sin(e.t*.05+(e.hx||0))*.25,.05);else e.y=1.3+Math.sin(e.t*.12)*.4;}else{let moved=false;if(!blockedCircle(nx,e.z,d.r*.7)){e.x=nx;moved=true;}if(!blockedCircle(e.x,nz,d.r*.7)){e.z=nz;moved=true;}if(!moved&&e.type=='scooter'){e.yaw+=Math.PI/2;e.vx=0;}}
+    const dd=Math.hypot(e.x-ox,e.z-oz);e.gait=(e.gait||0)+dd*(GAIT[ty]||10);ease('spd',Math.min(1,dd/(sp*.9)),.18);ease('al',alert,.1);ease('lg',lunge,.1);
     e.x=Math.max(.5,Math.min(lv.w*TS-.5,e.x));e.z=Math.max(.5,Math.min(lv.h*TS-.5,e.z));
     if(dist<d.r+.45&&p.inv==0&&p.dash==0)hurtPlayer(d.dmg,e.x,e.z);}
   enemies=enemies.filter(e=>!e.dead||e.fade>0&&e.fade--);

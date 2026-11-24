@@ -54,7 +54,7 @@ function clipBase(skel,name){if(skel.base[name]!=null)return skel.base[name];con
     for(const f of [B_FOOTL,B_FOOTR]){const toe=Qt.rot(s.q[f],[0,-FOOT_H,.13]),heel=Qt.rot(s.q[f],[0,-FOOT_H,-.05]);lo=Math.min(lo,pos[f][1]+toe[1],pos[f][1]+heel[1]);}}return skel.base[name]=-lo;}
 /* The pose for this frame: 13 bone matrices. `pose` is what the game asks for: _walk (a stride counter),
    _moving, _run, and optional part overrides (armL/armR/legL/legR {x,y,z}, head {x,y}, body handled by the caller). */
-function skelPose(skel,pose,time){pose=pose||{};const rest=skel.rest,A=skel.anim,moving=!!pose._moving,T=time==null?0:time;
+function skelPose(skel,pose,time){pose=pose||{};if(skel.custom)return creaturePose(skel,pose,time);const rest=skel.rest,A=skel.anim,moving=!!pose._moving,T=time==null?0:time;
   if(A.frame!==T){const d=A.frame<0?99:Math.min(10,Math.abs(T-A.frame));A.frame=T;const k=1-Math.pow(.82,d);A.blend+=((moving?1:0)-A.blend)*k;A.run=moving?!!pose._run:A.run;}
   // idle: arms hang a little out with soft elbows; breathing lifts the chest; weight shifts slowly from foot to foot
   const t=T/60+A.t,br=Math.sin(t*1.5)*.012,sw=Math.sin(t*.37)*.02,q=[];

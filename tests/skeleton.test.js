@@ -18,3 +18,8 @@ const sit=G.skelPose(S,{legL:{x:-1.4},legR:{x:-1.4}},7);ok(sit.pos[0][1]<.75&&si
 for(const sex of ['m','f']){const M=G.bodyMesh(sex,false,false,'short'),n=M.pos.length/3;let bad=0,hair=0;for(let i=0;i<n;i++){if(!(M.bw[i*3]>=0&&M.bw[i*3]<13&&M.bw[i*3+1]>=0&&M.bw[i*3+1]<13&&M.bw[i*3+2]>=0&&M.bw[i*3+2]<=1))bad++;if(M.col[i*3]==7)hair++;if(!isFinite(M.pos[i*3]+M.nrm[i*3]))bad++;}
   let top=0;for(let i=0;i<n;i++)top=Math.max(top,M.pos[i*3+1]);ok(n>10000&&!bad&&Math.max(...M.idx)<n,(sex=='m'?'the man':'the woman')+' is a real body: '+n+' points, each on valid bones');ok(top>1.55&&top<1.8&&hair>200,'and stands '+top.toFixed(2)+' m tall with hair on the scalp');}
 const W=G.humanoid({skirt:true,style:'long',capless:true}),names=W.map(p=>p.name);ok(names.includes('skin')&&names.includes('shoes')&&W.find(p=>p.pal).pal.length==36,'each person wears shoes and brings their own colors to the shared body');
+// the animals
+for(const t of ['rat','squirrel','goose','crab','bat','raven','ghost','turtle']){const P=G.enemyModel(t),S=P.skel,m=P[0].mesh,n=S.rest.length;let bad=0,move=0;
+  for(let i=0;i<m.bw.length;i+=3)if(!(m.bw[i]<n&&m.bw[i+1]<n&&m.bw[i+2]>=0&&m.bw[i+2]<=1))bad++;
+  const a=G.skelPose(S,{_g:0,_s:1,_t:0,_st:'walk'},0),b=G.skelPose(S,{_g:1.6,_s:1,_t:9,_al:1,_lg:1,_st:'walk'},9);for(let i=0;i<a.length;i++){if(!isFinite(a[i]+b[i]))bad++;move=Math.max(move,Math.abs(a[i]-b[i]));}
+  ok(S&&n<=13&&m.bw.length==m.count*3&&!bad&&move>.05,'the '+t+' has a skeleton of '+n+' bones and its joints move');}
