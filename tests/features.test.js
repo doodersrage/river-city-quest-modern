@@ -1,7 +1,8 @@
 // Side content: reading markers, the four neighborhood challenges, bushes, chests, night, dying and the menu.
 const G=require('./harness.js'),T=G.TS;const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};
 const I=G.inp,clr=()=>{I.a=I.b=I.item=I.menu=I.start=I.up=I.down=I.left=I.right=0;};
-const step=(o,n)=>{for(let i=0;i<(n||1);i++){clr();I.x=I.z=0;Object.assign(I,o||{});G.update();}clr();I.x=I.z=0;};
+// a swing next to a shopkeeper opens their shop, which would stall the bot: close it
+const step=(o,n)=>{for(let i=0;i<(n||1);i++){clr();I.x=I.z=0;Object.assign(I,o||{});if(G.shop)G.shop=null;G.update();}clr();I.x=I.z=0;};
 const talkThrough=pick=>{for(let k=0;k<200&&G.dlg;k++){if(G.dlg.choices&&G.dlg.i==G.dlg.lines.length-1){G.dlg.n=999;G.dlg.sel=pick||0;}step({a:1});step({},2);}};
 const face=(x,z)=>{G.p.yaw=Math.atan2(x-G.p.x,z-G.p.z);};
 const go=(id,tx,tz)=>{G.loadScene(id,tx*T+T/2,tz*T+T/2,0);step({},40);G.dlg=null;G.enemies.length=0;G.p.hold=0;G.p.swing=0;};
