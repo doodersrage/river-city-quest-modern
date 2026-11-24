@@ -5,7 +5,7 @@ const ROOT=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const files=[...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m=>m[1]);
 const store={};
-const sb={console,Math,JSON,Object,Array,String,Number,Set,Map,Error,Float32Array,performance,
+const sb={atob,console,Math,JSON,Object,Array,String,Number,Set,Map,Error,Float32Array,performance,
   document:{getElementById:()=>null,createElement:()=>({getContext:()=>null}),querySelectorAll:()=>[]},
   addEventListener(){},requestAnimationFrame(){},navigator:{},location:{protocol:'file:'},
   localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=String(v);}}};

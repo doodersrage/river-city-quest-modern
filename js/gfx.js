@@ -27,14 +27,14 @@ function qualityTick(ms){if(!QUAL.auto)return;if(QUAL.cool>0){QUAL.cool--;return
 const VS=`#version 300 es
 precision highp float;
 in vec3 aPos;in vec2 aUV;in vec3 aCol;in float aSway;in vec3 aNrm;in vec3 aBW;
-uniform mat4 uPV,uModel,uLVP;uniform float uTime,uWave,uSkin;uniform mat4 uBones[13];
+uniform mat4 uPV,uModel,uLVP;uniform float uTime,uWave,uSkin,uPalOn;uniform mat4 uBones[13];uniform vec3 uPal[12];
 out vec3 vW;out vec3 vN;out vec2 vUV;out vec3 vCol;out vec4 vL;
 void main(){vec4 lp=vec4(aPos,1.);vec3 ln=aNrm;
   if(uSkin>.5){mat4 A=uBones[int(aBW.x+.5)],Bm=uBones[int(aBW.y+.5)];lp=mix(A*lp,Bm*lp,aBW.z);ln=mix(mat3(A)*ln,mat3(Bm)*ln,aBW.z);}
   vec4 wp=uModel*lp;
   wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));
   if(uWave>0.)wp.y+=uWave*(sin(wp.x*1.1+uTime*1.4)+cos(wp.z*.9+uTime*1.1))*.035;
-  vW=wp.xyz;vN=mat3(uModel)*ln;vUV=aUV;vCol=aCol;vL=uLVP*wp;gl_Position=uPV*wp;}`;
+  vW=wp.xyz;vN=mat3(uModel)*ln;vUV=aUV;vCol=uPalOn>.5?uPal[int(aCol.x+.5)]:aCol;vL=uLVP*wp;gl_Position=uPV*wp;}`;
 const SKYFN=`
 uniform vec3 uSunDir,uSunCol,uSkyCol,uHorCol;uniform float uNight,uTime,uCloud;
 float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -136,7 +136,7 @@ function colorTex(w,h,hdrOK){const t=gl.createTexture();gl.bindTexture(gl.TEXTUR
 function fbFor(tex){const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);return f;}
 function initGL(canvas){gl=canvas.getContext('webgl2',{antialias:false,alpha:false,preserveDrawingBuffer:false,powerPreference:'high-performance'});if(!gl)return false;
   extCBF=gl.getExtension('EXT_color_buffer_float');aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-  const ALLU=['uPV','uModel','uLVP','uTime','uWave','uAlb','uNrm','uTex2','uShadow','uMode','uTint','uGndCol','uFogCol','uCam','uAlpha','uFlash','uAdd','uFogD','uShadowOn','uAmb','uIndoor','uOff','uL','uLC','uNL','uMetal','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uCloud','uRes','uFog','uSnap','uTex','uSkin','uBones'];prog=mkProg(VS,FS);U=uniforms(prog,ALLU);
+  const ALLU=['uPV','uModel','uLVP','uTime','uWave','uAlb','uNrm','uTex2','uShadow','uMode','uTint','uGndCol','uFogCol','uCam','uAlpha','uFlash','uAdd','uFogD','uShadowOn','uAmb','uIndoor','uOff','uL','uLC','uNL','uMetal','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uCloud','uRes','uFog','uSnap','uTex','uSkin','uBones','uPal','uPalOn'];prog=mkProg(VS,FS);U=uniforms(prog,ALLU);
   sprog=mkProg(SVS,SFS);US=uniforms(sprog,ALLU);
   skyProg=mkProg(QVS,SKYFS);postProgs.sky=uniforms(skyProg,['uInvPV','uCam','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uTime','uCloud']);
   for(const [k,f] of [['down',DOWNFS],['up',UPFS],['fin',FINFS]]){const p=mkProg(QVS,f);postProgs[k]={p,u:uniforms(p,['uTex','uBloom','uPx','uThresh','uFade','uBloomK','uExpo','uFxaa'])};}
@@ -171,7 +171,8 @@ function attrData(m,key,size){const a=m[key];if(a&&a.length>=m.count*size)return
 function mkVAO(m,dynamic){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const bufs=[];
   for(const [name,size,key] of ATTR){if(key=='bw'&&!(m&&m.bw&&m.bw.length)){bufs.push(null);continue;}const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);if(m)gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.STATIC_DRAW);
     const l=ATTR.findIndex(a=>a[0]==name);gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,size,gl.FLOAT,false,0,0);bufs.push(b);}
-  gl.bindVertexArray(null);return{vao,bufs,n:m?m.count:0};}
+  let idx=false;if(m&&m.idx){const e=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,e);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,m.idx,gl.STATIC_DRAW);idx=true;}
+  gl.bindVertexArray(null);return{vao,bufs,idx,n:m?(idx?m.idx.length:m.count):0};}
 function upload(o,m){gl.bindVertexArray(o.vao);ATTR.forEach(([,size,key],i)=>{if(!o.bufs[i])return;gl.bindBuffer(gl.ARRAY_BUFFER,o.bufs[i]);gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.DYNAMIC_DRAW);});o.n=m.count;gl.bindVertexArray(null);}
 function meshGL(m){return m.gl||(m.gl=mkVAO(m));}
 let curSceneId=null;
@@ -179,10 +180,10 @@ function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b
 
 /* ---------- drawing calls the game uses ---------- */
 function drawVAO(o,model,tex,opt){if(!o.n)return;gl.uniformMatrix4fv(U.uModel,false,model||M4id());
-  if(PASS=='shadow'){if(tex===waterTex||tex===foamTex)return;gl.bindVertexArray(o.vao);gl.drawArrays(gl.TRIANGLES,0,o.n);gl.bindVertexArray(null);return;}
+  if(PASS=='shadow'){if(tex===waterTex||tex===foamTex)return;gl.bindVertexArray(o.vao);if(o.idx)gl.drawElements(gl.TRIANGLES,o.n,gl.UNSIGNED_SHORT,0);else gl.drawArrays(gl.TRIANGLES,0,o.n);gl.bindVertexArray(null);return;}
   const mode=tex===waterTex?2:tex===foamTex?3:0;gl.uniform1i(U.uMode,mode);if(mode){gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,tex);gl.activeTexture(gl.TEXTURE0);}
   if(opt&&opt.tint)gl.uniform3fv(U.uTint,opt.tint);if(opt&&opt.flash)gl.uniform1f(U.uFlash,opt.flash);if(opt&&opt.off)gl.uniform2fv(U.uOff,opt.off);
-  gl.bindVertexArray(o.vao);gl.drawArrays(gl.TRIANGLES,0,o.n);gl.bindVertexArray(null);
+  gl.bindVertexArray(o.vao);if(o.idx)gl.drawElements(gl.TRIANGLES,o.n,gl.UNSIGNED_SHORT,0);else gl.drawArrays(gl.TRIANGLES,0,o.n);gl.bindVertexArray(null);
   if(opt){if(opt.tint)gl.uniform3f(U.uTint,1,1,1);if(opt.flash)gl.uniform1f(U.uFlash,0);if(opt.off)gl.uniform2f(U.uOff,0,0);}if(mode)gl.uniform1i(U.uMode,0);}
 // fog, ambient and point lights for the main pass. lights are [x,y,z,radius,[r,g,b]]
 function setCommon(fogCol,fog,amb,lights){const lfc=fogCol.map(v=>Math.pow(v,2.2));gl.uniform3fv(U.uFogCol,lfc);gl.uniform1f(U.uFogD,1.15/Math.max(8,fog[1])/(lv&&lv.room&&mode!='mini'?3.5:3.4));

@@ -15,7 +15,7 @@ It's the same game as the [PS1-style version](https://github.com/doodersrage/riv
 
 ## The look
 
-- **Sculpted people:** bodies are modeled like a sculptor blocks out anatomy (shoulders, chest, hips, calves, hands, and faces with brows, cheekbones, nose, lips, ears and set-in eyes), blended into one smooth surface, at real adult proportions. Men and women have different builds, and clothes, skin and hair blend at their edges.
+- **Real human bodies:** people are Blender Studio's realistic Human Base Meshes (public domain), a man and a woman of about 16,000 points each, with real faces, hands and musculature. One body is shared by everyone; each person brings their own skin tone, clothes, hair color and height. Shirts and trousers are relaxed and pushed out so cloth hangs instead of clinging, hair grows from the scalp, and caps and shoes are sculpted to fit.
 - **Motion-captured movement:** people are one skinned body on a 13-bone skeleton, so knees, elbows, hips and shoulders bend. Walking and running are real human motion from the Carnegie Mellon motion capture library; standing still has breathing and slow weight shifts.
 - **Real trees and plants:** oaks, maples and pines with forked trunks and crowns built from thousands of leaves, which cast dappled shadows. Mulched flower beds, shrubs and lumpy boulders. The leaves follow the real calendar.
 - **Richmond's streets:** cobblestones in Shockoe Bottom and on Church Hill, asphalt with trolley rails on Broad Street, brick sidewalks with granite curbs in the old neighborhoods, and gravel paths in the parks.
@@ -78,3 +78,5 @@ The tests load the game into Node without a screen. `playthrough.test.js` has a 
 ## Credits
 
 The walk and run animations were baked from the CMU Graphics Lab Motion Capture Database by `tools/bake-mocap.js` (BVH conversion by Bruce Hahne). The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
+
+The bodies are the Blender Studio Human Base Meshes v1.4.1 (CC0), rigged by the Castcut project and baked into `js/bodydata.js` by `tools/bake-body.js`. See `tools/bodies/LICENSE.md`.

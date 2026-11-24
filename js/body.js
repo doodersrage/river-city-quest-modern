@@ -40,60 +40,64 @@ function surfaceNet(F,lo,hi,h){const nx=Math.ceil((hi[0]-lo[0])/h)+2,ny=Math.cei
   const N=acc.map(nrm3);
   return{verts,quads,N};}
 
-/* ---------- anatomy ---------- */
-// build: {fem, wide, hair:'short'|'long'|'bun'|'bald', hat:'cap'|'none', coat, skirt}
-function bodyParts(B){const S=SDF,f=B.fem,w=B.wide||1,sh=(f?.155:.178)*w,hp=(f?.165:.15)*w,bu=f?1:0;
-  const shirt=B.coat?'coat':'shirt',low=B.skirt?'skirt':'pants';
-  const body=[[S.ell([0,.95,-.005],[hp,.12,.1]),low],[S.sph([-.07*w,.92,-.055],.085),low,.06],[S.sph([.07*w,.92,-.055],.085),low,.06],
-    [S.cap([0,1.0,0],[0,1.18,0],(f?.118:.13)*w,(f?.12:.145)*w,.72),shirt,.08],[S.ell([0,1.3,.008],[sh*.98,.13,.115]),shirt,.07],
-    [S.sph([-sh*.92,1.41,0],.062),shirt,.05],[S.sph([sh*.92,1.41,0],.062),shirt,.05],[S.cap([-.05,1.48,-.01],[-sh*.85,1.43,0],.045,.04),shirt,.05],[S.cap([.05,1.48,-.01],[sh*.85,1.43,0],.045,.04),shirt,.05],
-    [S.cap([0,1.44,.0],[0,1.62,.012],.054,.05),'skin',.04],[S.ell([0,1.02,.0],[hp*1.02,.028,.105]),'belt',.0]];
-  if(bu)body.push([S.sph([-.06,1.3,.075],.06),shirt,.05],[S.sph([.06,1.3,.075],.06),shirt,.05]);
-  if(B.skirt)body.push([S.cap([0,.98,0],[0,.48,0],hp*1.05,.24,.8),'skirt',.06]);
-  if(B.coat)body.push([S.cap([0,1.2,0],[0,.62,0],sh*.9,.2,.72),'coat',.06]);
-  const head=[[S.ell([0,.125,-.012],[.079,.098,.095]),'skin'],[S.ell([0,.07,.028],[.068,.076,.073]),'skin',.035],[S.ell([0,.035,.035],[.058,.045,.06]),'skin',.03],[S.sph([0,.008,.072],.026),'skin',.025],
-    [S.cap([0,.112,.086],[0,.074,.108],.011,.015),'skin',.012],[S.cap([-.034,.135,.078],[.034,.135,.078],.014,.014),'skin',.016],
-    [S.sph([-.046,.09,.06],.032),'skin',.02],[S.sph([.046,.09,.06],.032),'skin',.02],[S.ell([-.079,.1,-.005],[.011,.03,.019]),'skin',.01],[S.ell([.079,.1,-.005],[.011,.03,.019]),'skin',.01],
-    [S.ell([0,.044,.094],[.02,.006,.008]),'lips',.006]];
-  const hairS=B.hair||'short',hat=B.hat=='cap';
-  const hairPrims=[];
-  if(hairS!='bald'){hairPrims.push([p=>Math.max(S.ell([0,.128,-.016],[.085,.108,.101])(p),.092-p[1]+(p[2]<-.02?(-p[2]-.02)*1.6:0)+(p[2]>.06?.5:0)),'hair',.012]);
-    if(hairS=='long')hairPrims.push([S.cap([0,.1,-.06],[0,-.12,-.07],.075,.07,.65),'hair',.03]);
-    if(hairS=='bun')hairPrims.push([S.sph([0,.205,-.075],.04),'hair',.015]);}
-  if(hat){hairPrims.length=0;hairPrims.push([p=>Math.max(S.ell([0,.13,-.012],[.088,.11,.103])(p),.122-p[1]),'hat',.006],[S.ell([0,.12,.095],[.075,.01,.06]),'hat',.004]);
-    hairPrims.push([p=>Math.max(S.ell([0,.1,-.02],[.083,.08,.097])(p),p[1]-.122,p[2]+.01),'hair',.01]);}
-  head.push(...hairPrims);
-  const cuts=[[S.sph([-.033,.113,.097],.013),.012],[S.sph([.033,.113,.097],.013),.012]];
-  const leg=[[S.cap([0,.0,0],[0,-.44,.012],.088*(f?1.03:1),.056),low],[S.sph([0,-.55,-.03],.055),low,.05],[S.cap([0,-.45,.01],[0,-.82,-.005],.054,.036),low,.04],
-    [S.cap([0,-.875,-.04],[0,-.885,.13],.046,.04,1),'shoe',.03],[S.box([0,-.905,.04],[.045,.012,.1],.008),'shoe',.02]];
-  if(B.skirt){leg[0][1]='skin';leg[1][1]='skin';leg[2][1]='skin';}
-  const arm=[[S.sph([0,0,0],.062),shirt],[S.cap([0,-.03,0],[0,-.29,.005],.056,.043),shirt,.04],[S.cap([0,-.3,.008],[0,-.54,.025],.044,.031),B.coat?'coat':'skin',.03],
-    [S.ell([0,-.6,.03],[.024,.052,.041]),'skin',.02],[S.cap([0,-.575,.055],[.0,-.62,.075],.012,.01),'skin',.012]];
-  return{body:{prims:body,lo:[-.32,.4,-.25],hi:[.32,1.66,.25],h:.022},head:{prims:head,cuts,lo:[-.11,-.16,-.13],hi:[.11,.25,.14],h:.012},
-    legL:{prims:leg,lo:[-.11,-.94,-.12],hi:[.11,.12,.2],h:.02},legR:{prims:leg,lo:[-.11,-.94,-.12],hi:[.11,.12,.2],h:.02},
-    armL:{prims:arm,lo:[-.08,-.67,-.08],hi:[.08,.08,.12],h:.016},armR:{prims:arm,lo:[-.08,-.67,-.08],hi:[.08,.08,.12],h:.016}};}
-const BODYGEO={};
-let BODY_RES=1;// 1 = full detail; larger is coarser (set from the graphics quality)
-function bodyGeo(B){const key=JSON.stringify(B)+BODY_RES;if(BODYGEO[key])return BODYGEO[key];const D=bodyParts(B),out={};
-  for(const name in D){if(name=='legR'||name=='armR'){out[name]=out[name.replace('R','L')];continue;}const d=D[name],F=partField(d.prims,d.cuts),net=surfaceNet(F,d.lo,d.hi,d.h*BODY_RES),tris=[];
-    const vreg=net.verts.map(p=>regionAt(d.prims,p));
-    for(const q of net.quads){const c=[0,1,2,3].map(i=>net.verts[q[i]]),ctr=[0,1,2].map(a=>(c[0][a]+c[1][a]+c[2][a]+c[3][a])/4);tris.push([q,regionAt(d.prims,ctr)]);}
-    out[name]={net,tris,vreg,lo:d.lo,hi:d.hi};}
-  return BODYGEO[key]=out;}
-// one soft material for the whole figure: region edges then blend through the vertex colors instead of stepping
-const REGION_CELL={skin:'skin',lips:'skin',shirt:'skin',coat:'skin',pants:'skin',skirt:'skin',belt:'skin',shoe:'skin',hair:'skin',hat:'skin'};
-function sculptedHuman(o){const f=o.skirt||o.style=='long'||o.style=='bun',B={fem:!!f,wide:+(o.wide||1).toFixed(2),hair:o.style=='bun'?'bun':o.style=='long'?'long':'short',hat:o.capless?'none':'cap',coat:(o.acc||[]).includes('coat'),skirt:!!o.skirt};
-  const G=bodyGeo(B),sk=rgb(o.skin||'#d9a57e');
-  const COL={skin:sk,lips:[sk[0]*.9,sk[1]*.7,sk[2]*.68],shirt:cloth(o.shirt||'#3d63c8'),coat:cloth(o.coat||'#2a3a6a',.3),pants:cloth(o.pants||'#3c3c54',.25),skirt:cloth(o.pants||'#3c3c54',.25),
-    belt:[.12,.09,.07],shoe:cloth(o.shoe||'#2a2228',.1),hair:cloth(o.hair||'#3a2414',.1),hat:cloth(o.hat||'#6a4020')};
-  const pivots={body:[0,0,0],head:[0,1.6,0],legL:[-.09*(B.fem?.9:1),.92,0],legR:[.09*(B.fem?.9:1),.92,0],armL:[-(B.fem?.155:.178)*B.wide*1.08,1.42,0],armR:[(B.fem?.155:.178)*B.wide*1.08,1.42,0]};
-  const P=[];for(const name of ['body','head','legL','legR','armL','armR']){const g=G[name],m=new Mesh(),V=g.net.verts,N=g.net.N,sx=name=='armL'||name=='legL'?-1:1;
-    for(const [q,reg] of g.tris){const [u0,v0,u1,v1]=cellUV(REGION_CELL[reg]||'white'),col=COL[reg]||[1,1,1],UV=p=>[u0+(u1-u0)*((p[0]-g.lo[0])/(g.hi[0]-g.lo[0])),v1-(v1-v0)*((p[1]-g.lo[1])/(g.hi[1]-g.lo[1]))];
-      const pts=q.map(i=>V[i]),ns=q.map(i=>N[i]),cs=q.map(i=>COL[g.vreg[i]]||col);
-      m.tri(pts[0],pts[1],pts[2],UV(pts[0]),UV(pts[1]),UV(pts[2]),cs[0],cs[1],cs[2],ns[0],ns[1],ns[2]);m.tri(pts[0],pts[2],pts[3],UV(pts[0]),UV(pts[2]),UV(pts[3]),cs[0],cs[2],cs[3],ns[0],ns[2],ns[3]);}
-    if(sx<0)for(let i=0;i<m.pos.length;i+=3){m.pos[i]=-m.pos[i];m.nrm[i]=-m.nrm[i];}
-    P.push({mesh:m,pivot:pivots[name],name});}
-  // the eyes: whites, irises and a glint, set into the sockets
-  const Hd=P[1].mesh;for(const sx of [-1,1]){Hd.sphere(sx*.033,.113,.087,.0122,10,6,'white',[.86,.84,.8]);Hd.sphere(sx*.033,.113,.0975,.0055,8,4,'white',cloth(o.eyes||['#4a3020','#3a5a7a','#2a2018','#4a6a3a'][Math.round(sk[0]*7)%4],.1));Hd.sphere(sx*.033,.113,.1012,.0024,6,3,'white',[.02,.02,.02]);}
-  for(const pt of P)pt.nSculpt=pt.mesh.count;
-  return P;}
+/* ---------- real bodies ---------- */
+// The people are Blender Studio's realistic Human Base Meshes (CC0), rigged by the Castcut project and baked
+// into js/bodydata.js. One mesh per sex and outfit cut is shared by everyone; each person brings a palette
+// (skin, shirt, trousers, shoes...) that the shader looks up by the clothing region stored on each vertex.
+const REG={HAIR:7,SKIN:0,SHIRT:1,LEGUP:2,SHOE:3,BELT:4,EYE:5,IRIS:6,ARMLOW:8,SHIN:10};
+function b64(s,T){const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new T(u.buffer);}
+const BODYMESH={};
+// is this point of the head under hair? the line runs from the forehead, over the ears, down to the nape
+function scalp(D,x,y,z){const h=y-D.eye[1],zr=z-D.ear[2];const line=zr>0?.034+zr*.5:.034+Math.max(-1,zr/.035)*.1;return h>line;}
+function bodyMesh(sex,coat,skirt,style){const key=sex+(coat?'c':'')+(skirt?'s':'')+style;if(BODYMESH[key])return BODYMESH[key];const D=BODYDATA[sex],n=D.n,P=b64(D.pos,Int16Array),N=b64(D.nrm,Int8Array),W=b64(D.bw,Uint8Array),R=Uint8Array.from(b64(D.reg,Uint8Array)),I=b64(D.idx,Uint16Array);
+  const m=new Mesh(),[u0,v0,u1,v1]=cellUV('skin'),tri=v=>Math.abs((v-Math.floor(v))*2-1),pos=new Float32Array(n*3),nrm=new Float32Array(n*3);
+  for(let i=0;i<n*3;i++){pos[i]=P[i]/16000;nrm[i]=N[i]/127;}
+  for(let i=0;i<n;i++)if(R[i]==REG.SKIN&&W[i*3]==B_HEAD&&W[i*3+2]<40&&scalp(D,pos[i*3],pos[i*3+1],pos[i*3+2]))R[i]=REG.HAIR;
+  // the mesh is split along seams; weld by place so cloth can be smoothed without tearing
+  const canon=new Int32Array(n),seen=new Map();for(let i=0;i<n;i++){const k=P[i*3]+','+P[i*3+1]+','+P[i*3+2];if(!seen.has(k))seen.set(k,i);canon[i]=seen.get(k);}
+  const nb=[];for(let i=0;i<n;i++)nb.push(null);const link=(a,b)=>{(nb[a]||(nb[a]=new Set())).add(b);};
+  for(let t=0;t<I.length;t+=3){const a=canon[I[t]],b=canon[I[t+1]],c=canon[I[t+2]];link(a,b);link(a,c);link(b,a);link(b,c);link(c,a);link(c,b);}
+  // cloth hangs: it bridges muscle and bone instead of clinging, so clothed parts are relaxed and pushed out
+  const soft=r=>r==REG.SHIRT||r==REG.LEGUP||r==REG.BELT||(r==REG.ARMLOW&&coat)||(r==REG.SHIN&&!skirt)||r==REG.HAIR;
+  for(let it=0;it<22;it++){const nx=new Float32Array(pos);for(let i=0;i<n;i++){if(canon[i]!=i||!nb[i]||!soft(R[i])||(it>=7&&R[i]!=REG.SHIRT&&R[i]!=REG.BELT))continue;let x=0,y=0,z=0,c=0;for(const j of nb[i]){x+=pos[j*3];y+=pos[j*3+1];z+=pos[j*3+2];c++;}
+      const k=R[i]==REG.HAIR?.35:.6;nx[i*3]+=(x/c-pos[i*3])*k;nx[i*3+1]+=(y/c-pos[i*3+1])*k;nx[i*3+2]+=(z/c-pos[i*3+2])*k;}pos.set(nx);}
+  const hair=style=='long'?.024:style=='bun'?.014:sex=='f'?.016:.011,off=[];off[REG.SHIRT]=coat?.024:.017;off[REG.LEGUP]=.011;off[REG.SHOE]=-.004;off[REG.BELT]=coat?.025:.018;off[REG.ARMLOW]=coat?.014:0;off[REG.SHIN]=skirt?0:.01;off[REG.HAIR]=hair;
+  for(let i=0;i<n;i++){if(canon[i]!=i)continue;const o=off[R[i]]||0;for(let c=0;c<3;c++)pos[i*3+c]+=nrm[i*3+c]*o;}
+  // fresh normals where the surface moved
+  const fn=new Float32Array(n*3);for(let t=0;t<I.length;t+=3){const a=canon[I[t]]*3,b=canon[I[t+1]]*3,c=canon[I[t+2]]*3,ux=pos[b]-pos[a],uy=pos[b+1]-pos[a+1],uz=pos[b+2]-pos[a+2],vx=pos[c]-pos[a],vy=pos[c+1]-pos[a+1],vz=pos[c+2]-pos[a+2],x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;
+    for(const v of [a,b,c]){fn[v]+=x;fn[v+1]+=y;fn[v+2]+=z;}}
+  m.pos=new Float32Array(n*3);m.nrm=new Float32Array(n*3);m.uv=new Float32Array(n*2);m.col=new Float32Array(n*3);m.sw=new Float32Array(n);m.bw=new Float32Array(n*3);m.idx=I;const box={top:-9,z0:9,z1:-9,x1:0};
+  for(let i=0;i<n;i++){const c=canon[i]*3,sf=soft(R[i])||R[i]==REG.SHOE,l=Math.hypot(fn[c],fn[c+1],fn[c+2])||1;
+    for(let k=0;k<3;k++){m.pos[i*3+k]=pos[c+k];m.nrm[i*3+k]=sf?fn[c+k]/l:nrm[i*3+k];}
+    if(R[i]==REG.HAIR){box.top=Math.max(box.top,pos[c+1]);box.z0=Math.min(box.z0,pos[c+2]);box.z1=Math.max(box.z1,pos[c+2]);box.x1=Math.max(box.x1,pos[c]);}
+    m.uv[i*2]=u0+(u1-u0)*tri(pos[c]*3+pos[c+2]*2);m.uv[i*2+1]=v0+(v1-v0)*tri(pos[c+1]*3);m.col[i*3]=R[i];m.bw[i*3]=W[i*3];m.bw[i*3+1]=W[i*3+1];m.bw[i*3+2]=W[i*3+2]/255;}
+  // where each foot is, heel to toe, so shoes can be made to fit
+  m.feet=[-1,1].map(sx=>{const v=[];for(let i=0;i<n;i++)if(R[i]==REG.SHOE&&pos[i*3]*sx>0&&pos[i*3+1]<.05)v.push([pos[i*3],pos[i*3+1],pos[i*3+2]]);v.sort((a,b)=>a[2]-b[2]);const k=Math.max(1,v.length>>3),avg=l=>[0,1,2].map(c=>l.reduce((s,p)=>s+p[c],0)/l.length);return{heel:avg(v.slice(0,k)),toe:avg(v.slice(-k)),z0:v[0][2],z1:v[v.length-1][2]};});
+  m.skull=box;return BODYMESH[key]=m;}
+const SHOENET={};
+function shoeMesh(sex,feet,col){if(!SHOENET[sex]){const S=SDF,D=BODYDATA[sex],prims=[];feet.forEach((f,i)=>{const an=D.rest[i?B_FOOTR:B_FOOTL],h=[f.heel[0],.04,f.z0+.042],t=[f.toe[0],.03,f.z1-.026],sole=p=>-p[1];
+      prims.push([p=>Math.max(S.cap(h,t,.046,.04,1)(p),sole(p)),'s'+i,.012],[p=>Math.max(S.cap([an[0],.05,an[2]-.005],[an[0],an[1]+.035,an[2]],.045,.041,1)(p),sole(p),p[1]-an[1]-.04),'s'+i,.012]);});
+    const net=surfaceNet(partField(prims),[-.3,-.02,-.2],[.3,.16,.3],.009);net.reg=net.verts.map(p=>regionAt(prims,p));SHOENET[sex]=net;}
+  const net=SHOENET[sex],m=new Mesh(),[u0,v0,u1,v1]=cellUV('leather'),cl=v=>v-Math.floor(v),UV=p=>[u0+(u1-u0)*cl(p[0]*5+p[2]*3),v0+(v1-v0)*cl(p[1]*6)],bones=[];
+  for(const q of net.quads){const pts=q.map(i=>net.verts[i]),ns=q.map(i=>net.N[i]),b=net.reg[q[0]]=='s0'?B_FOOTL:B_FOOTR,c=pts.map(p=>p[1]<.012?[col[0]*.5,col[1]*.5,col[2]*.5]:col);
+    m.tri(pts[0],pts[1],pts[2],UV(pts[0]),UV(pts[1]),UV(pts[2]),c[0],c[1],c[2],ns[0],ns[1],ns[2]);m.tri(pts[0],pts[2],pts[3],UV(pts[0]),UV(pts[2]),UV(pts[3]),c[0],c[2],c[3],ns[0],ns[2],ns[3]);for(let k=0;k<6;k++)bones.push(b,b,0);}
+  m.bw=bones;return m;}
+/* caps, buns and long hair are sculpted to fit the skull they sit on */
+const HEADNET={};
+function headwear(sex,style,cap,box,hairCol,hatCol){const key=sex+style+(cap?'c':'');if(!HEADNET[key]){const S=SDF,D=BODYDATA[sex],prims=[],ey=D.eye[1],cz=(box.z0+box.z1)/2,rz=(box.z1-box.z0)/2,cy=ey+.012,ry=box.top-cy;
+    if(cap){const brimY=ey+.062;prims.push([p=>Math.max(S.ell([0,cy,cz],[box.x1+.007,ry+.008,rz+.008])(p),brimY-p[1]),'hat',.004],[p=>Math.max(S.ell([0,brimY+.004,box.z1+.035],[.074,.007,.07])(p),cz+.02-p[2]),'hat',.003]);}
+    if(style=='long')prims.push([S.cap([0,ey+.03,box.z0+.045],[0,ey-.2,box.z0+.03],.07,.075,.6),'hair',.03],[S.cap([-(box.x1-.01),ey+.03,cz-.01],[-(box.x1+.002),ey-.15,cz-.005],.03,.032,1),'hair',.02],[S.cap([box.x1-.01,ey+.03,cz-.01],[box.x1+.002,ey-.15,cz-.005],.03,.032,1),'hair',.02]);
+    if(style=='bun')prims.push([S.sph([0,box.top-.02,box.z0+.02],.042),'hair',.01]);
+    if(!prims.length){HEADNET[key]={quads:[]};}else{const net=surfaceNet(partField(prims),[-.14,ey-.3,box.z0-.08],[.14,box.top+.05,box.z1+.13],.01);net.reg=net.verts.map(p=>regionAt(prims,p));HEADNET[key]=net;}}
+  const net=HEADNET[key],m=new Mesh(),[u0,v0,u1,v1]=cellUV('hairs'),[a0,b0,a1,b1]=cellUV('cloth'),cl=v=>v-Math.floor(v);
+  for(const q of net.quads){const pts=q.map(i=>net.verts[i]),ns=q.map(i=>net.N[i]),hat=net.reg[q[0]]=='hat',c=hat?hatCol:hairCol,UV=p=>hat?[a0+(a1-a0)*cl(p[0]*4),b0+(b1-b0)*cl(p[2]*4)]:[u0+(u1-u0)*cl(p[0]*5),v0+(v1-v0)*cl(p[1]*2.5)];
+    m.tri(pts[0],pts[1],pts[2],UV(pts[0]),UV(pts[1]),UV(pts[2]),c,c,c,ns[0],ns[1],ns[2]);m.tri(pts[0],pts[2],pts[3],UV(pts[0]),UV(pts[2]),UV(pts[3]),c,c,c,ns[0],ns[2],ns[3]);}
+  return m;}
+// a person: empty parts for things they wear and carry (in the old part spaces), plus the shared skinned body
+function realHuman(o){const fem=!!(o.skirt||o.style=='long'||o.style=='bun'),sex=fem?'f':'m',D=BODYDATA[sex],A=o.acc||[],coat=A.includes('coat'),sk=rgb(o.skin||'#d9a57e');
+  const hs=fem?1.1:1.14,P=[['body',[0,D.rest[5][1]-1.4,0]],['head',[0,D.eye[1]-.113*hs,D.eye[2]-.1*hs]],['legL',[0,0,0]],['legR',[0,0,0]],['armL',[0,0,0]],['armR',[0,0,0]]].map(([name,pivot])=>({mesh:new Mesh(),pivot,name}));
+  P[1].scale=hs;const bare=A.includes('tricorn')||A.includes('helmet'),style=o.style=='bun'?'bun':o.style=='long'?'long':'short',hairCol=cloth(o.hair||'#3a2414',.1),body=bodyMesh(sex,coat,!!o.skirt,style);
+  const pants=cloth(o.pants||'#3c3c54',.25),shirt=coat?cloth(o.coat||'#2a3a6a',.3):cloth(o.shirt||'#3d63c8'),pal=new Float32Array(36),set=(i,c)=>pal.set(c,i*3);
+  set(REG.SKIN,sk);set(REG.SHIRT,shirt);set(REG.LEGUP,pants);set(REG.SHOE,cloth(o.shoe||'#2a2228',.1));set(REG.BELT,[.1,.075,.06]);set(REG.EYE,[.82,.8,.76]);
+  set(REG.IRIS,cloth(o.eyes||['#3a2414','#2e4a66','#241a12','#3a5230'][Math.round(sk[0]*7)%4],.1));set(REG.ARMLOW,coat?shirt:sk);set(REG.SHIN,o.skirt?sk:pants);set(REG.HAIR,hairCol);
+  P.push({mesh:body,pivot:[0,0,0],name:'skin',shared:true,pal});P.push({mesh:shoeMesh(sex,body.feet,cloth(o.shoe||'#2a2228',.1)),pivot:[0,0,0],name:'shoes',rigged:true});const hw=headwear(sex,style,!bare&&!o.capless,body.skull,hairCol,cloth(o.hat||'#6a4020'));if(hw.count)P.push({mesh:hw,pivot:[0,0,0],name:'hat',real:true});P.meta={D,fem,scale:(fem?.985:1.03)*(.97+((Math.round(sk[1]*97)+(o.shirt||'').length)%7)*.01)};return P;}

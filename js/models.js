@@ -11,7 +11,7 @@ function cloth(h,k){const c=typeof h=='string'?rgb(h):h,g=(c[0]+c[1]+c[2])/3,m=k
 function humanoid(o){const sk=rgb(o.skin||'#d9a57e'),sh=cloth(o.shirt||'#3d63c8'),pa=cloth(o.pants||'#3c3c54',.25),ha=cloth(o.hat||'#6a4020'),hair=cloth(o.hair||'#3a2414',.1),shoe=cloth(o.shoe||'#2a2228',.1),N=12,w=(o.wide||1)*.96;
   const skD=sk.map(v=>v*.82),lip=[sk[0]*.86,sk[1]*.62,sk[2]*.6],A=o.acc||[];
   const shirtCell=A.includes('coat')?'knit':'cloth',pantCell=o.skirt?'cloth':'denim';
-  const P=typeof sculptedHuman=='function'?sculptedHuman(o):[
+  const P=typeof realHuman=='function'?realHuman(o):[
     part(m=>{// pelvis, torso and neck
       if(o.skirt)m.lathe(0,0,0,[[.5,.25],[.7,.22],[.9,.19],[1.0,.165]],N,pantCell,pa,w,.8,true);
       else m.lathe(0,0,0,[[.84,.15],[.92,.17],[1.0,.165],[1.06,.155]],N,pantCell,pa,w,.72,true);
@@ -54,7 +54,7 @@ function humanoid(o){const sk=rgb(o.skin||'#d9a57e'),sh=cloth(o.shirt||'#3d63c8'
   if(A.includes('pole')){AR.tube([0,-.6,0],[0,1.6,.3],.016,.013,8,'black',[.1,.1,.1]);AR.sphere(0,1.64,.31,.04,6,3,'brass');}
   if(A.includes('gloves')){for(const a of [AL,AR])a.sphere(0,-.61,.01,.046,8,4,'cloth',rgb('#c8a040'),1.3,.6,1.05);AR.sphere(0,-.82,0,.15,10,6,'white',[.1,.12,.16],1.25);}
   if(A.includes('pack')){const c=cloth('#4a3a28',.2);B.lathe(0,1.06,-.16,[[0,.12],[.08,.14],[.34,.14],[.4,.1]],10,'cloth',c,1.05,.55,true);B.box(-.09,1.12,-.25,.09,1.28,-.22,'cloth',dk(c));for(const sx of [-.1,.1])B.box(sx-.018,1.1,-.12,sx+.018,1.46,.12,'cloth',dk(c));}
-  if(typeof rigHuman=='function'&&typeof sculptedHuman=='function')rigHuman(P,!!(o.skirt||o.style=='long'||o.style=='bun'),+(o.wide||1).toFixed(2));
+  if(typeof rigHuman=='function'&&P.meta)rigHuman(P);
   return P;}
 function enemyModel(t){if(typeof realCreature=='function'){const r=realCreature(t);if(r)return r;}const P=[];
   if(t=='rat'){const c=rgb('#7a7480'),pk=rgb('#e8a0a8');P.push(part(m=>{m.sphere(0,.26,-.05,.26,8,5,'white',c,.85,1,1.55);m.sphere(0,.28,.38,.17,8,4,'white',c,.95,1,1.3);m.sphere(0,.27,.6,.05,5,2,'white',pk);

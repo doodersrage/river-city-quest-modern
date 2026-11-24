@@ -24,18 +24,34 @@ function boneWeights(part,y,sculpted){
   if(part=='body')return y<1.3?[B_PELVIS,B_CHEST,sstep(.98,1.14,y)]:[B_CHEST,B_HEAD,sstep(1.47,1.56,y)];
   if(part=='armL'||part=='armR'){const u=part=='armL'?B_UARML:B_UARMR;return sculpted?[u,u+1,sstep(-.23,-.37,y)]:[u+1,u+1,0];}
   const t=part=='legL'?B_THIGHL:B_THIGHR;return y>-.65?[t,t+1,sstep(-.37,-.54,y)]:[t+1,t+2,sstep(-.77,-.85,y)];}
-// turn a freshly built person (parts in their own spaces) into one skinned figure in body space
-function rigHuman(P,fem,wide){for(const pt of P){const m=pt.mesh,n0=pt.nSculpt||0;m.bw=[];
-    for(let i=0;i<m.count;i++){const w=boneWeights(pt.name,m.pos[i*3+1]+(pt.name=='body'?0:0),i<n0);m.bw.push(w[0],w[1],w[2]);m.pos[i*3]+=pt.pivot[0];m.pos[i*3+1]+=pt.pivot[1];m.pos[i*3+2]+=pt.pivot[2];}
+// the turn that brings one direction onto another
+const qfromTo=(a,b)=>{const d=a[0]*b[0]+a[1]*b[1]+a[2]*b[2],c=[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],q=[c[0],c[1],c[2],1+d],l=Math.hypot(...q)||1;return q.map(v=>v/l);};
+const dirOf=(a,b)=>{const d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],l=Math.hypot(...d)||1;return d.map(v=>v/l);};
+// turn a freshly built person into one skinned figure: the things they wear and carry are moved from the old
+// part spaces onto the real body and given bones, and the skeleton is set up for that body's rest pose
+function rigHuman(P){const D=P.meta.D,rest=D.rest;
+  for(const pt of P){if(pt.shared||pt.rigged)continue;const m=pt.mesh,n=m.count,s=pt.scale||1;m.bw=new Array(n*3);
+    const arm=pt.name=='armL'?0:pt.name=='armR'?1:-1;let q=null,hc=null;
+    if(arm>=0){const el=rest[arm?B_FARMR:B_FARML],wr=D.wrist[arm],he=D.hand[arm];q=qfromTo([0,-1,0],dirOf(el,wr));hc=[(wr[0]+he[0])/2,(wr[1]+he[1])/2,(wr[2]+he[2])/2];}
+    for(let i=0;i<n;i++){let p=[m.pos[i*3],m.pos[i*3+1],m.pos[i*3+2]],w;
+      if(pt.real)w=[B_HEAD,B_HEAD,0];else if(arm>=0){p=Qt.rot(q,[p[0],p[1]+.6,p[2]-.01]);p=[p[0]+hc[0],p[1]+hc[1],p[2]+hc[2]];const nn=Qt.rot(q,[m.nrm[i*3],m.nrm[i*3+1],m.nrm[i*3+2]]);m.nrm[i*3]=nn[0];m.nrm[i*3+1]=nn[1];m.nrm[i*3+2]=nn[2];w=[arm?B_FARMR:B_FARML,0,0];}
+      else{const k=pt.name=='body'?[1.04,1,.84]:[s,s,s];p=[p[0]*k[0]+pt.pivot[0],p[1]*k[1]+pt.pivot[1],p[2]*k[2]+pt.pivot[2]];
+        w=pt.name=='head'?[B_HEAD,B_HEAD,0]:pt.name=='body'?(p[1]<rest[2][1]-.1?[B_PELVIS,B_CHEST,sstep(rest[1][1]-.08,rest[1][1]+.06,p[1])]:[B_CHEST,B_HEAD,sstep(rest[2][1],rest[2][1]+.08,p[1])]):[pt.name=='legL'?B_THIGHL:B_THIGHR,0,0];}
+      m.pos[i*3]=p[0];m.pos[i*3+1]=p[1];m.pos[i*3+2]=p[2];m.bw[i*3]=w[0];m.bw[i*3+1]=w[1];m.bw[i*3+2]=w[2];}
     pt.pivot=[0,0,0];}
-  P.skel={rest:skelRest(fem,wide),anim:{blend:0,frame:-1,t:Math.random()*100}};return P;}
+  // the body rests with arms and legs a little out; the animation thinks of limbs as hanging straight down
+  const fix=[];for(let b=0;b<NBONES;b++)fix.push(Qt.I);const down=[0,-1,0];
+  for(const [b,c,end] of [[B_UARML,B_FARML],[B_UARMR,B_FARMR],[B_FARML,-1,D.wrist[0]],[B_FARMR,-1,D.wrist[1]],[B_THIGHL,B_SHINL],[B_THIGHR,B_SHINR],[B_SHINL,B_FOOTL],[B_SHINR,B_FOOTR]])fix[b]=qfromTo(dirOf(rest[b],end||rest[c]),down);
+  const len=(a,b)=>Math.hypot(rest[a][0]-rest[b][0],rest[a][1]-rest[b][1],rest[a][2]-rest[b][2]),lift=rest[B_FOOTL][1]-(rest[B_THIGHL][1]-len(B_THIGHL,B_SHINL)-len(B_SHINL,B_FOOTL));
+  P.skel={rest,fix,lift,scale:P.meta.scale,base:{},anim:{blend:0,frame:-1,t:Math.random()*100}};return P;}
+const FOOT_H=.065;// ankle joint above the sole
 function clipSample(C,phase){const f=((phase%1)+1)%1*C.n,i=Math.floor(f)%C.n,j=(i+1)%C.n,t=f-Math.floor(f),A=C.q[i],Bq=C.q[j],q=[];
   for(let b=0;b<NBONES;b++)q.push(Qt.slerp(A.slice(b*4,b*4+4),Bq.slice(b*4,b*4+4),t));return{q,y:C.y[i]+(C.y[j]-C.y[i])*t,x:C.x[i]+(C.x[j]-C.x[i])*t};}
 // joint positions for a set of bone rotations, with the pelvis at root
 function skelFK(rest,q,root){const pos=[root];for(let b=1;b<NBONES;b++){const p=BONE_PARENT[b],d=Qt.rot(q[p],[rest[b][0]-rest[p][0],rest[b][1]-rest[p][1],rest[b][2]-rest[p][2]]);pos.push([pos[p][0]+d[0],pos[p][1]+d[1],pos[p][2]+d[2]]);}return pos;}
 // how high the hips ride for a clip so the lower foot just touches the ground through the stride
-function clipBase(C,rest){if(C.base!=null)return C.base;let lo=1e9;for(let k=0;k<C.n;k++){const s=clipSample(C,k/C.n),pos=skelFK(rest,s.q,[0,rest[0][1]+s.y,0]);
-    for(const f of [B_FOOTL,B_FOOTR]){const toe=Qt.rot(s.q[f],[0,-.1,.12]),heel=Qt.rot(s.q[f],[0,-.1,-.05]);lo=Math.min(lo,pos[f][1]+toe[1],pos[f][1]+heel[1]);}}return C.base=-lo;}
+function clipBase(skel,name){if(skel.base[name]!=null)return skel.base[name];const C=CLIPS[name],rest=skel.rest;let lo=1e9;for(let k=0;k<C.n;k++){const s=clipSample(C,k/C.n),pos=skelFK(rest,s.q.map((q,b)=>Qt.mul(q,skel.fix[b])),[0,rest[0][1]+s.y,0]);
+    for(const f of [B_FOOTL,B_FOOTR]){const toe=Qt.rot(s.q[f],[0,-FOOT_H,.13]),heel=Qt.rot(s.q[f],[0,-FOOT_H,-.05]);lo=Math.min(lo,pos[f][1]+toe[1],pos[f][1]+heel[1]);}}return skel.base[name]=-lo;}
 /* The pose for this frame: 13 bone matrices. `pose` is what the game asks for: _walk (a stride counter),
    _moving, _run, and optional part overrides (armL/armR/legL/legR {x,y,z}, head {x,y}, body handled by the caller). */
 function skelPose(skel,pose,time){pose=pose||{};const rest=skel.rest,A=skel.anim,moving=!!pose._moving,T=time==null?0:time;
@@ -45,10 +61,10 @@ function skelPose(skel,pose,time){pose=pose||{};const rest=skel.rest,A=skel.anim
   q[B_PELVIS]=Qt.ax(0,0,1,sw*.6);q[B_CHEST]=Qt.mul(Qt.ax(0,0,1,-sw*.5),Qt.ax(1,0,0,br));q[B_HEAD]=Qt.ax(1,0,0,-br*.5);
   q[B_UARML]=Qt.ypr(0,.03+br,-.075);q[B_FARML]=Qt.mul(q[B_UARML],Qt.ax(1,0,0,-.2));q[B_UARMR]=Qt.ypr(0,.03+br,.075);q[B_FARMR]=Qt.mul(q[B_UARMR],Qt.ax(1,0,0,-.2));
   q[B_THIGHL]=Qt.ax(0,0,1,-.02+sw*.4);q[B_SHINL]=q[B_THIGHL];q[B_FOOTL]=Qt.ax(0,1,0,-.12);q[B_THIGHR]=Qt.ax(0,0,1,.02+sw*.4);q[B_SHINR]=q[B_THIGHR];q[B_FOOTR]=Qt.ax(0,1,0,.12);
-  let rootY=rest[0][1],rootX=sw*.25;
+  let rootY=rest[0][1]+(skel.lift||0),rootX=sw*.25;
   if(A.blend>.002&&typeof CLIPS!='undefined'){const C=A.run?CLIPS.run:CLIPS.walk,ph=(pose._walk||0)/6.2832*(A.run?.68:.9),s=clipSample(C,ph),b=A.blend;
     s.q[B_HEAD]=Qt.slerp(s.q[B_HEAD],s.q[B_CHEST],.25);s.q[B_HEAD]=Qt.slerp(s.q[B_HEAD],Qt.I,.4);// keep the eyes on the road
-    for(let i=0;i<NBONES;i++)q[i]=Qt.slerp(q[i],s.q[i],b);rootY+=(clipBase(C,rest)+s.y)*b;rootX=rootX*(1-b)+s.x*b;}
+    for(let i=0;i<NBONES;i++)q[i]=Qt.slerp(q[i],s.q[i],b);rootY+=(clipBase(skel,A.run?'run':'walk')+s.y-(skel.lift||0))*b;rootX=rootX*(1-b)+s.x*b;}
   // what the game asks for on top: these are turns of a whole limb from the shoulder or hip
   for(const [key,u] of [['armL',B_UARML],['armR',B_UARMR]]){const o=pose[key];if(!o)continue;q[u]=Qt.ypr(o.y,o.x,o.z);const up=(o.x||0)<-2;q[u+1]=Qt.mul(q[u],Qt.ax(1,0,0,up?-.12:-.3));}
   for(const [key,u] of [['legL',B_THIGHL],['legR',B_THIGHR]]){const o=pose[key];if(!o)continue;const x=o.x||0;q[u]=Qt.ypr(0,x,0);
@@ -56,8 +72,8 @@ function skelPose(skel,pose,time){pose=pose||{};const rest=skel.rest,A=skel.anim
     q[u+1]=x<-.6?Qt.ax(1,0,0,x+Math.min(1.5,(-x-.3)*1.1)):Qt.ax(1,0,0,x+Math.max(0,x)*.9);q[u+2]=q[u+1];}
   if(pose.legL&&pose.legR&&(pose.legL.x||0)<-.6&&(pose.legR.x||0)<-.6)rootY-=(1-Math.cos((pose.legL.x+pose.legR.x)/2))*.42;// seated: the hips drop as the thighs come level
   if(pose.head)q[B_HEAD]=Qt.mul(q[B_HEAD],Qt.ypr(pose.head.y,pose.head.x,0));
-  const pos=skelFK(rest,q,[rootX,rootY,0]),out=new Float32Array(NBONES*16);
-  for(let b=0;b<NBONES;b++){const [x,y,z,w]=q[b],r=rest[b],p=pos[b],o=b*16;
+  const qf=q.map((v,b)=>Qt.mul(v,skel.fix[b])),pos=skelFK(rest,qf,[rootX,rootY,0]),out=new Float32Array(NBONES*16);
+  for(let b=0;b<NBONES;b++){const [x,y,z,w]=qf[b],r=rest[b],p=pos[b],o=b*16;
     const m00=1-2*(y*y+z*z),m01=2*(x*y-z*w),m02=2*(x*z+y*w),m10=2*(x*y+z*w),m11=1-2*(x*x+z*z),m12=2*(y*z-x*w),m20=2*(x*z-y*w),m21=2*(y*z+x*w),m22=1-2*(x*x+y*y);
     out[o]=m00;out[o+1]=m10;out[o+2]=m20;out[o+4]=m01;out[o+5]=m11;out[o+6]=m21;out[o+8]=m02;out[o+9]=m12;out[o+10]=m22;out[o+15]=1;
     out[o+12]=p[0]-(m00*r[0]+m01*r[1]+m02*r[2]);out[o+13]=p[1]-(m10*r[0]+m11*r[1]+m12*r[2]);out[o+14]=p[2]-(m20*r[0]+m21*r[1]+m22*r[2]);}
