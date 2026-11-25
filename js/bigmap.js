@@ -8,7 +8,7 @@ const BIG={ox:16,oy:11};
 (function(){const OX=BIG.ox,OY=BIG.oy,hs=(a,b,c)=>{let h=(a*374761393+b*668265263+(c||0)*2147483647)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0);};
   const WATERY='w~',ROAD='p';
   for(const id in RCQ.maps){if(id.indexOf('ow:')!=0)continue;const m=RCQ.maps[id],w=m.w,h=m.h,W=w+2*OX,H=h+2*OY,old=m.rows,seed=m.ax*7+m.ay*13+5;
-    const urban=old.join('').split('B').length-1>=30,g=[];
+    const plan=typeof STREETPLAN!='undefined'&&STREETPLAN[id],urban=old.join('').split('B').length-1>=30,g=[];
     for(let Y=0;Y<H;Y++){const row=[];for(let X=0;X<W;X++){const x=X-OX,y=Y-OY;
         if(x>=0&&y>=0&&x<w&&y<h){let c=old[y][x];// in open country the old tree line thins out, so the new ground is part of the same park
           if(!urban&&c=='T'&&(x==0||y==0||x==w-1||y==h-1)&&hs(X,Y,seed)%3)c=m.base&&'.,'.includes(m.base)?m.base:'.';row.push(c);continue;}
@@ -16,13 +16,13 @@ const BIG={ox:16,oy:11};
         let c;
         if(side&&(e==ROAD||WATERY.includes(e)))c=e;// roads and the river run straight on to the new edge
         else if(side&&'.,sSKkn'.includes(e))c=edge&&!'.,sn'.includes(e)?'.':e;
-        else if(urban&&(e=='B'||e=='X'||e=='D'||!side)){
-          if(edge)c='B';else if(d==1||d==4)c=(d==4&&along%6==2)?'t':'s';else if(d==2||d==3)c='p';else c=along%9==4?'s':'B';}
+        else if((urban||plan&&plan.town)&&(e=='B'||e=='X'||e=='D'||!side||plan)){
+          if(edge||plan)c='B';else if(d==1||d==4)c=(d==4&&along%6==2)?'t':'s';else if(d==2||d==3)c='p';else c=along%9==4?'s':'B';}
         else{const r=hs(X,Y,seed)%100;c=edge?'T':r<9?'T':r<13?'t':r<17?',':'.';}
         row.push(c);}g.push(row);}
     // sidewalks beside the roads that now run out through the new blocks
-    if(urban)for(let Y=1;Y<H-1;Y++)for(let X=1;X<W-1;X++){const x=X-OX,y=Y-OY;if(x>=0&&y>=0&&x<w&&y<h)continue;if(g[Y][X]!='B')continue;
-      const dx=x<0?-x:x>=w?x-w+1:0,dy=y<0?-y:y>=h?y-h+1:0;if(Math.max(dx,dy)<5)continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const q=g[Y+b][X+a],x2=X+a-OX,y2=Y+b-OY,band=!(x2>=0&&y2>=0&&x2<w&&y2<h);return q=='p'&&band&&Math.max(x2<0?-x2:x2>=w?x2-w+1:0,y2<0?-y2:y2>=h?y2-h+1:0)>=5;}))g[Y][X]='s';}
+    if(urban||plan)for(let Y=1;Y<H-1;Y++)for(let X=1;X<W-1;X++){const x=X-OX,y=Y-OY;if(x>=0&&y>=0&&x<w&&y<h)continue;if(g[Y][X]!='B')continue;
+      const dx=x<0?-x:x>=w?x-w+1:0,dy=y<0?-y:y>=h?y-h+1:0;if(Math.max(dx,dy)<(plan?1:5))continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const q=g[Y+b][X+a],x2=X+a-OX,y2=Y+b-OY,band=!(x2>=0&&y2>=0&&x2<w&&y2<h);return q=='p'&&band&&Math.max(x2<0?-x2:x2>=w?x2-w+1:0,y2<0?-y2:y2>=h?y2-h+1:0)>=(plan?1:5);}))g[Y][X]='s';}
     m.rows=g.map(r=>r.join(''));m.w=W;m.h=H;
     // everything that was placed on the old map moves with it
     const sh=o=>{if(o&&o.tx!=null){o.tx+=OX;o.ty+=OY;}if(o&&o.fx!=null){o.fx+=OX;o.fy+=OY;}if(o&&o.cells)o.cells=o.cells.map(([a,b])=>[a+OX,b+OY]);},pair=a=>Array.isArray(a)&&a.length>=2&&typeof a[0]=='number'?[a[0]+OX,a[1]+OY].concat(a.slice(2)):a;
@@ -30,8 +30,26 @@ const BIG={ox:16,oy:11};
     for(const L of m.lm||[]){L.x+=OX;L.y+=OY;}m.en=(m.en||[]).map(e=>[e[0],e[1]+OX,e[2]+OY].concat(e.slice(3)));
     const rd={};for(const k in m.reads||{}){const [a,b]=k.split(',').map(Number);rd[(a+OX)+','+(b+OY)]=m.reads[k];}m.reads=rd;
     for(const k of ['readsT','statue','bossT','reward','solve'])if(Array.isArray(m[k]))m[k]=pair(m[k]);else sh(m[k]);
+    // a district with a street plan is laid out by hand after the real streets around its landmarks
+    m.streets=[];m.signs=[];
+    if(plan){const core=(x,y)=>x>=OX&&y>=OY&&x<OX+w&&y<OY+h,inb=(x,y)=>x>0&&y>0&&x<W-1&&y<H-1,put=(x,y,c)=>{if(inb(x,y)&&!core(x,y))g[y][x]=c;};
+      const api={W,H,g,put,core,
+        // a street: roadway, a sidewalk each side, and its name for the street signs
+        street(name,x0,y0,x1,y1,o){o=o||{};const horiz=x1-x0>=y1-y0;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let c='p';if(o.median){const k=horiz?y-y0:x-x0,n=horiz?y1-y0:x1-x0,a=horiz?x:y;if(k==(n>>1))c=a%5==2?'t':'.';}put(x,y,c);}
+          if(!o.bare)for(let y=y0-1;y<=y1+1;y++)for(let x=x0-1;x<=x1+1;x++){if(x>=x0&&x<=x1&&y>=y0&&y<=y1)continue;if(inb(x,y)&&!core(x,y)&&(g[y][x]=='B'||(o.over&&o.over.includes(g[y][x]))))g[y][x]=o.trees&&(horiz?x:y)%6==3&&(horiz?(y<y0||y>y1):(x<x0||x>x1))?'t':'s';}
+          m.streets.push({n:name,x0:x0-1,y0:y0-1,x1:x1+1,y1:y1+1});},
+        name(n,x0,y0,x1,y1){m.streets.push({n,x0,y0,x1,y1});},
+        fill(x0,y0,x1,y1,c,every,alt){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)put(x,y,every&&hs(x,y,seed+9)%every==0?alt:c);},
+        // a real place: its ground, and a plaque on the sidewalk that tells you what it is
+        plaque(key,title,text,x,y){put(x,y,'M');m.reads[x+','+y]='!'+key;RCQ.readx['!'+key]=[title,text];},
+        landmark(art,x,y,ww,hh,read){for(let b=y;b<y+hh;b++)for(let a=x;a<x+ww;a++)put(a,b,'X');m.lm.push({art,x,y,w:ww,h:hh,read:read||null});}};
+      plan(api);
+      // a signpost at each corner where two named streets cross
+      for(let i=0;i<m.streets.length;i++)for(let j=i+1;j<m.streets.length;j++){const A=m.streets[i],B=m.streets[j];if(A.n==B.n||A.n=='alley'||B.n=='alley'||A.n.indexOf('St. John')==0||B.n.indexOf('St. John')==0||A.n=='Capitol Square'||B.n=='Capitol Square')continue;const x0=Math.max(A.x0,B.x0),x1=Math.min(A.x1,B.x1),y0=Math.max(A.y0,B.y0),y1=Math.min(A.y1,B.y1);if(x0>x1||y0>y1)continue;
+        for(const [x,y] of [[x0,y0],[x1,y1]])if(g[y]&&g[y][x]=='s'&&!m.signs.some(q=>Math.abs(q[0]-x)+Math.abs(q[1]-y)<3)){m.signs.push([x,y,A.n,B.n]);break;}}
+      m.rows=g.map(r=>r.join(''));}
     // street lamps along the new sidewalks
-    if(urban)for(let Y=2;Y<H-2;Y++)for(let X=2;X<W-2;X++){const x=X-OX,y=Y-OY;if(x>=-1&&y>=-1&&x<=w&&y<=h)continue;if(g[Y][X]=='s'&&hs(X,Y,seed+3)%23==0)m.lamps.push([X,Y]);}
+    if(urban||plan)for(let Y=2;Y<H-2;Y++)for(let X=2;X<W-2;X++){const x=X-OX,y=Y-OY;if(x>=-1&&y>=-1&&x<=w&&y<=h)continue;if(g[Y][X]=='s'&&hs(X,Y,seed+3)%23==0)m.lamps.push([X,Y]);}
   }
   // where a road reaches the edge but the map next door has trees there, clear a way through them
   const WK='.,psSKk=-FEn^|1',set=(m,x,y,c)=>{m.rows[y]=m.rows[y].slice(0,x)+c+m.rows[y].slice(x+1);},carve=(m,x,y,sx,sy)=>{for(let k=0;k<14&&m.rows[y]&&m.rows[y][x]=='T';k++,x+=sx,y+=sy)set(m,x,y,'.');};

@@ -100,8 +100,8 @@ function buildMesh(lv){
     if(!room)groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h);
     // things standing on the tile
     switch(c){
-      case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4,hd=hood(lv),rowh=hd=='fan'||hd=='jward'||hd=='cary',look=wallLook(rowh?k*31+(x>>1)+7:k,lv),same=(a,b)=>comp[a+','+b]===k;
-        if(hd=='fan')mansardTile(M,x,y,ht,same,hash(x>>1,y,k));else{M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});}
+      case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4,hd=hood(lv),rowh=hd=='fan'||hd=='jward'||hd=='cary'||hd=='chill',look=wallLook(rowh?k*31+(x>>1)+7:k,lv),same=(a,b)=>comp[a+','+b]===k;
+        if(hd=='fan')mansardTile(M,x,y,ht,same,hash(x>>1,y,k));else if(hd=='chill')gableTile(M,x,y,ht,same,look,[[1,.5,.45],[.55,.75,.6],[.8,.82,.86],[.5,.5,.54]][hash(k,5)%4],hash(x,y,31));else{M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});}
         facade(M,lv,x,y,ht,bh,kind,h,look);if(hash(k,x,y)%9==0){const ox=X0+.5+(h%3)*.3,oz=Z0+.5+((h>>3)%3)*.3;M.box(ox,ht,oz,ox+.55,ht+1.5,oz+.45,'brick');M.box(ox-.06,ht+1.5,oz-.06,ox+.61,ht+1.6,oz+.51,'granite');}
         break;}
       case'X':case'D':{if(lmAt(lv,x,y))break;const ht=bh(x,y);if(room){M.box(X0,0,Z0,X1,ht,Z1,{top:'roof',side:'qwall'},null,{bottom:1},true);break;}
@@ -152,6 +152,8 @@ function buildMesh(lv){
     }
   }
   for(const L of lv.d.lm||[])landmark(M,lv,L);
+  // a green street sign on a pole at each named corner
+  for(const [sx,sy] of lv.d.signs||[]){const px=sx*TS+.35,pz=sy*TS+.35,g=[.1,.36,.22];M.tube([px,0,pz],[px,3,pz],.035,.03,6,'chrome');M.box(px-.5,2.72,pz-.015,px+.5,2.92,pz+.015,'paint',g);M.box(px-.015,2.5,pz-.5,px+.015,2.7,pz+.5,'paint',g);M.box(px-.42,2.79,pz-.02,px+.42,2.85,pz+.02,'white');M.box(px-.02,2.57,pz-.42,px+.02,2.63,pz+.42,'white');M.sphere(px,3.02,pz,.045,6,3,'chrome');}
   for(const pr of lv.props||[])propMesh(M,pr);
   // doorways on whatever building face is open to the street
   for(const dr of lv.doors||[]){if(!room&&rows[dr.ty][dr.tx]=='D'&&!lmAt(lv,dr.tx,dr.ty))continue;if(!room&&typeof LMK!='undefined'&&lmAt(lv,dr.tx,dr.ty)&&LMK[lmAt(lv,dr.tx,dr.ty).art])continue;const fd=faceDir(lv,dr.tx,dr.ty),X0=dr.tx*TS,Z0=dr.ty*TS,cx=X0+TS/2,cz=Z0+TS/2,o=.03,w=.75;
@@ -170,7 +172,7 @@ function groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h){
 const FLOOR_H=3.3;
 // each building gets its own masonry: red, dark or tawny brick, or painted stucco
 // which neighborhood a map is, for how its buildings are built
-const HOODS={'ow:1,1':'fan','ow:-1,0':'fan','ow:2,0':'jward','ow:3,0':'chill','ow:4,0':'chill','ow:3,1':'shockoe','ow:4,1':'shockoe','ow:3,2':'shockoe','ow:0,1':'cary','ow:0,0':'works','ow:2,3':'works'};
+const HOODS={'ow:2,1':'civic','ow:1,1':'fan','ow:-1,0':'fan','ow:2,0':'jward','ow:3,0':'chill','ow:4,0':'chill','ow:3,1':'shockoe','ow:4,1':'shockoe','ow:3,2':'shockoe','ow:0,1':'cary','ow:0,0':'works','ow:2,3':'works'};
 function hood(lv){return lv._hood||(lv._hood=HOODS[lv.d.id]||'town');}
 const CLAPW=[1.04,1.14,1.74];// clapboard painted white
 const HOODLOOK={fan:[['brick',[1,1,1]],['brick',[.82,.72,.68]],['plaster',[.95,.92,.82]],['brick',[1.05,.92,.84]],['plaster',[.72,.78,.84]],['brick',[.9,.8,.78]],['brick',[.96,.86,.8]]],
@@ -178,6 +180,7 @@ const HOODLOOK={fan:[['brick',[1,1,1]],['brick',[.82,.72,.68]],['plaster',[.95,.
   chill:[['brick',[1,1,1]],['clap',CLAPW],['clap',[1,1,1]],['clap',[.76,.96,1.5]],['brick',[.9,.82,.8]],['clap',CLAPW]],
   shockoe:[['brick',[.8,.7,.66]],['brick',[.92,.8,.74]],['brick',[.7,.64,.62]],['brick',[1,.92,.86]]],
   cary:[['plaster',[1,.86,.7]],['plaster',[.74,.9,.86]],['plaster',[.95,.9,.6]],['plaster',[.8,.82,.95]],['brick',[1,1,1]],['plaster',[.97,.96,.92]],['plaster',[.95,.74,.7]]],
+  civic:[['marble',[.9,.88,.84]],['granite',[1,1,1]],['brick',[.95,.9,.86]],['plaster',[.9,.88,.8]],['marble',[.82,.82,.84]]],
   works:[['brick',[1.05,.98,.85]],['concrete',[1,1,1]],['brick',[.85,.8,.78]],['concrete',[.85,.87,.9]]]};
 function wallLook(k,lv){const L=HOODLOOK[hood(lv)],h=hash(k,lv.d.ax*13+lv.d.ay,17);if(L)return L[h%L.length];
   return[[ 'brick',[1,1,1]],['brick',[.82,.76,.74]],['brick',[1.04,.9,.8]],['brick',[.9,.84,.86]],['plaster',[.95,.9,.78]],['plaster',[.78,.8,.78]],['brick',[.96,.94,.9]]][h%7];}

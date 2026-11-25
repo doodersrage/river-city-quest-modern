@@ -158,3 +158,25 @@ LMK.byrd=(M,X0,Z0,X1,Z1)=>{const cx=(X0+X1)/2,bk=[1.08,.94,.78],tc=[.93,.89,.78]
   fbox(M,S,-.1,L+.1,H-.9,H-.5,0,.2,'marble',tc);fbox(M,S,-.2,L+.2,H-.5,H-.3,0,.36,'marble',tc);for(let u=.1;u<L;u+=.45)fbox(M,S,u,u+.16,H-.75,H-.5,0,.3,'marble',tc);fbox(M,S,0,L,H-.3,H+.55,-.25,.02,'brick',bk);fbox(M,S,-.05,L+.05,H+.55,H+.7,-.3,.08,'marble',tc);
   fbox(M,S,L/2-1.6,L/2+1.6,H+.7,H+1.3,-.25,.02,'marble',tc);ltri(M,S.P(L/2-1.8,H+1.3,.02),S.P(L/2+1.8,H+1.3,.02),S.P(L/2,H+2,.02),'marble',tc);for(const u of [.25,L-.25])M.lathe(S.P(u,0,0)[0],H+.7,z1-.12,[[0,.14],[.12,.2],[.4,.24],[.5,.12],[.62,.16],[.75,0]],8,'marble',tc);
   for(const s of ['E','W']){const F=wallFace(x0,z0,x1,z1,s);for(const y of [4.6,7.8])lmWin(M,F,F.len/2,y,1,1.6,{hood:1,trim:tc});}};
+
+/* ---------- neighbors of the landmarks ---------- */
+// St. Paul's Episcopal Church: a stuccoed Greek Revival temple with a deep columned porch and a low eight-sided cupola
+LMK.temple=(M,X0,Z0,X1,Z1)=>{const cx=(X0+X1)/2,W=[.93,.9,.84],x0=X0+.5,x1=X1-.5,z0=Z0+.3,zp=Z1-.35,zf=zp-2,base=1.1,H=6,top=base+H;
+  M.box(x0-.2,0,z0,x1+.2,base,zp,'granite',null,{bottom:1},true);for(let i=0;i<5;i++)M.box(x0+.6,0,zp,x1-.6,base*(1-(i+1)/6),zp+(i+1)*.06,'granite');
+  M.box(x0,base,z0,x1,top,zf,'plaster',W,{bottom:1,top:1},true);const n=6;for(let i=0;i<n;i++)lmColumn(M,x0+.45+i*(x1-x0-.9)/(n-1),zp-.45,base,H,.34,'ionic',W);
+  M.box(x0-.1,top,z0-.1,x1+.1,top+.9,zp,'white',W);M.box(x0-.3,top+.9,z0-.3,x1+.3,top+1.05,zp+.2,'white',W);M.gable(x0-.3,z0-.3,x1+.3,zp+.2,top+1.05,1.7,false,'tin',null,'white');
+  const S=wallFace(x0,z0,x1,zf,'S');lmDoor(M,S,S.len/2,base,1.5,3.2);for(const u of [1.4,S.len-1.4])lmDoor(M,S,u,base,1.1,2.8);
+  for(const s of ['E','W']){const F=wallFace(x0,z0,x1,zf,s);for(let i=0;i<3;i++){const u=(i+.5)*F.len/3;lmWin(M,F,u,base+1.2,1,3.6,{cols:3,rows:6,hood:1});fbox(M,F,u+F.len/6-.2,u+F.len/6+.2,base,top,0,.08,'white',W);}}
+  const cz=zf-1.2;M.box(cx-1.1,top+1.6,cz-1.1,cx+1.1,top+2.6,cz+1.1,'white',W);M.lathe(cx,top+2.6,cz,[[0,1],[1.5,.96],[1.5,1.08],[1.65,1.08]],8,'white',W);M.lathe(cx,top+4.25,cz,[[0,1.02],[.4,.9],[.75,.55],[.9,.2],[1.2,.05],[1.3,0]],16,'copper');};
+// Old City Hall: gray granite Gothic, a tall clock tower at one corner and steep-roofed turrets at the others
+LMK.cityhall=(M,X0,Z0,X1,Z1)=>{const g=[.78,.79,.82],dk=[.5,.52,.56],x0=X0+.5,x1=X1-.5,z0=Z0+.4,z1=Z1-.5,H=11;
+  M.box(x0-.15,0,z0-.15,x1+.15,.9,z1+.15,'granite',dk,{bottom:1},true);M.box(x0,.9,z0,x1,H,z1,'granite',g,{bottom:1,top:1},true);for(const y of [4.2,7.4])M.box(x0-.06,y,z0-.06,x1+.06,y+.18,z1+.06,'granite',dk);M.box(x0-.2,H,z0-.2,x1+.2,H+.35,z1+.2,'granite',dk);
+  hipRoof(M,x0-.2,z0-.2,x1+.2,z1+.2,H+.35,3.2,2.4,2.4,'roof',[.6,.62,.68]);
+  for(const s of ['S','E','W','N']){const F=wallFace(x0,z0,x1,z1,s),n=Math.max(2,Math.floor(F.len/2.2));for(let i=0;i<n;i++){const u=(i+.5)*F.len/n;for(const y of [1.5,4.8,8])lmWin(M,F,u,y,.95,1.5,{arch:1,key:1,cols:2,rows:3,trim:dk,t:.11});}}
+  const S=wallFace(x0,z0,x1,z1,'S');lmWin(M,S,S.len/2,.9,1.9,2.4,{arch:1,key:1,cell:'door',cols:2,rows:1,nosill:1,trim:dk,t:.2});for(let i=0;i<4;i++)M.box((x0+x1)/2-1.6-i*.1,0,z1,(x0+x1)/2+1.6+i*.1,.9-i*.22,z1+.1+i*.05,'granite');
+  const turret=(tx,tz,r,top,clock)=>{M.box(tx-r,0,tz-r,tx+r,top,tz+r,'granite',g,{bottom:1,top:1},true);M.box(tx-r-.12,top,tz-r-.12,tx+r+.12,top+.3,tz+r+.12,'granite',dk);
+    for(const s of ['S','E','W','N']){const F=wallFace(tx-r,tz-r,tx+r,tz+r,s);for(let y=2;y<top-3.2;y+=3.2)lmWin(M,F,r,y,.55,1.5,{arch:1,cols:1,rows:2,trim:dk});lmWin(M,F,r,top-2.6,Math.min(1.1,r*1.2),1.2,{arch:1,cols:2,rows:1,cell:'grille',gcol:dk,trim:dk});
+      if(clock){fquad(M,F,r-.85,r+.85,top-5.2,top-3.5,.05,'clock');}}
+    hipRoof(M,tx-r-.12,tz-r-.12,tx+r+.12,tz+r+.12,top+.3,clock?5.5:3.2,r+.12,r+.12,'roof',[.6,.62,.68]);M.lathe(tx,top+.3+(clock?5.5:3.2),tz,[[0,.08],[.3,.14],[.5,.04],[1,0]],6,'copper');};
+  turret(x0+1.3,z1-1.1,1.3,19,true);turret(x1-.9,z1-.8,.9,13.5);turret(x0+.9,z0+.8,.9,13.5);turret(x1-.9,z0+.8,.9,13.5);
+  for(let i=0;i<3;i++){const x=x0+4.6+i*(x1-x0-7.6)/2;M.box(x-.5,H+.2,z1-.9,x+.5,H+1.5,z1+.05,'granite',g);M.gable(x-.6,z1-.9,x+.6,z1+.12,H+1.5,.9,false,'roof',[.6,.62,.68],'granite');lmWin(M,wallFace(x-.5,z1-.9,x+.5,z1+.05,'S'),.5,H+.45,.5,.75,{arch:1,cols:1,rows:1,trim:dk});}};

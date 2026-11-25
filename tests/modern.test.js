@@ -31,3 +31,8 @@ for(const id of ids){const m=M[id];if(m.w!=64||m.h!=44||m.rows.length!=44||m.row
   if(S)for(let x=0;x<64;x++){const a=WALK.includes(m.rows[43][x]),b=WALK.includes(S.rows[0][x]);if(a&&b)open++;if(a!=b)joins++;}}
 ok2(!size,'all '+ids.length+' neighborhoods are 64 by 44 tiles');ok2(!doors&&!npc,'every door and every person moved with the map');ok2(lm<40,'landmarks still stand on their own ground');
 ok2(open>40&&!joins,'neighbors still join edge to edge ('+open+' open tiles, '+joins+' one-sided)');}
+// districts with a street plan carry real street names, corner signs and plaques for real neighbors
+{const ok2=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};const M=G.RCQ.maps,want={'ow:2,1':['E Broad St','N 9th St','Governor St','Bank St'],'ow:3,1':['E Main St','N 17th St','E Cary St'],'ow:3,0':['E Broad St','E Grace St','N 24th St','N 25th St'],'ow:0,1':['W Cary St','S Colonial Ave','S Sheppard St'],'ow:1,1':['Monument Ave','N Lombardy St','Park Ave'],'ow:2,0':['N 2nd St','E Leigh St','E Clay St']};
+let miss=[],signs=0,pl=0;for(const id in want){const m=M[id],names=new Set(m.streets.map(s=>s.n));for(const n of want[id])if(!names.has(n))miss.push(id+' '+n);signs+=m.signs.length;for(const k in m.reads)if(m.reads[k][0]=='!'&&G.RCQ.readx[m.reads[k]]){const [x,y]=k.split(',').map(Number);if(m.rows[y][x]=='M')pl++;}}
+ok2(!miss.length,'six districts are laid out on their real streets'+(miss.length?' (missing '+miss.join(', ')+')':''));ok2(signs>=40&&pl>=12,signs+' corner street signs and '+pl+' plaques for real places');
+ok2(M['ow:2,1'].lm.some(L=>L.art=='cityhall')&&M['ow:2,1'].lm.some(L=>L.art=='temple'),"Old City Hall and St. Paul's stand by Capitol Square");}

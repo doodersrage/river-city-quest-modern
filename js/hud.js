@@ -15,6 +15,8 @@ function drawHud(){hx.clearRect(0,0,HW,HH);
   if(mode=='title'){drawTitle();return;}
   if(mode=='mini'){if(typeof drawMiniHud=='function')drawMiniHud();return;}
   if(!st)return;
+  if(mode=='play'&&lv&&!lv.room&&!dlg&&!menu&&lv.d.streets&&lv.d.streets.length){const tx=Math.floor(p.x/TS),ty=Math.floor(p.z/TS);let nm=null,best=1e9;for(const s of lv.d.streets)if(tx>=s.x0&&tx<=s.x1&&ty>=s.y0&&ty<=s.y1){const a=(s.x1-s.x0+1)*(s.y1-s.y0+1);if(a<best){best=a;nm=s.n;}}
+    if(nm&&nm!='alley'){const w=nm.length*9+28;hx.fillStyle='rgba(12,60,36,.82)';hx.fillRect(HW/2-w/2,HH-34,w,24);hx.strokeStyle='rgba(255,255,255,.8)';hx.strokeRect(HW/2-w/2+2.5,HH-31.5,w-5,19);T(nm,HW/2,HH-29,{align:'center',size:14,c:'#ffffff'});}}
   if(mode=='end'||mode=='credits'){mode=='end'?drawEnd():drawCredits();return;}
   // hearts, coins, item
   for(let i=0;i<st.max/2;i++)heart(16+(i%10)*26,14+Math.floor(i/10)*24,Math.max(0,Math.min(1,(p.hp-i*2)/2)));
