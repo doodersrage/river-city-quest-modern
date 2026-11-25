@@ -20,7 +20,7 @@ function drawModel(parts,base,pose,opt){
   if(ps){if(ps.t)m=M4.mul(m,M4.tr(ps.t[0],ps.t[1],ps.t[2]));if(ps.y)m=M4.mul(m,M4.ry(ps.y));if(ps.x)m=M4.mul(m,M4.rx(ps.x));if(ps.z)m=M4.mul(m,M4.rz(ps.z));}
   drawVAO(meshGL(pt.mesh),m,atlasTex,opt);}}
 function envLook(){const e=envLook0();return typeof weatherLook=='function'?weatherLook(e):e;}
-function envLook0(){const dk=dark();if(lv.room)return{fog:[10,30],fogCol:[.03,.03,.05],amb:.5};
+function envLook0(){const dk=dark();if(lv.room)return lv.dungeon?{fog:[10,30],fogCol:[.03,.03,.05],amb:.5}:{fog:[16,46],fogCol:[.1,.1,.11],amb:.92};// lived-in rooms are bright; dungeons stay dim
   const day=[.66,.72,.78],night=[.05,.06,.12],dusk=[.62,.45,.42],h=hour(),ds=h>=17&&h<20?Math.sin((h-17)/3*Math.PI):0;
   const fc=day.map((v,i)=>v*(1-dk)+night[i]*dk).map((v,i)=>v*(1-ds*.5)+dusk[i]*ds*.5);return{fog:[14-dk*5,40-dk*12],fogCol:fc,amb:1-dk*.66};}
 function lightsNow(){const L=[],dk=lv.room?1:dark();
