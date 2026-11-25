@@ -2,13 +2,13 @@
 /* River City Quest Modern: the benchmark. Open the game with ?bench on the end of the address and it tours six districts
    by itself, measuring on whatever machine it is running on, then shows a report you can copy and send.
    ?bench=0, 1 or 2 picks the quality level (low, medium, high); without a number it uses high.
-   Nothing is saved: your own game is left alone. */
+   Nothing is saved: your own game and your quality setting are left alone. */
 const BENCH=typeof location!='undefined'&&/[?&]bench(=|&|$)/.test(location.search||'');
 function benchRun(){const errs=[],m=/[?&]bench=(\d)/.exec(location.search),lvl=m?Math.min(2,+m[1]):2,route=['ow:2,1','ow:3,0','ow:1,1','ow:0,1','ow:4,1','ow:2,2'],rows=[];
   addEventListener('error',e=>errs.push(e.message||String(e)));saveGame=function(){};
   const say2=t=>{let d=document.getElementById('benchmsg');if(!d){d=document.createElement('div');d.id='benchmsg';d.style.cssText='position:fixed;left:0;right:0;top:0;padding:8px 12px;background:rgba(10,14,30,.85);color:#fff;font:14px sans-serif;z-index:50;text-align:center';document.body.appendChild(d);}d.textContent=t;};
   let drawMs=0;const r0=render;render=function(f){const t=performance.now();r0(f);drawMs+=performance.now()-t;};
-  startGame(null);dlg=null;QUAL.auto=false;QUAL.lvl=lvl;if(typeof setQuality=='function')setQuality(false,lvl);
+  startGame(null);dlg=null;let keep=null;try{keep=localStorage.getItem('rcqm-quality');}catch(e){}setQuality(false,lvl);try{if(keep==null)localStorage.removeItem('rcqm-quality');else localStorage.setItem('rcqm-quality',keep);}catch(e){}
   const frames=n=>new Promise(res=>{const step=()=>{if(--n<=0)res();else requestAnimationFrame(step);};requestAnimationFrame(step);});
   const one=async id=>{say2('Benchmark: '+RCQ.maps[id].name+' ('+(rows.length+1)+' of '+route.length+')');const t0=performance.now();loadScene(id,200,150,0);dlg=null;st.clock=CYC*.32;await frames(3);const build=performance.now()-t0;
     const dts=[];drawMs=0;let lastT=performance.now(),until=lastT+6000,drawn=0,tot=0,n=0;
@@ -17,7 +17,7 @@ function benchRun(){const errs=[],m=/[?&]bench=(\d)/.exec(location.search),lvl=m
     rows.push({name:RCQ.maps[id].name,build:Math.round(build),fps:avg,low,draw:drawMs/dts.length,tris:Math.round(tris),seen:n?Math.round(100*drawn/n/Math.max(1,tot)):0});};
   (async()=>{for(const id of route){try{await one(id);}catch(e){errs.push(id+': '+(e&&e.message||e));}}
     let gpu='unknown';try{const x=gl.getExtension('WEBGL_debug_renderer_info');gpu=x?gl.getParameter(x.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);}catch(e){}
-    const c=document.getElementById('gl'),pad=(s,n)=>(s+'').padEnd(n),L=['River City Quest benchmark','Graphics: '+gpu,'Screen: '+c.width+' x '+c.height+' drawn ('+(window.devicePixelRatio||1)+'x pixels), quality '+QL[lvl].name+(typeof WLOW!='undefined'&&WLOW?', phone build':''),'Browser: '+navigator.userAgent,'',
+    const c=document.getElementById('gl'),pad=(s,n)=>(s+'').padEnd(n),L=['River City Quest benchmark','Graphics: '+gpu,'Screen: '+FW+' x '+FH+' drawn on a '+c.width+' x '+c.height+' canvas ('+(window.devicePixelRatio||1)+'x pixels), quality '+QL[lvl].name+(typeof WLOW!='undefined'&&WLOW?', phone build':''),'Browser: '+navigator.userAgent,'',
       pad('District',30)+pad('fps',8)+pad('worst',8)+pad('draw ms',9)+pad('build ms',10)+pad('triangles',11)+'in view'];
     for(const r of rows)L.push(pad(r.name,30)+pad(r.fps.toFixed(0),8)+pad(r.low.toFixed(0),8)+pad(r.draw.toFixed(1),9)+pad(r.build,10)+pad(r.tris,11)+r.seen+'%');
     L.push('','fps is capped by the screen, usually at 60. "worst" is the slowest 1 in 100 frames. "draw ms" is the time the page spends sending each frame.',errs.length?'Errors: '+errs.slice(0,6).join(' | '):'No errors.');

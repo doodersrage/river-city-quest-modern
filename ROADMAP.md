@@ -36,6 +36,7 @@ Desktop is the target, but there is no desktop to measure on yet. Until there is
 - [x] A benchmark link: add `?bench` to the address (or `?bench=0`, `1`, `2` for low, medium, high) and it tours six districts and shows a report to copy
 - [ ] An on-screen counter: frames a second, triangles drawn, district build time
 - [ ] Measure every district on the phone at each quality level
+  - Measured so far (25 Nov, PowerVR BXM-8-256 phone, six districts): Low 35 to 55 frames a second, worst frames 15 to 29; High 13 to 19, worst 5 to 9. Districts build in 1.2 to 3 s. Medium and the other 18 districts are not measured.
 - [ ] Set limits a district must stay under, for phone and for desktop, and a test that fails when one goes over
 - [ ] Desktop quality level: decide what it turns on (denser grass, longer view, more traffic) so there is room to shine
 - [ ] When a desktop is available: measure there and adjust
