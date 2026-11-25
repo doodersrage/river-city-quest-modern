@@ -19,8 +19,10 @@ function deciduous(M,x,z,seed,s,y0){s=s||1;y0=y0||0;const R=seeded(seed*7919+13)
   for(let i=0;i<5;i++){const a=i*1.26+R()*.6,by=y0+(1.9+i*.33)*s,len=(1.3+R()*.7)*s,end=[x+Math.cos(a)*len,by+(1+R()*.6)*s,z+Math.sin(a)*len];
     M.tube([x,by,z],end,.1*s,.035*s,6,'bark');const tw=[end[0]+Math.cos(a+.6)*.6*s,end[1]+.5*s,end[2]+Math.sin(a+.6)*.6*s];M.tube(end,tw,.035*s,.015*s,5,'bark');}
   M.swayV=.05;const cy=y0+(4.3+R()*.6)*s,rx=(2.1+R()*.5)*s,ry=(1.9+R()*.4)*s;
-  crownCards(M,R,[tx,cy,tz],[rx,ry,rx*(.9+R()*.2)],52,1.05*s,'leafcard');
-  for(let k=0;k<3;k++){const a=R()*6.283;crownCards(M,R,[tx+Math.cos(a)*rx*.7,cy-ry*.35,tz+Math.sin(a)*rx*.7],[rx*.5,ry*.45,rx*.5],10,.85*s,'leafcard');}
+  // each tree is its own kind and its own shade: some turn early, some hold their green, some have already gone russet
+  const tn=[[1,1,1],[.78,.98,.66],[1.14,.9,.68],[.66,.88,.58],[1.06,1.04,.78],[.9,.8,.62]][seed%6];
+  crownCards(M,R,[tx,cy,tz],[rx,ry,rx*(.9+R()*.2)],52,1.05*s,'leafcard',tn);
+  for(let k=0;k<3;k++){const a=R()*6.283;crownCards(M,R,[tx+Math.cos(a)*rx*.7,cy-ry*.35,tz+Math.sin(a)*rx*.7],[rx*.5,ry*.45,rx*.5],10,.85*s,'leafcard',tn);}
   M.swayV=0;}
 // a pine: straight trunk, tiers of needle cards that droop toward the tips
 function conifer(M,x,z,seed,s,y0){s=s||1;y0=y0||0;const R=seeded(seed*104729+7),H=(7+R()*2)*s;M.swayV=0;M.lathe(x,y0,z,[[0,.26*s],[.3*s,.2*s],[H,.04*s]],8,'bark');

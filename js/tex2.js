@@ -15,7 +15,8 @@ function makeLayers(S){
   const legacy=makeAtlas(),N=CELLS.length,alb=new Uint8Array(S*S*4*N),nrm=new Uint8Array(S*S*4*N);
   const cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d',{willReadFrequently:true});
   for(let i=0;i<N;i++){const name=CELLS[i],H=new Float32Array(S*S),E=new Float32Array(S*S);let img;
-    if(HI[name]){img=g.createImageData(S,S);HI[name](img.data,H,E,S,i);}
+    if(name.indexOf('text')==0&&typeof paintText=='function'){img=g.createImageData(S,S);paintText(img.data,H,E,S,+name.slice(4)-1);}
+    else if(HI[name]){img=g.createImageData(S,S);HI[name](img.data,H,E,S,i);}
     else{g.clearRect(0,0,S,S);g.imageSmoothingEnabled=SOFT.has(name);g.drawImage(legacy,(i%ATLAS_N)*ATLAS_PX,((i/ATLAS_N)|0)*ATLAS_PX,ATLAS_PX,ATLAS_PX,0,0,S,S);img=g.getImageData(0,0,S,S);
       const d=img.data;for(let k=0;k<S*S;k++){H[k]=(d[k*4]*.3+d[k*4+1]*.55+d[k*4+2]*.15)/255;if(name=='doorlit'&&d[k*4]>200&&d[k*4+1]>150)E[k]=1;}
       if(GLASSY.has(name))for(let k=0;k<S*S;k++){const r=d[k*4],gg=d[k*4+1],b=d[k*4+2];if(b>r+25&&b>gg)E[k]=1;}}

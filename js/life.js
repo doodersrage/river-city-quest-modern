@@ -148,7 +148,7 @@ const GARDENS=['ow:0,2','ow:0,-1','ow:4,0','ow:1,-1','ow:3,1'];
 let runners=[];
 function addFolk(who,talk,lines,hat,shirt,extra){const s=freeSpot(3);if(!s)return null;const n=Object.assign({who,talk,lines,hat:[hat],shirt:[shirt],tx:Math.floor(s[0]/TS),ty:Math.floor(s[1]/TS),x:s[0],z:s[1],hx:s[0],hz:s[1],yaw:0,t:rnd(200),walk:0,i:npcs.length,wander:talk=='folk'},extra||{});npcs.push(n);return n;}
 const FOLKC=[['#e83048','#3d63c8'],['#f2c14e','#58a850'],['#3ac2e8','#e8e4dc'],['#b890f8','#f2c14e'],['#58c868','#e83048'],['#f890a0','#2e4a8a']];
-function lifeOnLoad(id){dogReset();runners=[];lv.strings=null;
+function lifeOnLoad(id){dogReset();runners=[];lv.strings=null;if(typeof trafficInit=='function')trafficInit();
   if(id==HOME){for(const [x,y] of [[13,7],[13,8],[10,1],[2,4]])lv.g[y][x]='!';if(st.furn&&st.furn.piano){lv.g[4][13]=lv.g[4][14]='!';}}
   if(lv.room)return;
   const s=SECRETS[id];if(s&&!st.got['sec:'+id]){const k=mkPick('secret',s[0]*TS+TS/2,s[1]*TS+TS/2);k.id='sec:'+id;k.life=1e9;picks.push(k);}
@@ -167,7 +167,7 @@ function lifeOnLoad(id){dogReset();runners=[];lv.strings=null;
 
 /* ---------- each frame ---------- */
 let fireflies=[];
-function lifeUpdate(){wxTick();if(warm>0)warm--;if(zoom>0)zoom--;dogUpdate();frogTick();for(const r of runners){r.x+=r.v;r.walk+=.3;if(r.x>lv.w*TS+2)r.x=-2;}
+function lifeUpdate(){if(typeof trafficUpdate=='function')trafficUpdate();wxTick();if(warm>0)warm--;if(zoom>0)zoom--;dogUpdate();frogTick();for(const r of runners){r.x+=r.v;r.walk+=.3;if(r.x>lv.w*TS+2)r.x=-2;}
   const ffOn=!lv.room&&dark()>.6&&!(st.wx=='rain'||st.wx=='snow')&&st.wxk<.5&&lv.d.rows.some(r=>r.includes('T'));
   if(!ffOn)fireflies.length=0;else{while(fireflies.length<14)fireflies.push({x:p.x+(Math.random()-.5)*24,z:p.z+(Math.random()-.5)*24,y:.6+Math.random()*1.6,ph:Math.random()*6,b:rnd(90)});
     for(const f of fireflies){f.ph+=.03;f.x+=Math.cos(f.ph)*.03;f.z+=Math.sin(f.ph*1.3)*.03;f.y+=Math.sin(f.ph*2)*.006;f.b=(f.b+1)%90;if(Math.hypot(f.x-p.x,f.z-p.z)>16){f.x=p.x+(Math.random()-.5)*20;f.z=p.z+(Math.random()-.5)*20;}}}}
@@ -237,7 +237,7 @@ TALK3.ballplayer=function(n){if(st.items.balls&&st.ammo.balls>=10&&st.pins.flies
 function offerPinball(){say(['A pinball machine called RIVER CITY RAMBLE. One coin a game.'+(best('pin')?' High score: '+best('pin')+'.':'')],sel=>{if(sel!=0)return;if(st.coins<1){toast('You need a coin.');sfx('no');return;}st.coins--;startMini('pin');},'Penny Arcade',['Play','Not now']);}
 
 /* ---------- drawing: the dog, the home, picks that hop, the bike, runners ---------- */
-function drawLife(){
+function drawLife(){if(typeof trafficDraw=='function')trafficDraw();
   if(dog){const D=getModel('dog',()=>lifeModel('dog')),s=dog.moving?Math.sin(dog.walk)*.6:0,dg=dog.dig>0?Math.sin(frame*.8)*.5:0;
     shadowAt(dog.x,dog.z,.7);drawModel(D,M4.mul(M4.tr(dog.x,0,dog.z),M4.ry(dog.yaw)),{legFL:{x:s+dg},legBR:{x:s},legFR:{x:-s-dg},legBL:{x:-s},tail:{y:Math.sin(frame*(dog.bark>0?.8:.25))*.5},head:{x:dog.dig>0?.5:dog.bark>0?-.3*Math.abs(Math.sin(frame*.5)):0}});}
   if(lv.id==HOME){const F=st.furn||{},at=(k,y)=>M4.tr((HSPOT[k][0]+.5)*TS,y||0,(HSPOT[k][1]+.5)*TS),dm=(k,y,r)=>{const m=getModel(k,()=>lifeModel(k));drawModel(m,r?M4.mul(at(k,y),M4.ry(r)):at(k,y));};

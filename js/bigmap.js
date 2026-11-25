@@ -14,7 +14,7 @@ const BIG={ox:16,oy:11};
           if(!urban&&c=='T'&&(x==0||y==0||x==w-1||y==h-1)&&hs(X,Y,seed)%3)c=m.base&&'.,'.includes(m.base)?m.base:'.';row.push(c);continue;}
         const e=old[Math.max(0,Math.min(h-1,y))][Math.max(0,Math.min(w-1,x))],dx=x<0?-x:x>=w?x-w+1:0,dy=y<0?-y:y>=h?y-h+1:0,d=Math.max(dx,dy),edge=X==0||Y==0||X==W-1||Y==H-1,side=dx>0!=dy>0,along=dx>=dy?Y:X;
         let c;
-        if(side&&(e==ROAD||WATERY.includes(e)))c=e;// roads and the river run straight on to the new edge
+        if(side&&e==ROAD||WATERY.includes(e))c=e;// roads and the river run straight on to the new edge
         else if(side&&'.,sSKkn'.includes(e))c=edge&&!'.,sn'.includes(e)?'.':e;
         else if((urban||plan&&plan.town)&&(e=='B'||e=='X'||e=='D'||!side||plan)){
           if(edge||plan)c='B';else if(d==1||d==4)c=(d==4&&along%6==2)?'t':'s';else if(d==2||d==3)c='p';else c=along%9==4?'s':'B';}
@@ -47,7 +47,7 @@ const BIG={ox:16,oy:11};
       plan(api);
       // a signpost at each corner where two named streets cross
       for(let i=0;i<m.streets.length;i++)for(let j=i+1;j<m.streets.length;j++){const A=m.streets[i],B=m.streets[j];if(A.n==B.n||A.n=='alley'||B.n=='alley'||A.n.indexOf('St. John')==0||B.n.indexOf('St. John')==0||A.n=='Capitol Square'||B.n=='Capitol Square')continue;const x0=Math.max(A.x0,B.x0),x1=Math.min(A.x1,B.x1),y0=Math.max(A.y0,B.y0),y1=Math.min(A.y1,B.y1);if(x0>x1||y0>y1)continue;
-        for(const [x,y] of [[x0,y0],[x1,y1]])if(g[y]&&g[y][x]=='s'&&!m.signs.some(q=>Math.abs(q[0]-x)+Math.abs(q[1]-y)<3)){m.signs.push([x,y,A.n,B.n]);break;}}
+        for(const [x,y] of [[x0,y0],[x1,y1]])if(g[y]&&g[y][x]=='s'&&!m.signs.some(q=>Math.abs(q[0]-x)+Math.abs(q[1]-y)<3)){m.signs.push([x,y,A.n,B.n,A.x1-A.x0>A.y1-A.y0?1:0,B.x1-B.x0>B.y1-B.y0?1:0]);break;}}
       m.rows=g.map(r=>r.join(''));}
     // street lamps along the new sidewalks
     if(urban||plan)for(let Y=2;Y<H-2;Y++)for(let X=2;X<W-2;X++){const x=X-OX,y=Y-OY;if(x>=-1&&y>=-1&&x<=w&&y<=h)continue;if(g[Y][X]=='s'&&hs(X,Y,seed+3)%23==0)m.lamps.push([X,Y]);}

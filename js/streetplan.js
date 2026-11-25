@@ -52,4 +52,29 @@ const STREETPLAN={};
     a.fill(2,1,8,4,'s',6,'t');a.put(5,3,'Y');a.plaque('bojangles','Bill "Bojangles" Robinson','The statue of the dancer went up in 1973 where Leigh Street meets Adams. He paid for a traffic light at this corner after a child was hurt crossing.',6,5);
     a.plaque('walker','Maggie L. Walker House','At 110 1/2 East Leigh Street, on Quality Row, lived the first woman in America to charter a bank. The house is a National Historic Site.',22,9);
     a.plaque('eggleston','The Eggleston Hotel','At Second and Leigh stood Miller\'s Hotel, later the Eggleston, where the musicians who played the Hippodrome stayed.',35,9);});
+  // Broad Street downtown: the two great department stores faced each other across Sixth Street
+  STREETPLAN['ow:1,0']=town(a=>{
+    a.street('E Marshall St',1,5,62,7);a.street('E Grace St',1,36,62,38,{trees:1});a.street('N 5th St',9,1,11,42);a.street('N 7th St',51,1,53,42);
+    a.name('E Broad St',1,19,63,24);a.name('N 6th St',29,1,34,43);a.lot(55,27,61,32);a.fill(54,29,54,30,'p');
+    a.plaque('stores','Miller & Rhoads and Thalhimers','For most of a century Richmond shopped at two department stores side by side on Broad Street. "Meet me under the clock" meant the one at Miller & Rhoads.',20,8);});
+  // Scott's Addition: The Diamond sits on the Boulevard, with the old warehouse blocks to the west
+  STREETPLAN['ow:0,0']=town(a=>{
+    a.street('W Broad St',1,36,62,39);a.street('Robin Hood Rd',1,5,62,7);a.street('Roseneath Rd',9,1,11,42);a.street('Summit Ave',51,1,53,42);
+    a.name('N Arthur Ashe Blvd',28,1,35,43);a.name('W Leigh St',1,19,63,24);a.lot(2,26,7,33);a.lot(55,10,61,17);a.fill(54,13,54,14,'p');
+    a.plaque('scotts',"Scott's Addition",'Warehouses, bakeries and bottling plants filled these blocks. Now the same brick buildings hold breweries, cideries and apartments.',12,18);});
+  // Arthur Ashe Boulevard: museums along the Boulevard, with Broad Street across it and Monument Avenue to the south
+  STREETPLAN['ow:-1,0']=town(a=>{
+    a.street('Monument Ave',1,36,62,40,{median:1});a.street('W Leigh St',1,5,62,7);a.street('N Sheppard St',9,1,11,42);a.street('N Robinson St',51,1,53,42);
+    a.name('N Arthur Ashe Blvd',29,1,34,43);a.name('W Broad St',16,19,63,24);
+    a.plaque('ashemon','Arthur Ashe Monument','On Monument Avenue stands a statue of Arthur Ashe, the Richmond-born tennis champion, with books in one hand and a racket in the other, and children around him.',34,35);});
+  // VCU and Court End: the Siegel Center at Broad and Harrison, John Marshall's house at Ninth and Marshall
+  STREETPLAN['ow:2,-1']=town(a=>{
+    a.street('W Marshall St',1,5,62,7);a.street('W Grace St',1,36,62,38,{trees:1});a.street('N Harrison St',9,1,11,42);a.street('N 9th St',51,1,53,42);
+    a.name('W Broad St',1,19,63,24);a.name('N Belvidere St',29,1,34,43);a.lot(2,27,7,33);
+    a.plaque('courtend','Court End','John Marshall, the chief justice, built his brick house here at Ninth and Marshall in 1790 and lived in it for 45 years.',54,14);});
+  // Manchester: Hull Street runs through the old industrial town south of the river
+  STREETPLAN['ow:2,3']=town(a=>{
+    a.fill(42,1,45,10,'w');a.street('Bainbridge St',1,36,62,38);a.street('W 7th St',9,14,11,42);a.street('E 2nd St',51,14,53,42);
+    a.name('Hull St',1,19,63,24);a.name('Mayo Bridge',29,1,34,18);a.name('Commerce Rd',29,25,34,43);a.lot(55,27,61,33);a.fill(54,29,54,30,'p');
+    a.plaque('manchester','Manchester','Manchester was its own city, across the river from Richmond, until the two merged in 1910. Mills and tobacco factories lined these streets.',12,25);});
 })();

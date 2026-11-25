@@ -112,13 +112,20 @@ function buildMesh(lv){
     switch(c){
       case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4,hd=hood(lv),rowh=hd=='fan'||hd=='jward'||hd=='cary'||hd=='chill',look=wallLook(rowh?k*31+(x>>1)+7:k,lv),same=(a,b)=>comp[a+','+b]===k;
         if(hd=='fan')mansardTile(M,x,y,ht,same,hash(x>>1,y,k));else if(hd=='chill')gableTile(M,x,y,ht,same,look,[[1,.5,.45],[.55,.75,.6],[.8,.82,.86],[.5,.5,.54]][hash(k,5)%4],hash(x,y,31));else{M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});}
-        facade(M,lv,x,y,ht,bh,kind,h,look);if(hash(k,x,y)%9==0){const ox=X0+.5+(h%3)*.3,oz=Z0+.5+((h>>3)%3)*.3;M.box(ox,ht,oz,ox+.55,ht+1.5,oz+.45,'brick');M.box(ox-.06,ht+1.5,oz-.06,ox+.61,ht+1.6,oz+.51,'granite');}
+        facade(M,lv,x,y,ht,bh,kind,h,look,null,rowh?k*31+(x>>1)+7:k);
+        if(hd!='fan'&&hd!='chill'){const rh=hash(k,x*3+1,y*5+2),ry=ht+.45;// what collects on a flat roof
+          if(rh%9==1){M.box(cx-.55,ry,cz-.4,cx+.55,ry+.7,cz+.4,'tin',[.75,.76,.78]);M.box(cx-.4,ry+.7,cz-.25,cx+.4,ry+.76,cz+.25,'grille',[.3,.3,.32]);}
+          else if(rh%17==2){M.tube([cx,ry,cz],[cx,ry+.85,cz],.09,.09,6,'tin');M.lathe(cx,ry+.85,cz,[[0,.17],[.12,.13],[.2,0]],6,'tin');}
+          else if(rh%13==5)M.box(cx-.55,ry,cz-.55,cx+.55,ry+.16,cz+.55,{top:'pane',side:'white'});
+          else if(rh%31==3){M.box(cx-.8,ry,cz-.9,cx+.8,ry+2.1,cz+.9,look[0],look[1]);M.box(cx-.9,ry+2.1,cz-1,cx+.9,ry+2.2,cz+1,'granite');M.box(cx-.4,ry,cz+.9,cx+.4,ry+1.9,cz+.93,'door');}
+          else if(rh%47==4&&hd!='civic'&&hd!='cary'){for(const [a,b] of [[-.6,-.6],[.6,-.6],[-.6,.6],[.6,.6]])M.tube([cx+a,ry,cz+b],[cx+a*.8,ry+2,cz+b*.8],.05,.05,4,'black');M.lathe(cx,ry+2,cz,[[0,.95],[2,.9],[2,.98],[2.08,.98],[2.6,0]],12,'wood',[.5,.4,.32]);for(const yy of [.4,1,1.6])M.lathe(cx,ry+2+yy,cz,[[0,.96],[.06,.96]],12,'black');}}
+        if(hash(k,x,y)%9==0){const ox=X0+.5+(h%3)*.3,oz=Z0+.5+((h>>3)%3)*.3;M.box(ox,ht,oz,ox+.55,ht+1.5,oz+.45,'brick');M.box(ox-.06,ht+1.5,oz-.06,ox+.61,ht+1.6,oz+.51,'granite');}
         break;}
       case'X':case'D':{if(lmAt(lv,x,y))break;const ht=bh(x,y);if(room){M.box(X0,0,Z0,X1,ht,Z1,{top:'roof',side:'qwall'},null,{bottom:1},true);break;}
         // a building you can walk into: same masonry, windows and cornice as its neighbors, with a real door on the street side
         const look=wallLook(hash(x>>2,y>>2,77),lv);if(hood(lv)=='chill'){const sm=(a,b)=>{const q=src(a,b);return(q=='X'||q=='D')&&!lmAt(lv,a,b);};gableTile(M,x,y,ht,sm,look,[[1,.5,.45],[.55,.75,.6],[.8,.82,.86],[.5,.5,.54]][hash(x>>2,y>>2,5)%4],hash(x,y,31));}
         else{M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});}
-        facade(M,lv,x,y,ht,bh,2,h,look,c=='D'?faceDir(lv,x,y):null);break;}
+        facade(M,lv,x,y,ht,bh,2,h,look,c=='D'?faceDir(lv,x,y):null,hash(x>>2,y>>2,77));break;}
       case'W':{const edge=x==0||y==0||x==lv.w-1||y==lv.h-1,wh=y==lv.h-1?.8:edge?(lit?3.4:4):2.2;M.box(X0,0,Z0,X1,wh,Z1,{top:wh<1||!edge?wlCell:'black',side:wlCell},wlC,{bottom:1},wh>1);
         if(lit&&edge&&wh>1)M.box(X0-.01,wh-.2,Z0-.01,X1+.01,wh,Z1+.01,'white',[wlC[0]*.8,wlC[1]*.8,wlC[2]*.8],{bottom:1});break;}
       case'T':{const kind=h%5;if(kind<2)conifer(M,cx+((h>>3)%5-2)*.08,cz+((h>>6)%5-2)*.08,h,.95+(h>>9)%4*.06);else deciduous(M,cx,cz,h,.9+(h>>9)%4*.07);break;}
@@ -162,16 +169,26 @@ function buildMesh(lv){
     }
   }
   for(const L of lv.d.lm||[])landmark(M,lv,L);
+  // wooden utility poles with crossarms and sagging wires, along the alleys and side streets of the neighborhoods that still have them overhead
+  if(!room&&['fan','chill','cary','works','jward'].includes(hood(lv)))for(const s of lv.d.streets||[]){const hz=s.x1-s.x0>s.y1-s.y0,len=hz?s.x1-s.x0:s.y1-s.y0,wid=hz?s.y1-s.y0:s.x1-s.x0;if(len<14||wid>6)continue;if(s.n!='alley'&&hash(s.x0,s.y0,19)%2)continue;
+    const pts=[],line=hz?s.y0:s.x0,alley=s.n=='alley',wd=[.34,.27,.2];for(let i=(hz?s.x0:s.y0)+2;i<(hz?s.x1:s.y1)-1;i+=5){const tx=hz?i:line,ty=hz?line:i,c2=src(tx,ty);if(!(c2=='s'||alley&&c2=='p'))continue;pts.push(hz?[i*TS+1,(alley?line*TS+.25:line*TS+.45)]:[(alley?line*TS+.25:line*TS+.45),i*TS+1]);}
+    pts.forEach(([px,pz],i)=>{M.lathe(px,0,pz,[[0,.15],[1,.13],[8.4,.09]],8,'wood',wd);const ax=hz?0:1,az=hz?1:0;M.box(px-ax*.85-.05,7.7,pz-az*.85-.05,px+ax*.85+.05,7.82,pz+az*.85+.05,'wood',wd);M.box(px-ax*.6-.04,7.0,pz-az*.6-.04,px+ax*.6+.04,7.1,pz+az*.6+.04,'wood',wd);
+      for(const o of [-.75,0,.75])M.lathe(px+ax*o,7.82,pz+az*o,[[0,.035],[.1,.045],[.14,0]],5,'white',[.6,.75,.7]);if(hash(Math.round(px),Math.round(pz),7)%3==0){M.lathe(px+ax*.28,6.1,pz+az*.28,[[0,.2],[.05,.24],[.75,.24],[.8,.2]],8,'white',[.42,.44,.46]);}
+      const n=pts[i+1];if(n&&Math.hypot(n[0]-px,n[1]-pz)<26)for(const [o,y0,sag] of [[-.75,7.95,.55],[0,7.95,.6],[.75,7.95,.5],[-.5,7.12,.7],[.5,7.12,.75]]){let pa=[px+ax*o,y0,pz+az*o];for(let k=1;k<=6;k++){const t=k/6,pb=[px+(n[0]-px)*t+ax*o,y0-sag*4*t*(1-t),pz+(n[1]-pz)*t+az*o];M.tube(pa,pb,.014,.014,3,'black');pa=pb;}}});}
   // parking bays painted in the lots
   for(const L of lv.d.lots||[]){const x0=L[0]*TS,x1=(L[2]+1)*TS,z0=L[1]*TS,z1=(L[3]+1)*TS,two=z1-z0>=11.5,Wt=[.86,.86,.84];for(let px=x0+.1;px<x1;px+=2.7){M.quad([px-.05,.014,z0+4.9],[px+.05,.014,z0+4.9],[px+.05,.014,z0+.2],[px-.05,.014,z0+.2],'white',Wt);if(two)M.quad([px-.05,.014,z1-.2],[px+.05,.014,z1-.2],[px+.05,.014,z1-4.9],[px-.05,.014,z1-4.9],'white',Wt);}}
-  // traffic signals at the big crossings: a pole on the corner with an arm out over the road
-  if(!room&&streetKind(lv)=='asphalt'){let sig=0;for(let y=2;y<lv.h-2&&sig<8;y++)for(let x=2;x<lv.w-2&&sig<8;x++){const k=roadKind(lv,x,y);if(k.t!='x'||roadKind(lv,x-1,y).t=='x'||roadKind(lv,x,y-1).t=='x')continue;
-      let w=1,hh=1;while(roadKind(lv,x+w,y).t=='x')w++;while(roadKind(lv,x,y+hh).t=='x')hh++;if(w<3||hh<3||w>6||hh>6)continue;sig++;
-      for(const [cx2,cz2,ax,az] of [[x*TS-.45,y*TS-.45,1,0],[(x+w)*TS+.45,(y+hh)*TS+.45,-1,0]]){if(!'st'.includes(src(Math.floor(cx2/TS),Math.floor(cz2/TS))||'#'))continue;const dk=[.12,.13,.14],len=Math.min(w*TS*.55,4.6);
-        M.lathe(cx2,0,cz2,[[0,.13],[.25,.1],[5.6,.07]],8,'white',dk);M.tube([cx2,5.3,cz2],[cx2+ax*len,5.5,cz2],.06,.045,6,'white',dk);
-        for(const f of [.55,1]){const hx2=cx2+ax*len*f;M.box(hx2-.16,4.45,cz2-.14,hx2+.16,5.4,cz2+.14,'white',[.85,.7,.12]);[[.9,.1,.08],[.9,.7,.1],[.1,.8,.3]].forEach((cl,q)=>{for(const sgn of [-1,1])M.sphere(hx2,5.2-q*.28,cz2+sgn*.15,.09,6,3,q==2?'lampglow':'white',q==2?[.3,1,.5]:cl.map(v=>v*.35));});}}}}
+  // traffic signals at the big crossings: a pole on each corner with an arm out over the road it faces; the lamps are lit by the traffic code
+  lv.sigHeads=[];if(!room&&streetKind(lv)=='asphalt'){let sig=0;for(let y=2;y<lv.h-2&&sig<8;y++)for(let x=2;x<lv.w-2&&sig<8;x++){const k=roadKind(lv,x,y);if(k.t!='x'||roadKind(lv,x-1,y).t=='x'||roadKind(lv,x,y-1).t=='x')continue;
+      let w=1,hh=1;while(roadKind(lv,x+w,y).t=='x')w++;while(roadKind(lv,x,y+hh).t=='x')hh++;if(w<3||hh<3||w>6||hh>6)continue;sig++;const xa=x*TS-.45,xb=(x+w)*TS+.45,za=y*TS-.45,zb=(y+hh)*TS+.45;
+      // arms along x hang over the north-south street and face its traffic; arms along z face the east-west street
+      for(const [cx2,cz2,ax,az] of [[xa,za,1,0],[xb,zb,-1,0],[xb,za,0,1],[xa,zb,0,-1]]){if(!'st'.includes(src(Math.floor(cx2/TS),Math.floor(cz2/TS))||'#'))continue;const dk=[.12,.13,.14],len=Math.min((ax?w:hh)*TS*.55,4.6);
+        M.lathe(cx2,0,cz2,[[0,.13],[.25,.1],[5.6,.07]],8,'white',dk);M.tube([cx2,5.3,cz2],[cx2+ax*len,5.5,cz2+az*len],.06,.045,6,'white',dk);
+        for(const f of [.55,1]){const hx2=cx2+ax*len*f,hz2=cz2+az*len*f;M.box(hx2-(ax?.16:.14),4.45,hz2-(ax?.14:.16),hx2+(ax?.16:.14),5.4,hz2+(ax?.14:.16),'white',[.85,.7,.12]);
+          for(let q=0;q<3;q++)for(const sgn of [-1,1])M.sphere(hx2+(ax?0:sgn*.15),5.2-q*.28,hz2+(ax?sgn*.15:0),.085,6,3,'white',[.06,.06,.06]);lv.sigHeads.push({x:hx2,z:hz2,ax:ax?'z':'x'});}}}}
   // a green street sign on a pole at each named corner
-  for(const [sx,sy] of lv.d.signs||[]){const px=sx*TS+.35,pz=sy*TS+.35,g=[.1,.36,.22];M.tube([px,0,pz],[px,3,pz],.035,.03,6,'chrome');M.box(px-.5,2.72,pz-.015,px+.5,2.92,pz+.015,'paint',g);M.box(px-.015,2.5,pz-.5,px+.015,2.7,pz+.5,'paint',g);M.box(px-.42,2.79,pz-.02,px+.42,2.85,pz+.02,'white');M.box(px-.02,2.57,pz-.42,px+.02,2.63,pz+.42,'white');M.sphere(px,3.02,pz,.045,6,3,'chrome');}
+  for(const [sx,sy,n1,n2,h1,h2] of lv.d.signs||[]){const px=sx*TS+.35,pz=sy*TS+.35,g=[.06,.3,.19];M.tube([px,0,pz],[px,3.05,pz],.035,.03,6,'chrome');M.sphere(px,3.07,pz,.045,6,3,'chrome');
+    [[n1,h1,2.78],[n2,h2==h1?1-h1:h2,2.52]].forEach(([nm,hz,y])=>{const L=.56,t=.012;if(hz){M.box(px-L,y,pz-t,px+L,y+.24,pz+t,'paint',g);textQuad(M,[px-L,y,pz+t+.002],[px+L,y,pz+t+.002],[px+L,y+.24,pz+t+.002],[px-L,y+.24,pz+t+.002],nm);textQuad(M,[px+L,y,pz-t-.002],[px-L,y,pz-t-.002],[px-L,y+.24,pz-t-.002],[px+L,y+.24,pz-t-.002],nm);}
+      else{M.box(px-t,y,pz-L,px+t,y+.24,pz+L,'paint',g);textQuad(M,[px+t+.002,y,pz+L],[px+t+.002,y,pz-L],[px+t+.002,y+.24,pz-L],[px+t+.002,y+.24,pz+L],nm);textQuad(M,[px-t-.002,y,pz-L],[px-t-.002,y,pz+L],[px-t-.002,y+.24,pz+L],[px-t-.002,y+.24,pz-L],nm);}});}
   for(const pr of lv.props||[])propMesh(M,pr);
   // doorways on whatever building face is open to the street
   for(const dr of lv.doors||[]){if(!room&&rows[dr.ty][dr.tx]=='D'&&!lmAt(lv,dr.tx,dr.ty))continue;if(!room&&typeof LMK!='undefined'&&lmAt(lv,dr.tx,dr.ty)&&LMK[lmAt(lv,dr.tx,dr.ty).art])continue;const fd=faceDir(lv,dr.tx,dr.ty),X0=dr.tx*TS,Z0=dr.ty*TS,cx=X0+TS/2,cz=Z0+TS/2,o=.03,w=.75;
@@ -197,7 +214,7 @@ function groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h){
 const FLOOR_H=3.3;
 // each building gets its own masonry: red, dark or tawny brick, or painted stucco
 // which neighborhood a map is, for how its buildings are built
-const HOODS={'ow:2,1':'civic','ow:1,1':'fan','ow:-1,0':'fan','ow:2,0':'jward','ow:3,0':'chill','ow:4,0':'chill','ow:3,1':'shockoe','ow:4,1':'shockoe','ow:3,2':'shockoe','ow:0,1':'cary','ow:0,0':'works','ow:2,3':'works'};
+const HOODS={'ow:1,0':'broad','ow:2,-1':'broad','ow:2,1':'civic','ow:1,1':'fan','ow:-1,0':'fan','ow:2,0':'jward','ow:3,0':'chill','ow:4,0':'chill','ow:3,1':'shockoe','ow:4,1':'shockoe','ow:3,2':'shockoe','ow:0,1':'cary','ow:0,0':'works','ow:2,3':'works'};
 function hood(lv){return lv._hood||(lv._hood=HOODS[lv.d.id]||'town');}
 const CLAPW=[1.04,1.14,1.74];// clapboard painted white
 const HOODLOOK={fan:[['brick',[1,1,1]],['brick',[.82,.72,.68]],['plaster',[.95,.92,.82]],['brick',[1.05,.92,.84]],['plaster',[.72,.78,.84]],['brick',[.9,.8,.78]],['brick',[.96,.86,.8]]],
@@ -206,6 +223,7 @@ const HOODLOOK={fan:[['brick',[1,1,1]],['brick',[.82,.72,.68]],['plaster',[.95,.
   shockoe:[['brick',[.8,.7,.66]],['brick',[.92,.8,.74]],['brick',[.7,.64,.62]],['brick',[1,.92,.86]]],
   cary:[['plaster',[1,.86,.7]],['plaster',[.74,.9,.86]],['plaster',[.95,.9,.6]],['plaster',[.8,.82,.95]],['brick',[1,1,1]],['plaster',[.97,.96,.92]],['plaster',[.95,.74,.7]]],
   civic:[['marble',[.9,.88,.84]],['granite',[1,1,1]],['brick',[.95,.9,.86]],['plaster',[.9,.88,.8]],['marble',[.82,.82,.84]]],
+  broad:[['brick',[.95,.9,.86]],['marble',[.88,.86,.82]],['brick',[.8,.74,.72]],['plaster',[.9,.88,.8]],['brick',[1,1,1]],['granite',[1,1,1]],['brick',[1.05,.95,.82]]],
   works:[['brick',[1.05,.98,.85]],['concrete',[1,1,1]],['brick',[.85,.8,.78]],['concrete',[.85,.87,.9]]]};
 function wallLook(k,lv){const L=HOODLOOK[hood(lv)],h=hash(k,lv.d.ax*13+lv.d.ay,17);if(L)return L[h%L.length];
   return[[ 'brick',[1,1,1]],['brick',[.82,.76,.74]],['brick',[1.04,.9,.8]],['brick',[.9,.84,.86]],['plaster',[.95,.9,.78]],['plaster',[.78,.8,.78]],['brick',[.96,.94,.9]]][h%7];}
@@ -227,7 +245,7 @@ function mansardTile(M,x,y,ht,same,h){const X0=x*TS,Z0=y*TS,X1=X0+TS,Z1=Z0+TS,cx
 function facadeCell(x,y,dx,dy,f,nh,kind){if(f==0&&nh==0){if(kind==0&&dy==1)return'storefront';if(hash(x,y,dx+3*dy+7)%3==0)return'door';}return hash(x+f,y,dx+dy*5+f)%5==0?'panelit':'pane';}
 // the outside walls of a building tile, built around real openings: windows and doors are holes in the
 // wall with reveals, set back frames and glass, so they read as recessed the way real masonry does
-function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kind==2?[.18,.24,.2]:[.93,.92,.88],stone=[.9,.88,.84],k=hash(x,y,5),wc=look[0],wcol=look[1];
+function facade(M,lv,x,y,ht,bh,kind,h,look,entry,vkey){const X0=x*TS,Z0=y*TS,trim=kind==2?[.18,.24,.2]:[.93,.92,.88],stone=[.9,.88,.84],k=hash(x,y,5),wc=look[0],wcol=look[1];
   const doorCol=[[.16,.22,.18],[.08,.08,.09],[.42,.12,.1],[.15,.2,.32],[.35,.25,.16]][k%5],rev=wcol.map(v=>v*.8),hd=hood(lv),PW=[.94,.93,.9],iron=[.07,.07,.08];
   for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;
     // u runs along the wall seen from outside (0..TS), d sticks out of it
@@ -257,22 +275,25 @@ function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kin
     for(let f=f0;f<floors;f++){const yb=f*FLOOR_H,yt=Math.min(ht,yb+FLOOR_H),isEntry=entry&&entry[0]==dx&&entry[1]==dy&&f==0,c=isEntry?'door':entry&&f==0?'pane':(hd=='cary'&&f==0&&walk&&hash(x,y,dx+3*dy+7)%4)?'storefront':facadeCell(x,y,dx,dy,f,nh,kind);if(f>f0)fb(-.02,TS+.02,yb-.07,yb+.05,0,.05,'granite',stone);
       if(c=='storefront'){const o={u0:.12,u1:1.88,v0:.55,v1:2.75,dep:.16};panel(yb,yt,o);fb(.12,1.88,o.v0,o.v1,-.14,-.13,'pane');
         for(const u of [.12,1.88-.07])fb(u,u+.07,o.v0,o.v1,-.13,-.06,'white',doorCol);fb(.12,1.88,o.v1-.06,o.v1,-.13,-.06,'white',doorCol);fb(.12,1.88,o.v0,o.v0+.08,-.13,-.04,'white',doorCol);fb(.97,1.03,o.v0,o.v1,-.13,-.07,'white',doorCol);
-        fb(.05,1.95,2.85,3.2,0,.1,'sign2',[.9,.88,.82]);const ac=rgb(['#6a2a2a','#2a4a3a','#2a3a5a','#5a4a2a'][k%4]);
+        fb(.05,1.95,2.85,3.2,0,.1,'white',[.2,.2,.22]);textQuad(M,W(.08,2.88,.104),W(1.92,2.88,.104),W(1.92,3.17,.104),W(.08,3.17,.104),SHOPSIGNS[hash(x>>1,y>>1,lv.d.ax*5+lv.d.ay+dx*3+dy)%SHOPSIGNS.length]);const ac=rgb(['#6a2a2a','#2a4a3a','#2a3a5a','#5a4a2a'][k%4]);
         const a1=W(0,3.0,0),a2=W(TS,3.0,0),a3=W(TS,2.55,1.1),a4=W(0,2.55,1.1),a5=W(TS,2.35,1.1),a6=W(0,2.35,1.1);const aw=hd=='cary'?(k%2?'awning':'awning2'):'cloth',awc=hd=='cary'?null:ac;M.quad(a1,a2,a3,a4,aw,awc);M.quad(a4,a3,a5,a6,aw,awc);}
       else if(c=='door'){const o={u0:.55,u1:1.45,v0:yb,v1:yb+2.9,dep:.3};panel(yb,yt,o);fb(.55,1.45,yb,yb+2.42,-.3,-.25,'planks',doorCol);for(const [a,b] of [[.62,.97],[1.03,1.38]])for(const [c0,c1] of [[.25,1.15],[1.3,2.25]])fb(a,b,yb+c0,yb+c1,-.25,-.235,'planks',doorCol.map(v=>v*1.15));
         fb(.55,1.45,yb+2.42,yb+2.48,-.3,-.2,'white',trim);fb(.58,1.42,yb+2.48,yb+2.88,-.27,-.26,'pane');fb(1.26,1.31,yb+1.15,yb+1.22,-.25,-.2,'brass');
         fb(.4,1.6,yb,yb+.17,0,.8,'granite',stone);fb(.4,1.6,yb+.17,yb+.34,0,.45,'granite',stone);fb(.48,1.52,yb+2.9,yb+3.08,0,.12,'granite',stone);}
       else if(hd=='works'){// steel factory sash: wide, many small panes
         const v0=yb+1,v1=yb+2.75,o={u0:.2,u1:1.8,v0,v1,dep:.14};panel(yb,yt,o);fb(.2,1.8,v0,v1,-.12,-.11,c);for(let q=0;q<=4;q++)fb(.2+q*.4-.015,.2+q*.4+.015,v0,v1,-.11,-.085,'white',iron);for(let q=0;q<=3;q++)fb(.2,1.8,v0+q*(v1-v0)/3-.015,v0+q*(v1-v0)/3+.015,-.11,-.085,'white',iron);fb(.14,1.86,v0-.1,v0,0,.07,'concrete');}
-      else{const v0=yb+(f==0?.95:.9),v1=v0+1.75,o={u0:.52,u1:1.48,v0,v1,dep:.24};panel(yb,yt,o);fb(.52,1.48,v0,v1,-.2,-.19,c);
-        for(const u of [.52,1.48-.06])fb(u,u+.06,v0,v1,-.19,-.14,'white',trim);fb(.52,1.48,v0,v0+.07,-.19,-.13,'white',trim);fb(.52,1.48,v1-.06,v1,-.19,-.14,'white',trim);
-        fb(.52,1.48,(v0+v1)/2-.03,(v0+v1)/2+.03,-.19,-.15,'white',trim);fb(.985,1.015,v0,(v0+v1)/2,-.19,-.16,'white',trim);fb(.985,1.015,(v0+v1)/2,v1,-.19,-.16,'white',trim);
-        fb(.44,1.56,v0-.09,v0,0,.09,'granite',stone);
-        if(hd=='shockoe'){for(let q=0;q<6;q++){const u=.44+q*.187,yy=v1+.02+.13*Math.sin(Math.PI*(q+.5)/6);fb(u,u+.18,yy,yy+.2,0,.035,wc,wcol.map(v=>v*.72));}// a low brick arch over each window
-          if(k%3==0){fb(.14,.5,v0,v1,0,.04,'tin',[.3,.32,.33]);fb(1.5,1.86,v0,v1,0,.04,'tin',[.3,.32,.33]);}if(f>f0)fb(.16,.3,yb+.1,yb+.24,0,.03,'black',iron);}
-        else fb(.47,1.53,v1,v1+.2,0,.03,'granite',stone);
-        if(hd=='jward'&&f>0)fb(.44,1.56,v1+.2,v1+.3,0,.12,'white',stone);
-        if(kind==3){fb(.12,.44,v0,v1,.0,.05,'planks',[.17,.26,.19]);fb(1.56,1.88,v0,v1,0,.05,'planks',[.17,.26,.19]);}}
+      else{// each house has its own windows: plain sash, a wide three-part window, tall narrow ones, or small-paned sash
+        const ws=vkey==null?0:hash(vkey,91,3)%4,wa=ws==1?.3:ws==2?.64:.52,wb=TS-wa,wh=ws==1?1.6:ws==2?2:1.75,v0=yb+(f==0?.95:.9)-(ws==2?.1:0),v1=v0+wh,o={u0:wa,u1:wb,v0,v1,dep:.24};panel(yb,yt,o);fb(wa,wb,v0,v1,-.2,-.19,c);
+        for(const u of [wa,wb-.06])fb(u,u+.06,v0,v1,-.19,-.14,'white',trim);fb(wa,wb,v0,v0+.07,-.19,-.13,'white',trim);fb(wa,wb,v1-.06,v1,-.19,-.14,'white',trim);
+        fb(wa,wb,(v0+v1)/2-.03,(v0+v1)/2+.03,-.19,-.15,'white',trim);
+        if(ws==1){for(const u of [wa+(wb-wa)/3,wa+(wb-wa)*2/3])fb(u-.03,u+.03,v0,v1,-.19,-.14,'white',trim);}
+        else{fb(.985,1.015,v0,v1,-.19,-.16,'white',trim);if(ws==3){for(const u of [wa+(wb-wa)/4,wb-(wb-wa)/4])fb(u-.01,u+.01,v0,v1,-.19,-.165,'white',trim);for(const q of [.25,.75])fb(wa,wb,v0+wh*q-.01,v0+wh*q+.01,-.19,-.165,'white',trim);}}
+        fb(wa-.08,wb+.08,v0-.09,v0,0,.09,'granite',stone);
+        if(hd=='shockoe'){const sp=(wb-wa+.16)/6;for(let q=0;q<6;q++){const u=wa-.08+q*sp,yy=v1+.02+.13*Math.sin(Math.PI*(q+.5)/6);fb(u,u+sp-.01,yy,yy+.2,0,.035,wc,wcol.map(v=>v*.72));}// a low brick arch over each window
+          if(k%3==0&&ws!=1){fb(wa-.38,wa-.02,v0,v1,0,.04,'tin',[.3,.32,.33]);fb(wb+.02,wb+.38,v0,v1,0,.04,'tin',[.3,.32,.33]);}if(f>f0)fb(.16,.3,yb+.1,yb+.24,0,.03,'black',iron);}
+        else fb(wa-.05,wb+.05,v1,v1+.2,0,.03,'granite',stone);
+        if(hd=='jward'&&f>0)fb(wa-.08,wb+.08,v1+.2,v1+.3,0,.12,'white',stone);
+        if(kind==3&&ws!=1){fb(wa-.4,wa-.08,v0,v1,.0,.05,'planks',[.17,.26,.19]);fb(wb+.08,wb+.4,v0,v1,0,.05,'planks',[.17,.26,.19]);}}
       if(f==0&&walk&&(hd=='fan'||hd=='jward')){const pd=.84,dk=.34,pr=2.95;fb(0,TS,0,dk,0,pd,'planks',[.6,.56,.5]);fb(-.04,TS+.04,pr,pr+.16,0,pd+.1,'white',PW);
         {const a=W(-.04,pr+.42,0),b=W(TS+.04,pr+.42,0),c2=W(TS+.04,pr+.16,pd+.1),e=W(-.04,pr+.16,pd+.1);M.quad(e,c2,b,a,'tin',hd=='fan'?[.75,.5,.48]:[.5,.55,.56]);}
         if(c=='door')fb(.45,1.55,0,dk/2,pd,pd+.28,'granite',stone);
@@ -286,7 +307,11 @@ function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kin
         for(const u of [.36,1.64]){const p=W(u,.34,.72);M.box(p[0]-.09,.34,p[2]-.09,p[0]+.09,2.9,p[2]+.09,'white',PW);M.box(p[0]-.12,2.78,p[2]-.12,p[0]+.12,2.9,p[2]+.12,'white',PW);M.box(p[0]-.12,.34,p[2]-.12,p[0]+.12,.44,p[2]+.12,'white',PW);}
         fb(.2,1.8,2.9,3.2,0,.88,'white',PW);fb(.14,1.86,3.2,3.28,0,.94,'white',PW);const a=W(.14,3.28,.94),b=W(1.86,3.28,.94),t=W(1,3.62,.94),a2=W(.14,3.28,0),b2=W(1.86,3.28,0),t2=W(1,3.62,0);ltri(M,a,b,t,'white',PW);M.quad(a2,a,t,t2,'tin',[.5,.5,.54]);M.quad(b,b2,t2,t,'tin',[.5,.5,.54]);}
       if(kind==1&&f==1&&nh==0&&dy==1&&hd!='fan'&&hd!='jward'){fb(0,TS,yb,yb+.1,0,.75,'granite',[.4,.4,.42]);fb(0,TS,yb+1.0,yb+1.05,.7,.75,'black',[.08,.08,.08]);for(let q=0;q<9;q++)fb(q*.24,q*.24+.025,yb+.1,yb+1.0,.71,.74,'black',[.08,.08,.08]);}}
-    if(hash(x*3+dx,y*3+dy,11)%5==0)fb(TS-.12,TS-.04,0,ht-.5,.02,.1,'tin',[.5,.5,.52]);}}
+    if(hash(x*3+dx,y*3+dy,11)%5==0)fb(TS-.12,TS-.04,0,ht-.5,.02,.1,'tin',[.5,.5,.52]);
+    if(floors>=3&&nh==0&&hd!='fan'&&hd!='chill'&&hd!='civic'&&hash(x*5+dx,y*7+dy,43)%9==0){// an iron fire escape: a landing at each floor, stairs between, and a ladder that stops short of the street
+      for(let f=1;f<floors;f++){const py=f*FLOOR_H+.62;fb(.1,1.9,py,py+.05,0,.78,'grille',iron);for(const [a,b,c2,d2] of [[.1,1.9,.76,.76],[.1,.1,0,.76],[1.9,1.9,0,.76]]){const q0=W(a,py+.05,c2),q1=W(b,py+.05,d2),q2=W(b,py+.95,d2),q3=W(a,py+.95,c2);M.quad(q0,q1,q2,q3,'bars',iron);}
+        if(f<floors-1){const q0=W(.35,py+.05,.2),q1=W(.35,py+.05,.6),q2=W(1.65,py+FLOOR_H+.05,.6),q3=W(1.65,py+FLOOR_H+.05,.2);M.quad(q0,q1,q2,q3,'grille',iron);}}
+      {const q0=W(.25,2.3,.7),q1=W(.6,2.3,.7),q2=W(.6,FLOOR_H+.62,.7),q3=W(.25,FLOOR_H+.62,.7);M.quad(q0,q1,q2,q3,'bars',iron);}}}}
 function faceDir(lv,x,y){for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const c=lv.d.rows[y+dy]&&lv.d.rows[y+dy][x+dx];if(c&&WALK.includes(c))return[dx,dy];}return[0,1];}
 function statue(M,x,y,z){const s=[.62,.62,.66];M.box(x-.25,y,z-.15,x-.05,y+.9,z+.15,'stone',s);M.box(x+.05,y,z-.15,x+.25,y+.9,z+.15,'stone',s);M.box(x-.32,y+.9,z-.2,x+.32,y+1.7,z+.2,'stone',s);
   M.box(x-.45,y+.95,z-.12,x-.32,y+1.6,z+.12,'stone',s);M.box(x+.32,y+1.3,z-.12,x+.45,y+2.1,z+.12,'stone',s);M.box(x-.18,y+1.7,z-.18,x+.18,y+2.1,z+.18,'stone',s);}

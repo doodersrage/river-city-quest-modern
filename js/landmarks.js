@@ -147,7 +147,7 @@ LMK.byrd=(M,X0,Z0,X1,Z1)=>{const cx=(X0+X1)/2,bk=[1.08,.94,.78],tc=[.93,.89,.78]
   M.lathe(cx,0,z1+.35,[[0,.5],[1,.5],[1,.46],[2.1,.46],[2.1,.55],[2.3,.52],[2.5,.2]],8,'wood',[.55,.32,.2]);M.lathe(cx,1.02,z1+.35,[[0,.475],[1.06,.475]],8,'glass',[.7,.8,.85]);
   for(const sx of [-1,1]){for(const o of [3.1,4.5])lmWin(M,G,L/2+sx*o,.9,1,1.7,{cell:'case',cols:1,rows:1,trim:[.75,.6,.25],t:.07,nosill:1});lmWin(M,G,L/2+sx*5.9,.4,1.1,2.5,{cell:'storefront',cols:1,rows:1,trim:tc,nosill:1});}
   // the marquee: a deep canopy edged in bulbs
-  const my=3.35,mz=Z1-.12;M.box(cx-3.6,my,z1,cx+3.6,my+.75,mz,{top:'black',bottom:'white',side:'marquee'});M.box(cx-3.7,my+.75,z1,cx+3.7,my+.85,mz+.05,'gold');M.box(cx-3.7,my-.08,z1,cx+3.7,my,mz+.05,'gold');
+  const my=3.35,mz=Z1-.12;M.box(cx-3.6,my,z1,cx+3.6,my+.75,mz,{top:'black',bottom:'white',side:'marquee'});M.box(cx-3.7,my+.75,z1,cx+3.7,my+.85,mz+.05,'gold');textQuad(M,[cx-1.5,my+.06,mz+.012],[cx+1.5,my+.06,mz+.012],[cx+1.5,my+.69,mz+.012],[cx-1.5,my+.69,mz+.012],'BYRD THEATRE');textQuad(M,[cx-.38,my+1.2,z1+.762],[cx+.38,my+1.2,z1+.762],[cx+.38,H+.35,z1+.762],[cx-.38,H+.35,z1+.762],'BYRD',1);M.box(cx-3.7,my-.08,z1,cx+3.7,my,mz+.05,'gold');
   for(let x=cx-3.45;x<=cx+3.46;x+=.3){M.sphere(x,my-.1,mz-.04,.045,5,3,'lampglow');for(let z=z1+.25;z<mz-.2;z+=.3)M.sphere(x,my-.03,z,.04,4,2,'lampglow');}
   // the blade sign
   M.box(cx-.5,my+.85,z1,cx+.5,H+.6,z1+.75,{top:'gold',bottom:'gold',side:'marquee',east:'white',west:'white'},red);for(const sx of [-1,1])for(let y=my+1.1;y<H+.5;y+=.32)M.sphere(cx+sx*.52,y,z1+.76,.04,4,2,'lampglow');M.lathe(cx,H+.6,z1+.38,[[0,.5],[.2,.55],[.5,.3],[.9,.06],[1,0]],8,'gold');

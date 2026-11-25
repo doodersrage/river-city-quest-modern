@@ -22,7 +22,7 @@ function tileXZ(x,z){return[Math.floor(x/TS),Math.floor(z/TS)];}
 function tAt(x,z){const [tx,tz]=tileXZ(x,z);return tileAt(lv,tx,tz);}
 function passable(c){return walkable(c)||c=='~'&&st&&st.items.kayak;}
 function blockedCircle(x,z,r){for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r],[0,-r],[0,r],[-r,0],[r,0]]){const c=tAt(x+dx,z+dz);if(c!=null&&!passable(c))return c;}
-  for(const pr of lv.props||[])if(pr.solid&&Math.abs(x-pr.x)<pr.solid[0]+r&&Math.abs(z-pr.z)<pr.solid[1]+r)return'car';return null;}
+  for(const pr of lv.props||[])if(pr.solid&&Math.abs(x-pr.x)<pr.solid[0]+r&&Math.abs(z-pr.z)<pr.solid[1]+r)return'car';if(typeof trafficBlock=='function'&&trafficBlock(x,z,r))return'car';return null;}
 function npcBlock(x,z){for(const n of npcs)if(Math.hypot(n.x-x,n.z-z)<.85)return n;return null;}
 const centerOf=(tx,ty)=>[tx*TS+TS/2,ty*TS+TS/2];
 

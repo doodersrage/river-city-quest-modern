@@ -50,7 +50,7 @@ precision highp float;precision highp sampler2DArray;precision highp sampler2DSh
 in vec3 vW;in vec3 vN;in vec2 vUV;in vec3 vCol;in vec4 vL;
 uniform sampler2DArray uAlb,uNrm;uniform sampler2D uTex2;uniform sampler2DShadow uShadow;
 uniform int uMode;uniform vec3 uTint,uGndCol,uFogCol,uCam;uniform float uAlpha,uFlash,uAdd,uFogD,uShadowOn,uAmb,uIndoor;uniform vec2 uOff;
-uniform vec4 uL[16];uniform vec3 uLC[16];uniform int uNL;uniform float uMetal[96];
+uniform vec4 uL[16];uniform vec3 uLC[16];uniform int uNL;uniform float uMetal[112];
 ${SKYFN}
 out vec4 o;
 const float PI=3.14159265;
@@ -143,7 +143,7 @@ function initGL(canvas){gl=canvas.getContext('webgl2',{antialias:false,alpha:fal
   if(typeof BODY_RES!='undefined')BODY_RES=[1.8,1.3,1][QUAL.lvl];
   const L=makeLayers(Q().tex);atlasTex=texArray(L.alb,L.S,L.N);nrmTex=texArray(L.nrm,L.S,L.N);waterTex=texFrom(makeWaterTex(),true);foamTex=texFrom(makeFoamTex(),true);
   gl.useProgram(prog);gl.uniform1i(U.uAlb,0);gl.uniform1i(U.uNrm,1);gl.uniform1i(U.uTex2,2);gl.uniform1i(U.uShadow,3);
-  gl.uniform1fv(U.uMetal,new Float32Array(96).map((_,i)=>CELLS[i]?matOf(CELLS[i])[1]:0));
+  gl.uniform1fv(U.uMetal,new Float32Array(112).map((_,i)=>CELLS[i]?matOf(CELLS[i])[1]:0));
   quadVAO=gl.createVertexArray();gl.bindVertexArray(quadVAO);const qb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,qb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,1,1,-1,-1,1,1,-1,1]),gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.bindVertexArray(null);
   dynBuf=mkVAO(null,true);resizeTargets(true);return true;}
@@ -196,7 +196,8 @@ function drawVAO(o,model,tex,opt){if(!o.n)return;gl.uniformMatrix4fv(U.uModel,fa
   gl.bindVertexArray(o.vao);if(o.idx)gl.drawElements(gl.TRIANGLES,o.n,gl.UNSIGNED_SHORT,0);else gl.drawArrays(gl.TRIANGLES,0,o.n);gl.bindVertexArray(null);
   if(opt){if(opt.tint)gl.uniform3f(U.uTint,1,1,1);if(opt.flash)gl.uniform1f(U.uFlash,0);if(opt.off)gl.uniform2f(U.uOff,0,0);}if(mode)gl.uniform1i(U.uMode,0);}
 // fog, ambient and point lights for the main pass. lights are [x,y,z,radius,[r,g,b]]
-function setCommon(fogCol,fog,amb,lights){const lfc=fogCol.map(v=>Math.pow(v,2.2));gl.uniform3fv(U.uFogCol,lfc);gl.uniform1f(U.uFogD,1.15/Math.max(8,fog[1])/(lv&&lv.room&&mode!='mini'?3.5:3.4));
+const HAZE=.42;// how much thinner the air is outdoors than the old close fog
+function setCommon(fogCol,fog,amb,lights){const lfc=fogCol.map(v=>Math.pow(v,2.2));gl.uniform3fv(U.uFogCol,lfc);gl.uniform1f(U.uFogD,1.15/Math.max(8,fog[1])/(lv&&lv.room&&mode!='mini'?3.5:3.4)*(lv&&!lv.room&&mode!='mini'?HAZE:1));
   gl.uniform1f(U.uAmb,amb);gl.uniform1f(U.uAlpha,1);gl.uniform1f(U.uFlash,0);gl.uniform1f(U.uAdd,0);gl.uniform1f(U.uTime,frame/60);gl.uniform1f(U.uWave,0);gl.uniform2f(U.uOff,0,0);gl.uniform3f(U.uTint,1,1,1);gl.uniform1i(U.uMode,0);
   const L=new Float32Array(64),LC=new Float32Array(48);lights.slice(0,16).forEach((l,i)=>{L.set([l[0],l[1],l[2],l[3]*1.25],i*4);LC.set(l[4].map(v=>v*1.6),i*3);});
   gl.uniform4fv(U.uL,L);gl.uniform3fv(U.uLC,LC);gl.uniform1i(U.uNL,Math.min(16,lights.length));sunUniforms(U);}
@@ -305,5 +306,5 @@ function buildGrass(lv){if(lv.room)return null;const inst=[];
   gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,4,gl.FLOAT,false,20,0);gl.vertexAttribDivisor(1,1);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,1,gl.FLOAT,false,20,16);gl.vertexAttribDivisor(2,1);
   gl.bindVertexArray(null);return{vao,n:inst.length/5};}
 function drawGrass(G){gl.useProgram(gprog);gl.uniformMatrix4fv(GU.uPV,false,PV);gl.uniform1f(GU.uTime,frame/60);gl.uniform3fv(GU.uCam,camPos);gl.uniform3f(GU.uFocus,p.x,0,p.z);
-  gl.uniform3fv(GU.uSunCol,SUN.col);gl.uniform3fv(GU.uSkyCol,SUN.sky);const e=envLook();gl.uniform3fv(GU.uFogCol,e.fogCol.map(v=>Math.pow(v,2.2)));gl.uniform1f(GU.uFogD,1.15/Math.max(8,e.fog[1])/3.4);gl.uniform1f(GU.uAmb,e.amb);
+  gl.uniform3fv(GU.uSunCol,SUN.col);gl.uniform3fv(GU.uSkyCol,SUN.sky);const e=envLook();gl.uniform3fv(GU.uFogCol,e.fogCol.map(v=>Math.pow(v,2.2)));gl.uniform1f(GU.uFogD,HAZE*1.15/Math.max(8,e.fog[1])/3.4);gl.uniform1f(GU.uAmb,e.amb);
   gl.bindVertexArray(G.vao);gl.drawArraysInstanced(gl.TRIANGLES,0,9,G.n);gl.bindVertexArray(null);gl.useProgram(prog);}
