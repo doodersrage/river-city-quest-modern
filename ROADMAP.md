@@ -33,6 +33,7 @@ Done when you would choose to keep playing after 20 minutes.
 
 Desktop is the target, but there is no desktop to measure on yet. Until there is, the software renderer used for screenshots says nothing about speed.
 
+- [x] A benchmark link: add `?bench` to the address (or `?bench=0`, `1`, `2` for low, medium, high) and it tours six districts and shows a report to copy
 - [ ] An on-screen counter: frames a second, triangles drawn, district build time
 - [ ] Measure every district on the phone at each quality level
 - [ ] Set limits a district must stay under, for phone and for desktop, and a test that fails when one goes over

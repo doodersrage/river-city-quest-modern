@@ -34,6 +34,7 @@ A Zelda-like set in Richmond, Virginia. Plain JavaScript, hand-written WebGL2, n
 - `node tests/run.js` runs everything headless (about two minutes).
 - Look at it before calling it done. `python3 tools/shots/shot.py <name>...` and `python3 tools/shots/room.py <room id>...` take screenshots with Playwright and Chrome's software renderer. They are slow; allow several minutes.
 - Screenshots from a software renderer do not show real performance. Say so when reporting.
+- Real speed comes from the benchmark: open the game with `?bench` on a real device and copy the report (`js/bench.js`).
 
 ## Map data
 
