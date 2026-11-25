@@ -176,9 +176,19 @@ function mkVAO(m,dynamic){const vao=gl.createVertexArray();gl.bindVertexArray(va
 function upload(o,m){gl.bindVertexArray(o.vao);ATTR.forEach(([,size,key],i)=>{if(!o.bufs[i])return;gl.bindBuffer(gl.ARRAY_BUFFER,o.bufs[i]);gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.DYNAMIC_DRAW);});o.n=m.count;gl.bindVertexArray(null);}
 function meshGL(m){return m.gl||(m.gl=mkVAO(m));}
 let curSceneId=null;
-function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);sceneGL={lv,main:mkVAO(b.main),water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}
+function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);sceneGL={lv,main:{chunks:splitMesh(b.main,16).map(c=>({vao:mkVAO(c.m),lo:c.lo,hi:c.hi}))},water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}
 
 /* ---------- drawing calls the game uses ---------- */
+// the level is cut into pieces about 16 m square so only the ones in view (or casting shadows into view) are drawn
+function splitMesh(m,size){const C=new Map(),n=m.count,A=ATTR.filter(a=>m[a[2]]&&m[a[2]].length);for(let t=0;t<n;t+=3){const cx=(m.pos[t*3]+m.pos[t*3+3]+m.pos[t*3+6])/3,cz=(m.pos[t*3+2]+m.pos[t*3+5]+m.pos[t*3+8])/3,key=Math.floor(cx/size)+','+Math.floor(cz/size);
+    let c=C.get(key);if(!c){c={m:new Mesh(),lo:[1e9,1e9,1e9],hi:[-1e9,-1e9,-1e9]};C.set(key,c);}
+    for(const [,sz,k] of A){const src=m[k],dst=c.m[k];for(let i=t*sz;i<(t+3)*sz;i++)dst.push(src[i]);}
+    for(let v=t*3;v<t*3+9;v+=3)for(let k=0;k<3;k++){const q=m.pos[v+k];if(q<c.lo[k])c.lo[k]=q;if(q>c.hi[k])c.hi[k]=q;}}
+  return[...C.values()];}
+function boxVisible(M,lo,hi,flat){let l=0,r=0,b=0,t=0,nr=0;for(let i=0;i<8;i++){const x=i&1?hi[0]:lo[0],y=i&2?hi[1]:lo[1],z=i&4?hi[2]:lo[2],cx=M[0]*x+M[4]*y+M[8]*z+M[12],cy=M[1]*x+M[5]*y+M[9]*z+M[13],cw=M[3]*x+M[7]*y+M[11]*z+M[15];
+    if(cx<-cw)l++;if(cx>cw)r++;if(cy<-cw)b++;if(cy>cw)t++;if(!flat&&cw<0)nr++;}return!(l==8||r==8||b==8||t==8||nr==8);}
+let chunkStat=[0,0];
+function drawChunks(S){const sh=PASS=='shadow',M=sh?LVP:PV;let d=0;for(const c of S.chunks)if(boxVisible(M,c.lo,c.hi,sh)){drawVAO(c.vao);d++;}if(!sh)chunkStat=[d,S.chunks.length];}
 function drawVAO(o,model,tex,opt){if(!o.n)return;gl.uniformMatrix4fv(U.uModel,false,model||M4id());
   if(PASS=='shadow'){if(tex===waterTex||tex===foamTex)return;gl.bindVertexArray(o.vao);if(o.idx)gl.drawElements(gl.TRIANGLES,o.n,gl.UNSIGNED_SHORT,0);else gl.drawArrays(gl.TRIANGLES,0,o.n);gl.bindVertexArray(null);return;}
   const mode=tex===waterTex?2:tex===foamTex?3:0;gl.uniform1i(U.uMode,mode);if(mode){gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,tex);gl.activeTexture(gl.TEXTURE0);}
@@ -253,7 +263,7 @@ function render(fade){const now=performance.now();if(lastT)qualityTick(now-lastT
   else if(lv&&st&&cam){updateSun(!!lv.room);const env=envLook(),sx=shake>0?(Math.random()-.5)*shake*.03:0,sy=shake>0?(Math.random()-.5)*shake*.03:0;camPos=[cam.x+sx,cam.y+sy,cam.z];
     PV=M4.mul(M4.persp(.9,gl.canvas.width/gl.canvas.height,.2,220),M4.look(camPos,[cam.tx,cam.ty,cam.tz],[0,1,0]));
     worldPass(shp=>{if(!shp){setCommon(env.fogCol,env.fog,env.amb,lightsNow());if(flash>0)gl.uniform1f(U.uFlash,flash/12);}
-      const S=sceneMeshes();drawVAO(S.main);gl.uniform1f(U.uWave,1);drawVAO(S.water,null,waterTex,{off:[frame*.0012,frame*.0007]});drawVAO(S.foam,null,foamTex,{off:[0,-frame*.012]});if(S.froth)drawVAO(S.froth);gl.uniform1f(U.uWave,0);
+      const S=sceneMeshes();drawChunks(S.main);gl.uniform1f(U.uWave,1);drawVAO(S.water,null,waterTex,{off:[frame*.0012,frame*.0007]});drawVAO(S.foam,null,foamTex,{off:[0,-frame*.012]});if(S.froth)drawVAO(S.froth);gl.uniform1f(U.uWave,0);
       if(!shp&&S.grass&&Q().grass&&typeof drawGrass=='function')drawGrass(S.grass);
       drawEntities();if(!shp)drawBillboards(env);},lv.room?null:[p.x,p.z]);}
   post(fade);}

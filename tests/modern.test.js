@@ -20,3 +20,14 @@ const pg=G.pigeonModel();ok(pg.length==3&&pg[1].name=='wingL','pigeons keep thei
 {const ok2=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};const sizes={capitol:[10,6,10],station:[12,6,20],church:[6,5,14],carillon:[3,7,24],byrd:[7,3,10]};
 for(const [k,[w,h,tall]] of Object.entries(sizes)){const M=new G.Mesh();G.LMK[k](M,10,10,10+w*2,10+h*2);let bad=0,out=0,top=0;for(let i=0;i<M.pos.length;i+=3){const x=M.pos[i],y=M.pos[i+1],z=M.pos[i+2];if(!isFinite(x+y+z+M.nrm[i]+M.nrm[i+1]+M.nrm[i+2]))bad++;if(x<9.99||x>10.01+w*2||z<9.99||z>10.01+h*2||y<-.01)out++;top=Math.max(top,y);}
   ok2(!bad&&!out&&top>tall&&M.count>3000,'the '+k+' is built in detail ('+M.count/3+' triangles, '+top.toFixed(1)+' m tall) and stays on its own ground');}}
+// the enlarged maps: twice the size, everything still where it belongs, and neighbors still join
+{const ok2=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};const M=G.RCQ.maps,ids=Object.keys(M).filter(k=>k.indexOf('ow:')==0),WALK='.,psSKk=-FEn^|1';
+let size=0,doors=0,npc=0,lm=0,joins=0,open=0;
+for(const id of ids){const m=M[id];if(m.w!=64||m.h!=44||m.rows.length!=44||m.rows.some(r=>r.length!=64))size++;
+  for(const d of m.doors||[])if(!'D%'.includes(m.rows[d.ty][d.tx]))doors++;for(const n of m.npcs||[])if(!WALK.includes(m.rows[n.ty][n.tx]))npc++;
+  for(const L of m.lm||[])for(let y=L.y;y<L.y+L.h;y++)for(let x=L.x;x<L.x+L.w;x++)if(!'XD'.includes(m.rows[y][x]))lm++;
+  const [ax,ay]=id.slice(3).split(',').map(Number),E=M['ow:'+(ax+1)+','+ay],S=M['ow:'+ax+','+(ay+1)];
+  if(E)for(let y=0;y<44;y++){const a=WALK.includes(m.rows[y][63]),b=WALK.includes(E.rows[y][0]);if(a&&b)open++;if(a!=b)joins++;}
+  if(S)for(let x=0;x<64;x++){const a=WALK.includes(m.rows[43][x]),b=WALK.includes(S.rows[0][x]);if(a&&b)open++;if(a!=b)joins++;}}
+ok2(!size,'all '+ids.length+' neighborhoods are 64 by 44 tiles');ok2(!doors&&!npc,'every door and every person moved with the map');ok2(lm<40,'landmarks still stand on their own ground');
+ok2(open>40&&!joins,'neighbors still join edge to edge ('+open+' open tiles, '+joins+' one-sided)');}

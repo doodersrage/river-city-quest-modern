@@ -204,7 +204,8 @@ function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kin
   for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;
     // u runs along the wall seen from outside (0..TS), d sticks out of it
     const W=(u,yy,d)=>{if(dy){const zf=dy>0?Z0+TS:Z0;return[X0+(dy>0?u:TS-u),yy,zf+dy*d];}const xf=dx>0?X0+TS:X0;return[xf+dx*d,yy,Z0+(dx>0?TS-u:u)];};
-    const fb=(u0,u1,y0,y1,d0,d1,cells,col)=>{const a=W(u0,y0,d0),b=W(u1,y1,d1);M.box(Math.min(a[0],b[0]),y0,Math.min(a[2],b[2]),Math.max(a[0],b[0]),y1,Math.max(a[2],b[2]),cells,col);};
+    const hid={[dy?(dy>0?'n':'s'):(dx>0?'w':'e')]:1};// the side of each piece that sits against the wall is never seen
+    const fb=(u0,u1,y0,y1,d0,d1,cells,col)=>{const a=W(u0,y0,d0),b=W(u1,y1,d1);M.box(Math.min(a[0],b[0]),y0,Math.min(a[2],b[2]),Math.max(a[0],b[0]),y1,Math.max(a[2],b[2]),cells,col,hid);};
     // a flat piece of wall facing out (or along a reveal), textured at true scale and split on texture seams
     const face=(u0,u1,y0,y1,d,cell,col)=>{if(u1-u0<1e-3||y1-y0<1e-3)return;for(let ya=y0;ya<y1-1e-6;){const yb=Math.min(y1,(Math.floor(ya/TS+1e-6)+1)*TS),[c0,,c1]=cellUV(cell),L=Math.floor(c0),fv=yy=>1-(yy/TS-Math.floor(ya/TS+1e-6));
         const uu=u=>L+.002+(u/TS)*.996,p=[W(u0,ya,d),W(u1,ya,d),W(u1,yb,d),W(u0,yb,d)];M.tri(p[0],p[1],p[2],[uu(u0),fv(ya)],[uu(u1),fv(ya)],[uu(u1),fv(yb)],col,col,col);M.tri(p[0],p[2],p[3],[uu(u0),fv(ya)],[uu(u1),fv(yb)],[uu(u0),fv(yb)],col,col,col);ya=yb;}};
@@ -247,10 +248,11 @@ function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kin
       if(f==0&&walk&&(hd=='fan'||hd=='jward')){const pd=.84,dk=.34,pr=2.95;fb(0,TS,0,dk,0,pd,'planks',[.6,.56,.5]);fb(-.04,TS+.04,pr,pr+.16,0,pd+.1,'white',PW);
         {const a=W(-.04,pr+.42,0),b=W(TS+.04,pr+.42,0),c2=W(TS+.04,pr+.16,pd+.1),e=W(-.04,pr+.16,pd+.1);M.quad(e,c2,b,a,'tin',hd=='fan'?[.75,.5,.48]:[.5,.55,.56]);}
         if(c=='door')fb(.45,1.55,0,dk/2,pd,pd+.28,'granite',stone);
-        for(const u of [0,TS]){const p=W(u,dk,pd-.1);if(hd=='fan'){M.box(p[0]-.11,dk,p[2]-.11,p[0]+.11,dk+.12,p[2]+.11,'white',PW);M.lathe(p[0],dk+.12,p[2],[[0,.085],[1.2,.08],[2.3,.068],[2.34,.1],[2.49,.1]],10,'column',PW);}
+        const ux=dy?(dy>0?1:-1):0,uy=dy?0:(dx>0?-1:1),more=bh(x+ux,y+uy)>0&&bh(x+ux+dx,y+uy+dy)==0;// the next house along shares this post
+        for(const u of more?[0]:[0,TS]){const p=W(u,dk,pd-.1);if(hd=='fan'){M.box(p[0]-.11,dk,p[2]-.11,p[0]+.11,dk+.12,p[2]+.11,'white',PW);M.lathe(p[0],dk+.12,p[2],[[0,.085],[1.2,.08],[2.3,.068],[2.34,.1],[2.49,.1]],5,'column',PW);}
           else{M.box(p[0]-.03,dk,p[2]-.03,p[0]+.03,pr,p[2]+.03,'black',iron);const s=u?-1:1;for(const [w,hh] of [[.34,.3],[.2,.5]]){const q0=W(u,pr-hh,pd-.1),q1=W(u+s*w,pr-hh,pd-.1),q2=W(u+s*w,pr,pd-.1),q3=W(u,pr,pd-.1);M.quad(q0,q1,q2,q3,'grille',iron);}}}
         if(hd=='jward'){const q0=W(0,pr-.22,pd-.1),q1=W(TS,pr-.22,pd-.1),q2=W(TS,pr,pd-.1),q3=W(0,pr,pd-.1);M.quad(q0,q1,q2,q3,'bars',iron);}
-        if(c!='door'){if(hd=='fan'){fb(.1,TS-.1,dk+.72,dk+.79,pd-.14,pd-.06,'white',PW);fb(.1,TS-.1,dk+.08,dk+.13,pd-.13,pd-.07,'white',PW);for(let q=0;q<11;q++)fb(.16+q*.165,.195+q*.165,dk+.13,dk+.72,pd-.12,pd-.08,'white',PW);}
+        if(c!='door'){if(hd=='fan'){fb(.1,TS-.1,dk+.72,dk+.79,pd-.14,pd-.06,'white',PW);fb(.1,TS-.1,dk+.08,dk+.13,pd-.13,pd-.07,'white',PW);for(let q=0;q<8;q++)fb(.17+q*.232,.21+q*.232,dk+.13,dk+.72,pd-.12,pd-.08,'white',PW);}
           else{const q0=W(0,dk,pd-.1),q1=W(TS,dk,pd-.1),q2=W(TS,dk+.8,pd-.1),q3=W(0,dk+.8,pd-.1);M.quad(q0,q1,q2,q3,'bars',iron);fb(0,TS,dk+.8,dk+.84,pd-.13,pd-.07,'black',iron);}}}
       if(f==0&&walk&&hd=='chill'&&c=='door'){// Greek Revival: a small square-columned portico at the door
         for(const u of [.36,1.64]){const p=W(u,.34,.72);M.box(p[0]-.09,.34,p[2]-.09,p[0]+.09,2.9,p[2]+.09,'white',PW);M.box(p[0]-.12,2.78,p[2]-.12,p[0]+.12,2.9,p[2]+.12,'white',PW);M.box(p[0]-.12,.34,p[2]-.12,p[0]+.12,.44,p[2]+.12,'white',PW);}

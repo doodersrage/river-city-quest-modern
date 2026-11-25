@@ -30,7 +30,7 @@ G.p.hp=1;G.st.eq='basket';step({b:1});talkThrough(G.st.food.cupcake?1:0);ok(G.p.
 G.p.x=13.5*T;G.p.z=6.2*T;G.p.yaw=0;const c0=G.st.clock;step({a:1});talkThrough(0);ok(G.st.clock>c0,'sleep in your own bed until morning');
 
 // the camera and the album
-G.st.items.camera=1;go('ow:2,1',23*T,9*T);G.st.eq='camera';step({b:1});ok(G.st.photos&&G.st.photos.capitol,'photograph the Capitol');
+G.st.items.camera=1;go('ow:2,1',39*T,20*T);G.st.eq='camera';step({b:1});ok(G.st.photos&&G.st.photos.capitol,'photograph the Capitol');
 
 // fishing
 G.st.items.rod=1;go('ow:2,2',8*T,8*T);const g=G.lv.g;let spot=null;

@@ -14,11 +14,11 @@ G.startGame(null);settle();ok(G.lv.id=='ow:2,1'&&G.st.items.lantern==undefined,'
 const ar=G.npcs.find(n=>n.talk=='archivist');G.p.x=ar.x;G.p.z=ar.z+1.6;face(ar.x,ar.z);step({a:1});talkThrough();talkThrough();ok(G.st.items.lantern,'the archivist gives you the lantern');
 ok(G.goalScene()=='ow:2,2','the map points to Belle Isle');
 // walk south off the map onto Belle Isle
-G.p.x=16*T;G.p.z=20*T;settle();walkTo(16*T,22*T+2,300);settle();ok(G.lv.id=='ow:2,2','walk south from Capitol Square onto Belle Isle');
+G.p.x=32*T;G.p.z=42*T;settle();walkTo(32*T,44*T+2,300);settle();ok(G.lv.id=='ow:2,2','walk south from Capitol Square onto Belle Isle');
 // every edge leads somewhere now
-G.loadScene('ow:2,1',1,10*T+1,0);settle();walkTo(-1,10*T+1,120);settle();ok(G.lv.id=='ow:1,1','west of Capitol Square is '+G.lv.d.name);
+G.loadScene('ow:2,1',1,21*T+1,0);settle();walkTo(-1,21*T+1,120);settle();ok(G.lv.id=='ow:1,1','west of Capitol Square is '+G.lv.d.name);
 // into the quarry
-G.loadScene('ow:2,2',19*T+T/2,6*T+T/2,Math.PI);settle();walkTo(19*T+T/2,5*T+.2,200);settle();ok(G.lv.id=='quarry:0,1','bump the quarry door to go in');
+G.loadScene('ow:2,2',35*T+T/2,17*T+T/2,Math.PI);settle();walkTo(35*T+T/2,16*T+.2,200);settle();ok(G.lv.id=='quarry:0,1','bump the quarry door to go in');
 ok(G.lv.g[0][7]=='L','the north door is locked');
 killAll();step({},5);ok(G.st.f['clr:quarry:0,1'],'clearing the quarry floor');
 const c1=G.chests.find(c=>c.id=='q1');G.p.x=c1.x;G.p.z=c1.z+1.6;face(c1.x,c1.z);step({a:1});talkThrough();ok(G.st.keys.quarry==1,'the chest that appears holds a small key');

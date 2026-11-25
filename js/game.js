@@ -9,7 +9,7 @@ const ITEMORDER=['lantern','balls','powder','bug','shoes','hook','can','bottle',
 const ITEMNAME={lantern:'Gas Lantern',balls:'Baseballs',powder:'Blasting Powder',bug:'Gold-Bug',shoes:'Running Shoes',hook:'Grappling Hook',can:'Watering Can',bottle:'Ginger Beer',rod:'Fishing Rod',camera:'Camera',basket:'Picnic Basket',bike:'Bicycle'};
 const TRADE={melon:'Watermelon',music:'Sheet Music',rivermap:'River Map'};
 function newState(){return{coins:0,hp:6,max:6,items:{},ammo:{balls:0,powder:0},cap:{balls:30,powder:10},eq:null,keys:{},got:{},f:{},lore:{},pins:{},vis:{},
-  scene:'ow:2,1',x:15*TS+TS/2,z:9*TS+TS/2,clock:2400,time:0,ret:null,bottle:0,shield:0,trade:null,pieces:0,nightKills:0};}
+  scene:'ow:2,1',x:(15+BIG.ox)*TS+TS/2,z:(9+BIG.oy)*TS+TS/2,big:1,clock:2400,time:0,ret:null,bottle:0,shield:0,trade:null,pieces:0,nightKills:0};}
 function newPlayer(){return{x:0,z:0,y:0,yaw:Math.PI,vx:0,vz:0,swing:0,inv:0,kx:0,kz:0,walk:0,hold:0,holdIc:null,moving:false,dash:0,push:0,pushDir:null};}
 const hour=()=>(6+(st?st.clock:2400)/CYC*24)%24;
 function dark(){if(lv&&lv.room)return lv.dungeon?.55:0;const h=hour();return h>=20||h<5?1:h>=17?(h-17)/3:h<7?(7-h)/2:0;}
@@ -79,7 +79,7 @@ function startGame(fromSave){st=fromSave?Object.assign(newState(),fromSave):newS
   loadScene(st.scene,st.x,st.z,Math.PI);mode='play';
   if(!fromSave)say(['A cold fog has rolled up off the James, and the gas lamps of Richmond are going dark, block by block.','The archivist by the Capitol wants a word. Walk up and press A to talk.']);}
 function saveGame(){if(!st)return;st.x=p.x;st.z=p.z;st.hp=p.hp;try{localStorage.setItem('rcqm-save',JSON.stringify(st));}catch(e){}}
-function loadSave(){try{const s=JSON.parse(localStorage.getItem('rcqm-save')||'null');return s&&sceneData(s.scene)?s:null;}catch(e){return null;}}
+function loadSave(){try{const s=JSON.parse(localStorage.getItem('rcqm-save')||'null');if(s&&!s.big){/* a save from before the maps grew: move it to where that spot is now */if((s.scene||'').indexOf('ow:')==0){s.x+=BIG.ox*TS;s.z+=BIG.oy*TS;}if(s.ret&&typeof s.ret.x=='number'&&(s.ret.scene||s.ret.id||'ow:').indexOf('ow:')==0){s.ret.x+=BIG.ox*TS;s.ret.z+=BIG.oy*TS;}s.big=1;}return s&&sceneData(s.scene)?s:null;}catch(e){return null;}}
 
 /* ---------- dialog ---------- */
 function say(lines,cb,who,choices){if(!lines||!lines.length){if(cb)cb(0);return;}dlg={lines:lines.slice(),i:0,n:0,cb,who:who||'',choices:choices||null,sel:0};}

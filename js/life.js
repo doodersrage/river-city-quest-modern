@@ -20,7 +20,7 @@ function openSpot(id,cx,cy){const d=RCQ.maps[id];if(!d)return null;const R=d.row
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>!walkable(R[y+b][x+a])))continue;const k=Math.abs(x-cx)+Math.abs(y-cy);if(!best||k<best[0])best=[k,x,y];}return best&&[best[1],best[2]];}
 for(const [scene,cx,cy,def] of [['ow:2,3',20,17,{who:'Shelter Volunteer',hat:['#e8d28a'],shirt:['#58a850'],talk:'shelter'}],['ow:3,1',16,12,{who:'Market Grocer',hat:['#e8d28a'],shirt:['#d8692a'],talk:'grocer'}],
     ['ow:3,2',20,10,{who:'Trail Cyclist',hat:['#3ac2e8'],shirt:['#f2c14e'],talk:'cyclist'}],['ow:3,1',8,17,{who:'Tomato Farmer',hat:['#e8d28a'],shirt:['#e83048'],talk:'tomato'}]]){
-  const s=openSpot(scene,cx,cy);if(s)EXTRA_NPCS.push(Object.assign({scene,tx:s[0],ty:s[1]},def));}
+  const s=openSpot(scene,cx+BIG.ox,cy+BIG.oy);if(s)EXTRA_NPCS.push(Object.assign({scene,tx:s[0],ty:s[1]},def));}
 const HOME='rowhouse:0,0';if(RCQ.rooms[HOME])RCQ.rooms[HOME].name='Your Row House';
 
 /* ---------- hidden stashes: one per neighborhood, tucked beside a tree, bush or rock you can reach ---------- */
@@ -161,7 +161,7 @@ function lifeOnLoad(id){dogReset();runners=[];lv.strings=null;
     toast('First Friday! Galleries open late.');}
   const ev=events();
   if((ev.includes('folk')||ev.includes('riverrock'))&&id=='ow:4,1')for(let i=0;i<6;i++){const c=FOLKC[i];addFolk(ev.includes('folk')?'Festivalgoer':'Riverrock Fan','folk',[['This band came all the way from Mali!','Free music on the river. Only in Richmond.','Have you tried the funnel cake?'][i%3]],c[0],c[1]);}
-  if(ev.includes('10k')&&id=='ow:1,1'){for(let i=0;i<7;i++){const c=FOLKC[i%6];runners.push({x:-2-i*5,z:(9+(i%3)*.6)*TS,v:.055+Math.random()*.02,walk:i,m:{hat:c[0],shirt:c[1]}});}
+  if(ev.includes('10k')&&id=='ow:1,1'){for(let i=0;i<7;i++){const c=FOLKC[i%6];runners.push({x:-2-i*5,z:(9+BIG.oy+(i%3)*.6)*TS,v:.055+Math.random()*.02,walk:i,m:{hat:c[0],shirt:c[1]}});}
     if(!st.f['ev10k'+today().getFullYear()]){st.f['ev10k'+today().getFullYear()]=1;toast('It\'s Monument Avenue 10K season! Runners everywhere.');}}
   if(ev.includes('lights')&&(id=='ow:1,1'||id=='ow:0,1')&&!st.f['evlights'+today().getFullYear()]){st.f['evlights'+today().getFullYear()]=1;toast('Holiday lights are up! They look best after dark.');}}
 
