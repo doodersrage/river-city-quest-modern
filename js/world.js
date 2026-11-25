@@ -60,7 +60,7 @@ function worldGrid(w){const tw=w.w/2,th=w.h/2,g=[];
 function worldContent(id,m){const w=worldOf(id);if(!w)return false;let main=worldMain(w);const g=worldGrid(w),tw=w.w/2,th=w.h/2,ow=m.w,oh=m.h,old=m.rows;
   const T=(tx,ty)=>[w.w/2+(tx+.5-ow/2)*OLD_SCALE,w.h/2+(ty+.5-oh/2)*OLD_SCALE],used=new Set(),at=(x,y)=>x<0||y<0||x>=tw||y>=th?null:g[y][x];
   // the nearest free cell of the notebook grid that suits: sidewalk or open ground first, then roadway
-  const snap=(X,Z,want,pad)=>{const cx=Math.max(3,Math.min(tw-4,Math.floor(X/2))),cy=Math.max(3,Math.min(th-4,Math.floor(Z/2))),ok=want||(c=>c=='s'||c=='.');for(const pass of [0,1])for(let r=0;r<60;r++){let best=null;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){if(Math.max(Math.abs(dx),Math.abs(dy))!=r)continue;const x=cx+dx,y=cy+dy;if(x<3||y<3||x>=tw-3||y>=th-3||used.has(x+','+y))continue;const c=at(x,y);
+  const snap=(X,Z,want,pad)=>{const cx=Math.max(3,Math.min(tw-4,Math.floor(X/2))),cy=Math.max(3,Math.min(th-4,Math.floor(Z/2))),ok=want||(c=>c=='s'||c=='.');for(const pass of [0,1])for(let r=0;r<(pass?Math.max(tw,th):60);r++){let best=null;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){if(Math.max(Math.abs(dx),Math.abs(dy))!=r)continue;const x=cx+dx,y=cy+dy;if(x<3||y<3||x>=tw-3||y>=th-3||used.has(x+','+y))continue;const c=at(x,y);
           if(!(pass?(c=='s'||c=='.'||c=='p'||c=='n'):ok(c)))continue;if(!main[(y*2+1)*w.w+x*2+1])continue;if(pad&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const q=at(x+a,y+b);return q=='B'||q=='~'||q=='X'||q=='D';}))continue;const d=dx*dx+dy*dy;if(!best||d<best[2])best=[x,y,d];}
         if(best){used.add(best[0]+','+best[1]);return[best[0],best[1]];}}return[cx,cy];};
   // landmarks take the place of the real building they are, or of the nearest one that fits

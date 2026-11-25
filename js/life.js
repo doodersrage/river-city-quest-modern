@@ -138,8 +138,12 @@ function weatherLook(e){const k=wxNow();if(!k)return e;const dk=dark(),mix=(a,b,
 
 /* ---------- frogs come out in the rain ---------- */
 function frogTick(){for(const k of picks)if(k.kind=='frog'){if(k.jump>0){k.jump--;k.y=.5+Math.sin(k.jump/12*Math.PI)*.6;}if(--k.hop<=0){k.hop=50+rnd(70);const a=rnd(4)*Math.PI/2,nx=k.x+Math.sin(a)*1.4,nz=k.z+Math.cos(a)*1.4;
-    if(walkable(tAt(nx,nz))){k.x=nx;k.z=nz;k.yaw=a;k.jump=12;}}}
+    if(walkable(tAt(nx,nz))&&!(lv.world&&blockedCircle(nx,nz,.25))){k.x=nx;k.z=nz;k.yaw=a;k.jump=12;}}}
   if(frame%90||lv.room||st.wx!='rain'||st.wxk<.5||st.f.frogsDone)return;if(picks.filter(k=>k.kind=='frog').length>=3)return;
+  if(lv.world){// on real ground: the grassy bank cells are found once, and a frog comes up on one of them
+    if(!lv.bank){lv.bank=[];for(let y=2;y<lv.h-2;y++)for(let x=2;x<lv.w-2;x++)if(lv.g[y][x]=='.'&&onMain(lv.world,x*2+1,y*2+1)&&[[1,0],[-1,0],[0,1],[0,-1],[2,0],[-2,0],[0,2],[0,-2]].some(([a,b])=>lv.g[y+b][x+a]=='~'))lv.bank.push([x,y]);
+      if(lv.bank.length<8)for(let k=0;k<400&&lv.bank.length<40;k++){const x=2+rnd(lv.w-4),y=2+rnd(lv.h-4);if(lv.g[y][x]=='.'&&onMain(lv.world,x*2+1,y*2+1))lv.bank.push([x,y]);}}
+    for(let i=0;i<12&&lv.bank.length;i++){const [tx,tz]=lv.bank[rnd(lv.bank.length)],x=tx*TS+TS/2,z=tz*TS+TS/2;if(Math.hypot(x-p.x,z-p.z)<6||blockedCircle(x,z,.3))continue;const k=mkPick('frog',x,z);k.life=1500;k.hop=30+rnd(40);k.jump=0;k.yaw=0;picks.push(k);break;}return;}
   for(let i=0;i<40;i++){const tx=1+rnd(lv.w-2),tz=1+rnd(lv.h-2);if(lv.g[tz][tx]!='.')continue;if(![[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>WATER.includes(lv.g[tz+b]&&lv.g[tz+b][tx+a])))continue;
     const x=tx*TS+TS/2,z=tz*TS+TS/2;if(Math.hypot(x-p.x,z-p.z)<6)continue;const k=mkPick('frog',x,z);k.life=1500;k.hop=30+rnd(40);k.jump=0;k.yaw=0;picks.push(k);break;}}
 

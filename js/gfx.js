@@ -296,7 +296,7 @@ void main(){float s=sin(aI.z),c=cos(aI.z);vec3 b=vec3(aB.x*c,aB.y,aB.x*s)*vec3(1
 const GFS=`#version 300 es
 precision highp float;in vec3 vC;in vec3 vW;in float vH;uniform vec3 uSunCol,uSkyCol,uFogCol,uCam;uniform float uFogD,uAmb;out vec4 o;
 void main(){vec3 c=vC*vC*(uSunCol*.35+uSkyCol*uAmb*.5);float d=distance(vW,uCam);float f=1.-exp(-d*uFogD);o=vec4(mix(c,uFogCol,f),1.);}`;
-function buildGrass(lv){if(lv.room)return null;const inst=[],W=lv.world,pavedW=W&&['civic','broad','shockoe','works','cary','jward'].includes(hood(lv));let per=44;
+function buildGrass(lv){if(lv.room)return null;const inst=[],W=lv.world,pavedW=W&&['broad','shockoe','works','cary','jward'].includes(hood(lv));let per=44;
   if(W){let n=0;for(const r of lv.d.rows)for(const c of r)if(c=='.')n++;per=Math.max(6,Math.min(30,Math.floor(140000/Math.max(1,n))));}
   for(let z=0;z<lv.h;z++)for(let x=0;x<lv.w;x++){const c=lv.d.rows[z][x];if(c!='.'&&c!=',')continue;if(W&&(pavedW&&!W.areas.some(a=>'park grass cemetery pitch yard'.includes(a.k)&&inPolygon(a.pp,x*2+1,z*2+1))||W.areas.some(a=>(a.k=='wood'||a.k=='scrub')&&inPolygon(a.pp,x*2+1,z*2+1))))continue;const n=c==','?10:per;
     for(let k=0;k<n;k++){const h=hash(x*7+k,z*13,91);if(W){const px=(x+(h%1000)/1000)*TS,pz=(z+((h>>10)%1000)/1000)*TS,rn=roadNear(W,px,pz,9);if(rn&&rn.d<rn.r.wm/2+(rn.r.car&&!'avm'.includes(rn.r.k)?2.75:.3)||buildingAt(W,px,pz)||W.areas.some(a=>'parking plaza paved sand deck'.includes(a.k)&&inPolygon(a.pp,px,pz)))continue;}inst.push((x+(h%1000)/1000)*TS,(z+((h>>10)%1000)/1000)*TS,((h>>4)%628)/100,.24+((h>>12)%30)/100,((h>>20)%100)/100);}}

@@ -8,10 +8,9 @@ It's the same game as the [PS1-style version](https://github.com/doodersrage/riv
 
 | | |
 |---|---|
-| ![Shockoe Bottom](screenshots/shockoe-bottom.jpg) | ![The Fan](screenshots/the-fan.jpg) |
-| ![Broad Street](screenshots/broad-street.jpg) | ![Capitol Square](screenshots/capitol-square.jpg) |
-| ![Byrd Park](screenshots/byrd-park.jpg) | ![Belle Isle at sunset](screenshots/belle-isle-sunset.jpg) |
-| ![Church Hill at night](screenshots/church-hill-night.jpg) | |
+| ![Main Street Station under the rail viaduct](screenshots/shockoe-bottom.jpg) | ![The Fan](screenshots/the-fan.jpg) |
+| ![The Capitol](screenshots/capitol-square.jpg) | ![Jackson Ward](screenshots/jackson-ward.jpg) |
+| ![Hollywood Cemetery](screenshots/hollywood-cemetery.jpg) | ![Church Hill at night](screenshots/church-hill-night.jpg) |
 
 ## The look
 

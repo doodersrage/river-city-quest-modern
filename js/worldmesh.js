@@ -41,7 +41,7 @@ function fBox(M,F,u0,u1,y0,y1,d0,d1,cell,col,noBottom){fQuad(M,F,u0,u1,y0,y1,d1,
 function fLedge(M,F,u0,u1,y0,y1,d,cell,col){fQuad(M,F,u0,u1,y0,y1,d,cell,col);M.quad(F.P(u0,y1,d),F.P(u1,y1,d),F.P(u1,y1,0),F.P(u0,y1,0),cell,col);}
 
 /* ---------- ground and water ---------- */
-function worldGround(M,Wm,lv,w){const x0=-w.mx,x1=w.w+w.mx,z0=-w.mz,z1=w.h+w.mz,hd=hood(lv),paved=['civic','broad','shockoe','works','cary','jward'].includes(hd),base=paved?'concrete':'grass',bc=paved?[.86,.85,.82]:null;
+function worldGround(M,Wm,lv,w){const x0=-w.mx,x1=w.w+w.mx,z0=-w.mz,z1=w.h+w.mz,hd=hood(lv),paved=['broad','shockoe','works','cary','jward'].includes(hd),base=paved?'concrete':'grass',bc=paved?[.86,.85,.82]:null;
   if(!w.wf){for(let x=x0;x<x1;x+=40)for(let z=z0;z<z1;z+=40){const a=[x,0,z],b=[Math.min(x1,x+40),0,z],c=[Math.min(x1,x+40),0,Math.min(z1,z+40)],d=[x,0,Math.min(z1,z+40)];gTri(M,a,b,c,base,bc);gTri(M,a,c,d,base,bc);}}
   else{// the bank is traced through the smoothed water, square by square; open land is merged into long strips
     const cw=w.water.cw,ch=w.water.ch,f=w.wf,X=i=>x0+i*2+1,Z=j=>z0+j*2+1,bank=[.5,.44,.36];
@@ -146,6 +146,8 @@ function worldLandmark(M,lv,w,lm){const L=lm.L,T=new Mesh(),w0=L.w*TS,d0=L.h*TS;
   for(let t=0;t<T.count;t+=3){const layer=Math.floor(T.uv[t*2]+1e-4);if(!LM_TILE[layer]||T.sw[t]!=0)continue;const n=[T.nrm[t*3],T.nrm[t*3+1],T.nrm[t*3+2]],ax=Math.abs(n[1])>.7?1:Math.abs(n[0])>Math.abs(n[2])?0:2;
     for(let k=0;k<3;k++){const i=t+k,x=T.pos[i*3],y=T.pos[i*3+1],z=T.pos[i*3+2];T.uv[i*2]=(ax==1?x:ax==0?z:x)/2;T.uv[i*2+1]=(ax==1?z:-y)/2;T.sw[i]=-(layer+1);}}
   M.add(T);}
+// how wooded each green district is (trees per hundred 7 m plots), and whether it is a burying ground
+const WGREEN={'ow:2,1':[7],'ow:1,2':[30,1],'ow:2,2':[46],'ow:0,3':[52],'ow:3,3':[40],'ow:0,-1':[34],'ow:-1,2':[48],'ow:1,3':[22],'ow:0,2':[14],'ow:1,-1':[16]};
 const LM_TILE={};for(const c of ['marble','stone','granite','brick','steps','concrete','roof','copper','plaster','white','tin','stonewall','sidewalk','cobble','floor','planks','wood','black','gold','chrome','clap','clap2','worn','qwall'])LM_TILE[CELL[c]]=1;
 
 /* ---------- trees, lamps, signals and street furniture ---------- */
@@ -157,6 +159,11 @@ function worldProps(lv){const w=lv.world,out=[];worldJunctions(w);const seed=lv.
         if(q.x<-w.mx+2||q.z<-w.mz+2||q.x>w.w+w.mx-2||q.z>w.h+w.mz-2||!free(q.x,q.z,3.5)||onRoad(q.x,q.z,.6)||w.junctions.some(j=>Math.hypot(j.x-q.x,j.z-q.z)<j.w/2+5))continue;trees.push([q.x,q.z,hh,1]);}}}
   for(const a of w.areas){const dens=a.k=='wood'?46:a.k=='park'||a.k=='cemetery'?260:a.k=='scrub'?120:0;if(!dens)continue;const n=Math.min(90,Math.floor(Math.abs(polyArea(a.pp))/dens));let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const q of a.pp){x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);z0=Math.min(z0,q[1]);z1=Math.max(z1,q[1]);}
     for(let k=0,tries=0;k<n&&tries<n*6&&trees.length<(WLOW?125:250);tries++){const hh=hash(tries,Math.round(x0),seed+Math.round(z0)),x=x0+(hh%1000)/1000*(x1-x0),z=z0+((hh>>10)%1000)/1000*(z1-z0);if(!inPolygon(a.pp,x,z)||!free(x,z,a.k=='wood'?2.6:5)||roadNear(w,x,z,5))continue;trees.push([x,z,hh]);k++;}}
+  // parks, the cemetery and the river banks are wooded even where nobody has drawn the woods on the map
+  {const G=WGREEN[w.id];if(G){const cap=WLOW?150:330,R=lv.d.rows,cand=[];w.graves=[];for(let cz=4;cz<w.h-4;cz+=7)for(let cx=4;cx<w.w-4;cx+=7){const hh=hash(cx,cz,seed+41),x=cx+(hh%600)/100,z=cz+((hh>>10)%600)/100,c=R[Math.floor(z/2)]&&R[Math.floor(z/2)][Math.floor(x/2)];if(c!='.')continue;
+        const rn=roadNear(w,x,z,7);if(rn&&rn.d<rn.r.wm/2+2.2)continue;if((hh>>20)%100<G[0]&&free(x,z,3)){cand.push([x,z,hh]);continue;}
+        if(G[1])for(let k=0;k<3;k++){const gx=cx+1+k*2.1,gz=cz+((hh>>5)%3)*1.6+1;if((hash(cx+k,cz,seed+77)%10)<7&&R[Math.floor(gz/2)][Math.floor(gx/2)]=='.'&&!roadNear(w,gx,gz,3))w.graves.push([gx,gz,hash(cx,k,cz)]);}}
+      cand.sort((a,b)=>(a[2]&65535)-(b[2]&65535));for(const t of cand){if(trees.length>=cap)break;trees.push(t);}if(G[1]){const keep=(WLOW?260:520)/Math.max(1,w.graves.length);w.graves=w.graves.filter(g=>((g[2]>>>4)%1000)/1000<keep);}if(G[1])w.graves=w.graves.filter(g=>!trees.some(t=>Math.abs(t[0]-g[0])<1.2&&Math.abs(t[1]-g[1])<1.2));}}
   w.trees=trees;w.solid=trees.filter(t=>t[0]>0&&t[1]>0&&t[0]<w.w&&t[1]<w.h).map(t=>[t[0],t[1],.32]);
   for(const q of w.pts){if(q.xm<1||q.zm<1||q.xm>w.w-1||q.zm>w.h-1)continue;const kind={hydrant:'hydrant',bin:'can',post:'mailbox'}[q.k];if(kind&&!onRoad(q.xm,q.zm,0))out.push({kind,tx:Math.floor(q.xm/2),ty:Math.floor(q.zm/2),x:q.xm,z:q.zm,yaw:0});}
   // parked cars along the curb of the ordinary streets, clear of the corners
@@ -168,6 +175,7 @@ function worldProps(lv){const w=lv.world,out=[];worldJunctions(w);const seed=lv.
   for(const r of w.roads){if(!'pstr'.includes(r.k)||r.b)continue;const L=lineLen(r.pp);for(let s=12+hash(r.p[0],r.p[1],5)%9,i=0;s<L-6;s+=31,i++){const q=lineAt(offsetLine(r.pp,(i%2?1:-1)*(r.wm/2+.9)),s);if(q.x<3||q.z<3||q.x>w.w-3||q.z>w.h-3||buildingAt(w,q.x,q.z)||lamps.some(l=>Math.hypot(l[0]-q.x,l[1]-q.z)<16)||lamps.length>44)continue;lamps.push([q.x,q.z]);}}
   w.lampsDeco=lamps.filter(([x,z])=>!lv.lamps.some(l=>Math.hypot(l.tx*2+1-x,l.ty*2+1-z)<12));return out;}
 function worldFurniture(M,lv,w){for(const t of w.trees){const [x,z,h,street]=t;if(h%7==0&&!street){const sc=.95+((h>>>9)%4)*.06;conifer(M,x,z,h,sc);M.lathe(x,0,z,[[1.3*sc,1.25*sc],[4.6*sc,.75*sc],[7.4*sc,.06]],7,'leaves2',[.42,.55,.42]);}else deciduous(M,x,z,h,street?.72+((h>>>9)%4)*.05:.9+((h>>>9)%4)*.07);}
+  for(const [x,z,h] of w.graves||[]){const k=h%4,g=[[.74,.74,.72],[.6,.6,.6],[.8,.78,.72],[.5,.52,.5]][k];if(k==3){M.box(x-.22,0,z-.22,x+.22,.5,z+.22,'granite',g);M.lathe(x,.5,z,[[0,.14],[1.5,.08],[1.7,0]],4,'granite',g);}else{M.box(x-.32,0,z-.09,x+.32,.75+k*.15,z+.09,k==1?'granite':'marble',g);if(k==2)M.box(x-.38,0,z-.14,x+.38,.12,z+.14,'granite',g);}}
   lv.sigHeads=[];const dk=[.12,.13,.14],gas=['chill','shockoe','fan','jward','civic'].includes(hood(lv));
   const gasLamp=(cx,cz,tx,ty)=>{M.lathe(cx,0,cz,[[0,.2],[.25,.18],[.35,.1],[.6,.07],[2.5,.06],[2.6,.1]],6,'black');M.box(cx-.22,2.6,cz-.22,cx+.22,2.68,cz+.22,'black');M.lathe(cx,2.68,cz,[[0,.16],[.4,.24],[.55,.26]],4,'glass',null,1,1);M.lathe(cx,3.23,cz,[[0,.3],[.12,.28],[.32,.06],[.42,0]],4,'black');M.sphere(cx,3.68,cz,.05,4,2,'black');lv.glows.push([cx,2.95,cz,tx,ty]);};
   for(const l of lv.lamps)gasLamp(l.tx*2+1,l.ty*2+1,l.tx,l.ty);
