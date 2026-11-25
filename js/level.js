@@ -100,13 +100,14 @@ function buildMesh(lv){
     if(!room)groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h);
     // things standing on the tile
     switch(c){
-      case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4,look=wallLook(k,lv);
-        M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});
+      case'B':{const ht=bh(x,y),k=comp[x+','+y],kind=hash(k,5,lv.d.ay)%4,hd=hood(lv),rowh=hd=='fan'||hd=='jward'||hd=='cary',look=wallLook(rowh?k*31+(x>>1)+7:k,lv),same=(a,b)=>comp[a+','+b]===k;
+        if(hd=='fan')mansardTile(M,x,y,ht,same,hash(x>>1,y,k));else{M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});}
         facade(M,lv,x,y,ht,bh,kind,h,look);if(hash(k,x,y)%9==0){const ox=X0+.5+(h%3)*.3,oz=Z0+.5+((h>>3)%3)*.3;M.box(ox,ht,oz,ox+.55,ht+1.5,oz+.45,'brick');M.box(ox-.06,ht+1.5,oz-.06,ox+.61,ht+1.6,oz+.51,'granite');}
         break;}
       case'X':case'D':{if(lmAt(lv,x,y))break;const ht=bh(x,y);if(room){M.box(X0,0,Z0,X1,ht,Z1,{top:'roof',side:'qwall'},null,{bottom:1},true);break;}
         // a building you can walk into: same masonry, windows and cornice as its neighbors, with a real door on the street side
-        const look=wallLook(hash(x>>2,y>>2,77),lv);M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});
+        const look=wallLook(hash(x>>2,y>>2,77),lv);if(hood(lv)=='chill'){const sm=(a,b)=>{const q=src(a,b);return(q=='X'||q=='D')&&!lmAt(lv,a,b);};gableTile(M,x,y,ht,sm,look,[[1,.5,.45],[.55,.75,.6],[.8,.82,.86],[.5,.5,.54]][hash(x>>2,y>>2,5)%4],hash(x,y,31));}
+        else{M.floor(X0,Z0,X1,Z1,ht,'roof');M.box(X0,ht,Z0,X1,ht+.45,Z1,{top:'granite',side:look[0]},look[1],{bottom:1});}
         facade(M,lv,x,y,ht,bh,2,h,look,c=='D'?faceDir(lv,x,y):null);break;}
       case'W':{const edge=x==0||y==0||x==lv.w-1||y==lv.h-1,wh=y==lv.h-1?.8:edge?(lit?3.4:4):2.2;M.box(X0,0,Z0,X1,wh,Z1,{top:wh<1||!edge?wlCell:'black',side:wlCell},wlC,{bottom:1},wh>1);
         if(lit&&edge&&wh>1)M.box(X0-.01,wh-.2,Z0-.01,X1+.01,wh,Z1+.01,'white',[wlC[0]*.8,wlC[1]*.8,wlC[2]*.8],{bottom:1});break;}
@@ -168,13 +169,38 @@ function groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h){
     const g=dy==-1?[X0,Z0-.28,X1,Z0]:dy==1?[X0,Z1,X1,Z1+.28]:dx==-1?[X0-.28,Z0,X0,Z1]:[X1,Z0,X1+.28,Z1];if(n=='p')M.floor(g[0],g[1],g[2],g[3],.008,'cobble',[.55,.53,.56]);}}
 const FLOOR_H=3.3;
 // each building gets its own masonry: red, dark or tawny brick, or painted stucco
-function wallLook(k,lv){const v=hash(k,lv.d.ax*13+lv.d.ay,17)%7;
-  return[[ 'brick',[1,1,1]],['brick',[.82,.76,.74]],['brick',[1.04,.9,.8]],['brick',[.9,.84,.86]],['plaster',[.95,.9,.78]],['plaster',[.78,.8,.78]],['brick',[.96,.94,.9]]][v];}
+// which neighborhood a map is, for how its buildings are built
+const HOODS={'ow:1,1':'fan','ow:-1,0':'fan','ow:2,0':'jward','ow:3,0':'chill','ow:4,0':'chill','ow:3,1':'shockoe','ow:4,1':'shockoe','ow:3,2':'shockoe','ow:0,1':'cary','ow:0,0':'works','ow:2,3':'works'};
+function hood(lv){return lv._hood||(lv._hood=HOODS[lv.d.id]||'town');}
+const CLAPW=[1.04,1.14,1.74];// clapboard painted white
+const HOODLOOK={fan:[['brick',[1,1,1]],['brick',[.82,.72,.68]],['plaster',[.95,.92,.82]],['brick',[1.05,.92,.84]],['plaster',[.72,.78,.84]],['brick',[.9,.8,.78]],['brick',[.96,.86,.8]]],
+  jward:[['brick',[1,1,1]],['brick',[.88,.78,.74]],['brick',[1.02,.9,.8]],['brick',[.8,.74,.72]],['plaster',[.9,.86,.76]]],
+  chill:[['brick',[1,1,1]],['clap',CLAPW],['clap',[1,1,1]],['clap',[.76,.96,1.5]],['brick',[.9,.82,.8]],['clap',CLAPW]],
+  shockoe:[['brick',[.8,.7,.66]],['brick',[.92,.8,.74]],['brick',[.7,.64,.62]],['brick',[1,.92,.86]]],
+  cary:[['plaster',[1,.86,.7]],['plaster',[.74,.9,.86]],['plaster',[.95,.9,.6]],['plaster',[.8,.82,.95]],['brick',[1,1,1]],['plaster',[.97,.96,.92]],['plaster',[.95,.74,.7]]],
+  works:[['brick',[1.05,.98,.85]],['concrete',[1,1,1]],['brick',[.85,.8,.78]],['concrete',[.85,.87,.9]]]};
+function wallLook(k,lv){const L=HOODLOOK[hood(lv)],h=hash(k,lv.d.ax*13+lv.d.ay,17);if(L)return L[h%L.length];
+  return[[ 'brick',[1,1,1]],['brick',[.82,.76,.74]],['brick',[1.04,.9,.8]],['brick',[.9,.84,.86]],['plaster',[.95,.9,.78]],['plaster',[.78,.8,.78]],['brick',[.96,.94,.9]]][h%7];}
+// a pitched roof over one tile of a building: the ridge runs east-west down the middle of however deep the building is here
+function gableTile(M,x,y,ht,same,look,rc,h){const X0=x*TS,Z0=y*TS,X1=X0+TS,Z1=Z0+TS,cx=X0+1;let a=0,b=0;while(same(x,y-a-1))a++;while(same(x,y+b+1))b++;
+  const D=(a+b+1)*TS,pitch=Math.min(.7,2.7/(D/2)),zs=Z0-a*TS,hf=z=>ht+pitch*Math.min(z-zs,zs+D-z),zm=zs+D/2,cut=zm>Z0+.01&&zm<Z1-.01?[Z0,zm,Z1]:[Z0,Z1],ov=.28;
+  for(let i=0;i<cut.length-1;i++){let za=cut[i],zb=cut[i+1];if(i==0&&a==0)za-=ov;if(i==cut.length-2&&b==0)zb+=ov;M.quad([X0,hf(zb),zb],[X1,hf(zb),zb],[X1,hf(za),za],[X0,hf(za),za],'tin',rc);
+    za=cut[i];zb=cut[i+1];for(const sx of [-1,1]){if(same(x+sx,y)){let a2=0,b2=0;while(same(x+sx,y-a2-1))a2++;while(same(x+sx,y+b2+1))b2++;if(a2==a&&b2==b)continue;}const xx=sx>0?X1:X0;
+      if(sx>0)M.quad([xx,ht,zb],[xx,ht,za],[xx,hf(za),za],[xx,hf(zb),zb],look[0],look[1]);else M.quad([xx,ht,za],[xx,ht,zb],[xx,hf(zb),zb],[xx,hf(za),za],look[0],look[1]);}}
+  if(h%5==0){const zc=Math.max(Z0+.3,Math.min(Z1-.3,zm)),top=hf(zc)+1.15;M.box(cx-.32,ht,zc-.26,cx+.32,top,zc+.26,'brick');M.box(cx-.38,top,zc-.32,cx+.38,top+.1,zc+.32,'granite');}
+  else if(b==0&&D>=3.9&&h%2==0){const zf=Z1-.5,zr=Z1-1.5,y0=hf(zf)-.05,y1=y0+.95;M.box(cx-.42,y0,zr,cx+.42,y1,zf,look[0],look[1]);M.gable(cx-.5,zr,cx+.5,zf+.08,y1,.4,false,'tin',rc);M.quad([cx-.3,y0+.15,zf+.01],[cx+.3,y0+.15,zf+.01],[cx+.3,y1-.08,zf+.01],[cx-.3,y1-.08,zf+.01],'pane');
+    for(const u of [-.33,.3])M.box(cx+u,y0+.12,zf,cx+u+.03,y1-.05,zf+.03,'white');M.box(cx-.33,y0+.1,zf,cx+.33,y0+.15,zf+.05,'white');}}
+// the Fan's false mansard: a steep slate skirt around the top of the block, with dormers toward the street
+function mansardTile(M,x,y,ht,same,h){const X0=x*TS,Z0=y*TS,X1=X0+TS,Z1=Z0+TS,cx=X0+1,e={n:!same(x,y-1),s:!same(x,y+1),w:!same(x-1,y),e:!same(x+1,y)},inn=.5,yt=ht+1.45,tx0=X0+(e.w?inn:0),tx1=X1-(e.e?inn:0),tz0=Z0+(e.n?inn:0),tz1=Z1-(e.s?inn:0),sl=[.62,.62,.7];
+  M.quad([tx0,yt,tz1],[tx1,yt,tz1],[tx1,yt,tz0],[tx0,yt,tz0],'roof');
+  if(e.s)M.quad([X0,ht,Z1],[X1,ht,Z1],[tx1,yt,tz1],[tx0,yt,tz1],'roof',sl);if(e.n)M.quad([X1,ht,Z0],[X0,ht,Z0],[tx0,yt,tz0],[tx1,yt,tz0],'roof',sl);if(e.e)M.quad([X1,ht,Z1],[X1,ht,Z0],[tx1,yt,tz0],[tx1,yt,tz1],'roof',sl);if(e.w)M.quad([X0,ht,Z0],[X0,ht,Z1],[tx0,yt,tz1],[tx0,yt,tz0],'roof',sl);
+  for(const [on,zf,dz] of [[e.s,Z1-.1,-1],[e.n,Z0+.1,1]])if(on&&h%2==0){const za=Math.min(zf,zf+dz*.45),zb=Math.max(zf,zf+dz*.45);M.box(cx-.4,ht+.2,za,cx+.4,ht+1.2,zb,'white',[.93,.92,.88]);M.gable(cx-.48,za-.05,cx+.48,zb+.05,ht+1.2,.38,false,'roof',sl,'white');
+    const zq=zf-dz*.012;M.quad([cx-.28,ht+.32,zq],[cx+.28,ht+.32,zq],[cx+.28,ht+1.1,zq],[cx-.28,ht+1.1,zq],'pane');M.box(cx-.015,ht+.32,Math.min(zq,zq-dz*.02),cx+.015,ht+1.1,Math.max(zq,zq-dz*.02),'white');}}
 function facadeCell(x,y,dx,dy,f,nh,kind){if(f==0&&nh==0){if(kind==0&&dy==1)return'storefront';if(hash(x,y,dx+3*dy+7)%3==0)return'door';}return hash(x+f,y,dx+dy*5+f)%5==0?'panelit':'pane';}
 // the outside walls of a building tile, built around real openings: windows and doors are holes in the
 // wall with reveals, set back frames and glass, so they read as recessed the way real masonry does
 function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kind==2?[.18,.24,.2]:[.93,.92,.88],stone=[.9,.88,.84],k=hash(x,y,5),wc=look[0],wcol=look[1];
-  const doorCol=[[.16,.22,.18],[.08,.08,.09],[.42,.12,.1],[.15,.2,.32],[.35,.25,.16]][k%5],rev=wcol.map(v=>v*.8);
+  const doorCol=[[.16,.22,.18],[.08,.08,.09],[.42,.12,.1],[.15,.2,.32],[.35,.25,.16]][k%5],rev=wcol.map(v=>v*.8),hd=hood(lv),PW=[.94,.93,.9],iron=[.07,.07,.08];
   for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const nh=bh(x+dx,y+dy);if(nh>=ht)continue;
     // u runs along the wall seen from outside (0..TS), d sticks out of it
     const W=(u,yy,d)=>{if(dy){const zf=dy>0?Z0+TS:Z0;return[X0+(dy>0?u:TS-u),yy,zf+dy*d];}const xf=dx>0?X0+TS:X0;return[xf+dx*d,yy,Z0+(dx>0?TS-u:u)];};
@@ -192,21 +218,44 @@ function facade(M,lv,x,y,ht,bh,kind,h,look,entry){const X0=x*TS,Z0=y*TS,trim=kin
     if(f0*FLOOR_H>nh)face(0,TS,nh,Math.min(ht,f0*FLOOR_H),0,wc,wcol);
     // base course, belt courses and a bracketed cornice
     if(nh==0)fb(-.02,TS+.02,0,.42,0,.05,'granite',[.72,.7,.68]);
-    fb(-.06,TS+.06,ht-.5,ht-.08,0,.34,'white',stone);fb(-.06,TS+.06,ht-.08,ht,0,.4,'white',stone);for(let q=0;q<5;q++)fb(.12+q*.4,.24+q*.4,ht-.72,ht-.5,0,.2,'white',stone);
-    for(let f=f0;f<floors;f++){const yb=f*FLOOR_H,yt=Math.min(ht,yb+FLOOR_H),isEntry=entry&&entry[0]==dx&&entry[1]==dy&&f==0,c=isEntry?'door':entry&&f==0?'pane':facadeCell(x,y,dx,dy,f,nh,kind);if(f>f0)fb(-.02,TS+.02,yb-.07,yb+.05,0,.05,'granite',stone);
+    const nc=(lv.d.rows[y+dy]||'')[x+dx]||'#',walk=nh==0&&(WALK.includes(nc)||'f,ltMaubq'.includes(nc));
+    if(hd=='shockoe'){// corbelled brick: each course steps out a little further
+      for(let q=0;q<3;q++)fb(-.03,TS+.03,ht-.42+q*.14,ht-.28+q*.14,0,.06+q*.06,wc,wcol.map(v=>v*(.82+q*.05)));for(let q=0;q<7;q++)fb(.06+q*.28,.2+q*.28,ht-.6,ht-.42,0,.07,wc,wcol.map(v=>v*.78));}
+    else if(hd=='works'){fb(-.03,TS+.03,ht-.2,ht,0,.08,'concrete');}
+    else{fb(-.06,TS+.06,ht-.5,ht-.08,0,.34,'white',stone);fb(-.06,TS+.06,ht-.08,ht,0,.4,'white',stone);for(let q=0;q<5;q++)fb(.12+q*.4,.24+q*.4,ht-.72,ht-.5,0,.2,'white',stone);
+      if(hd=='jward'||hd=='fan')for(const u of [.02,TS-.14]){fb(u,u+.12,ht-1.15,ht-.5,0,.14,'white',stone);fb(u,u+.12,ht-.78,ht-.5,0,.3,'white',stone);}
+      if(hd=='cary'&&walk){fb(.25,TS-.25,ht,ht+.55,-.22,0,wc,wcol);fb(.2,TS-.2,ht+.55,ht+.65,-.26,.05,'white',stone);}}
+    for(let f=f0;f<floors;f++){const yb=f*FLOOR_H,yt=Math.min(ht,yb+FLOOR_H),isEntry=entry&&entry[0]==dx&&entry[1]==dy&&f==0,c=isEntry?'door':entry&&f==0?'pane':(hd=='cary'&&f==0&&walk&&hash(x,y,dx+3*dy+7)%4)?'storefront':facadeCell(x,y,dx,dy,f,nh,kind);if(f>f0)fb(-.02,TS+.02,yb-.07,yb+.05,0,.05,'granite',stone);
       if(c=='storefront'){const o={u0:.12,u1:1.88,v0:.55,v1:2.75,dep:.16};panel(yb,yt,o);fb(.12,1.88,o.v0,o.v1,-.14,-.13,'pane');
         for(const u of [.12,1.88-.07])fb(u,u+.07,o.v0,o.v1,-.13,-.06,'white',doorCol);fb(.12,1.88,o.v1-.06,o.v1,-.13,-.06,'white',doorCol);fb(.12,1.88,o.v0,o.v0+.08,-.13,-.04,'white',doorCol);fb(.97,1.03,o.v0,o.v1,-.13,-.07,'white',doorCol);
         fb(.05,1.95,2.85,3.2,0,.1,'sign2',[.9,.88,.82]);const ac=rgb(['#6a2a2a','#2a4a3a','#2a3a5a','#5a4a2a'][k%4]);
-        const a1=W(0,3.0,0),a2=W(TS,3.0,0),a3=W(TS,2.55,1.1),a4=W(0,2.55,1.1),a5=W(TS,2.35,1.1),a6=W(0,2.35,1.1);M.quad(a1,a2,a3,a4,'cloth',ac);M.quad(a4,a3,a5,a6,'cloth',ac);}
+        const a1=W(0,3.0,0),a2=W(TS,3.0,0),a3=W(TS,2.55,1.1),a4=W(0,2.55,1.1),a5=W(TS,2.35,1.1),a6=W(0,2.35,1.1);const aw=hd=='cary'?(k%2?'awning':'awning2'):'cloth',awc=hd=='cary'?null:ac;M.quad(a1,a2,a3,a4,aw,awc);M.quad(a4,a3,a5,a6,aw,awc);}
       else if(c=='door'){const o={u0:.55,u1:1.45,v0:yb,v1:yb+2.9,dep:.3};panel(yb,yt,o);fb(.55,1.45,yb,yb+2.42,-.3,-.25,'planks',doorCol);for(const [a,b] of [[.62,.97],[1.03,1.38]])for(const [c0,c1] of [[.25,1.15],[1.3,2.25]])fb(a,b,yb+c0,yb+c1,-.25,-.235,'planks',doorCol.map(v=>v*1.15));
         fb(.55,1.45,yb+2.42,yb+2.48,-.3,-.2,'white',trim);fb(.58,1.42,yb+2.48,yb+2.88,-.27,-.26,'pane');fb(1.26,1.31,yb+1.15,yb+1.22,-.25,-.2,'brass');
         fb(.4,1.6,yb,yb+.17,0,.8,'granite',stone);fb(.4,1.6,yb+.17,yb+.34,0,.45,'granite',stone);fb(.48,1.52,yb+2.9,yb+3.08,0,.12,'granite',stone);}
+      else if(hd=='works'){// steel factory sash: wide, many small panes
+        const v0=yb+1,v1=yb+2.75,o={u0:.2,u1:1.8,v0,v1,dep:.14};panel(yb,yt,o);fb(.2,1.8,v0,v1,-.12,-.11,c);for(let q=0;q<=4;q++)fb(.2+q*.4-.015,.2+q*.4+.015,v0,v1,-.11,-.085,'white',iron);for(let q=0;q<=3;q++)fb(.2,1.8,v0+q*(v1-v0)/3-.015,v0+q*(v1-v0)/3+.015,-.11,-.085,'white',iron);fb(.14,1.86,v0-.1,v0,0,.07,'concrete');}
       else{const v0=yb+(f==0?.95:.9),v1=v0+1.75,o={u0:.52,u1:1.48,v0,v1,dep:.24};panel(yb,yt,o);fb(.52,1.48,v0,v1,-.2,-.19,c);
         for(const u of [.52,1.48-.06])fb(u,u+.06,v0,v1,-.19,-.14,'white',trim);fb(.52,1.48,v0,v0+.07,-.19,-.13,'white',trim);fb(.52,1.48,v1-.06,v1,-.19,-.14,'white',trim);
         fb(.52,1.48,(v0+v1)/2-.03,(v0+v1)/2+.03,-.19,-.15,'white',trim);fb(.985,1.015,v0,(v0+v1)/2,-.19,-.16,'white',trim);fb(.985,1.015,(v0+v1)/2,v1,-.19,-.16,'white',trim);
-        fb(.44,1.56,v0-.09,v0,0,.09,'granite',stone);fb(.47,1.53,v1,v1+.2,0,.03,'granite',stone);
+        fb(.44,1.56,v0-.09,v0,0,.09,'granite',stone);
+        if(hd=='shockoe'){for(let q=0;q<6;q++){const u=.44+q*.187,yy=v1+.02+.13*Math.sin(Math.PI*(q+.5)/6);fb(u,u+.18,yy,yy+.2,0,.035,wc,wcol.map(v=>v*.72));}// a low brick arch over each window
+          if(k%3==0){fb(.14,.5,v0,v1,0,.04,'tin',[.3,.32,.33]);fb(1.5,1.86,v0,v1,0,.04,'tin',[.3,.32,.33]);}if(f>f0)fb(.16,.3,yb+.1,yb+.24,0,.03,'black',iron);}
+        else fb(.47,1.53,v1,v1+.2,0,.03,'granite',stone);
+        if(hd=='jward'&&f>0)fb(.44,1.56,v1+.2,v1+.3,0,.12,'white',stone);
         if(kind==3){fb(.12,.44,v0,v1,.0,.05,'planks',[.17,.26,.19]);fb(1.56,1.88,v0,v1,0,.05,'planks',[.17,.26,.19]);}}
-      if(kind==1&&f==1&&nh==0&&dy==1){fb(0,TS,yb,yb+.1,0,.75,'granite',[.4,.4,.42]);fb(0,TS,yb+1.0,yb+1.05,.7,.75,'black',[.08,.08,.08]);for(let q=0;q<9;q++)fb(q*.24,q*.24+.025,yb+.1,yb+1.0,.71,.74,'black',[.08,.08,.08]);}}
+      if(f==0&&walk&&(hd=='fan'||hd=='jward')){const pd=.84,dk=.34,pr=2.95;fb(0,TS,0,dk,0,pd,'planks',[.6,.56,.5]);fb(-.04,TS+.04,pr,pr+.16,0,pd+.1,'white',PW);
+        {const a=W(-.04,pr+.42,0),b=W(TS+.04,pr+.42,0),c2=W(TS+.04,pr+.16,pd+.1),e=W(-.04,pr+.16,pd+.1);M.quad(e,c2,b,a,'tin',hd=='fan'?[.75,.5,.48]:[.5,.55,.56]);}
+        if(c=='door')fb(.45,1.55,0,dk/2,pd,pd+.28,'granite',stone);
+        for(const u of [0,TS]){const p=W(u,dk,pd-.1);if(hd=='fan'){M.box(p[0]-.11,dk,p[2]-.11,p[0]+.11,dk+.12,p[2]+.11,'white',PW);M.lathe(p[0],dk+.12,p[2],[[0,.085],[1.2,.08],[2.3,.068],[2.34,.1],[2.49,.1]],10,'column',PW);}
+          else{M.box(p[0]-.03,dk,p[2]-.03,p[0]+.03,pr,p[2]+.03,'black',iron);const s=u?-1:1;for(const [w,hh] of [[.34,.3],[.2,.5]]){const q0=W(u,pr-hh,pd-.1),q1=W(u+s*w,pr-hh,pd-.1),q2=W(u+s*w,pr,pd-.1),q3=W(u,pr,pd-.1);M.quad(q0,q1,q2,q3,'grille',iron);}}}
+        if(hd=='jward'){const q0=W(0,pr-.22,pd-.1),q1=W(TS,pr-.22,pd-.1),q2=W(TS,pr,pd-.1),q3=W(0,pr,pd-.1);M.quad(q0,q1,q2,q3,'bars',iron);}
+        if(c!='door'){if(hd=='fan'){fb(.1,TS-.1,dk+.72,dk+.79,pd-.14,pd-.06,'white',PW);fb(.1,TS-.1,dk+.08,dk+.13,pd-.13,pd-.07,'white',PW);for(let q=0;q<11;q++)fb(.16+q*.165,.195+q*.165,dk+.13,dk+.72,pd-.12,pd-.08,'white',PW);}
+          else{const q0=W(0,dk,pd-.1),q1=W(TS,dk,pd-.1),q2=W(TS,dk+.8,pd-.1),q3=W(0,dk+.8,pd-.1);M.quad(q0,q1,q2,q3,'bars',iron);fb(0,TS,dk+.8,dk+.84,pd-.13,pd-.07,'black',iron);}}}
+      if(f==0&&walk&&hd=='chill'&&c=='door'){// Greek Revival: a small square-columned portico at the door
+        for(const u of [.36,1.64]){const p=W(u,.34,.72);M.box(p[0]-.09,.34,p[2]-.09,p[0]+.09,2.9,p[2]+.09,'white',PW);M.box(p[0]-.12,2.78,p[2]-.12,p[0]+.12,2.9,p[2]+.12,'white',PW);M.box(p[0]-.12,.34,p[2]-.12,p[0]+.12,.44,p[2]+.12,'white',PW);}
+        fb(.2,1.8,2.9,3.2,0,.88,'white',PW);fb(.14,1.86,3.2,3.28,0,.94,'white',PW);const a=W(.14,3.28,.94),b=W(1.86,3.28,.94),t=W(1,3.62,.94),a2=W(.14,3.28,0),b2=W(1.86,3.28,0),t2=W(1,3.62,0);ltri(M,a,b,t,'white',PW);M.quad(a2,a,t,t2,'tin',[.5,.5,.54]);M.quad(b,b2,t2,t,'tin',[.5,.5,.54]);}
+      if(kind==1&&f==1&&nh==0&&dy==1&&hd!='fan'&&hd!='jward'){fb(0,TS,yb,yb+.1,0,.75,'granite',[.4,.4,.42]);fb(0,TS,yb+1.0,yb+1.05,.7,.75,'black',[.08,.08,.08]);for(let q=0;q<9;q++)fb(q*.24,q*.24+.025,yb+.1,yb+1.0,.71,.74,'black',[.08,.08,.08]);}}
     if(hash(x*3+dx,y*3+dy,11)%5==0)fb(TS-.12,TS-.04,0,ht-.5,.02,.1,'tin',[.5,.5,.52]);}}
 function faceDir(lv,x,y){for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){const c=lv.d.rows[y+dy]&&lv.d.rows[y+dy][x+dx];if(c&&WALK.includes(c))return[dx,dy];}return[0,1];}
 function statue(M,x,y,z){const s=[.62,.62,.66];M.box(x-.25,y,z-.15,x-.05,y+.9,z+.15,'stone',s);M.box(x+.05,y,z-.15,x+.25,y+.9,z+.15,'stone',s);M.box(x-.32,y+.9,z-.2,x+.32,y+1.7,z+.2,'stone',s);
