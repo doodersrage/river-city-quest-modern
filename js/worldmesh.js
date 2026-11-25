@@ -37,6 +37,9 @@ const fQuad=(M,F,u0,u1,y0,y1,d,cell,col)=>M.quad(F.P(u0,y0,d),F.P(u1,y0,d),F.P(u
 function fBox(M,F,u0,u1,y0,y1,d0,d1,cell,col,noBottom){fQuad(M,F,u0,u1,y0,y1,d1,cell,col);M.quad(F.P(u0,y1,d1),F.P(u1,y1,d1),F.P(u1,y1,d0),F.P(u0,y1,d0),cell,col);if(!noBottom)M.quad(F.P(u0,y0,d0),F.P(u1,y0,d0),F.P(u1,y0,d1),F.P(u0,y0,d1),cell,col);
   M.quad(F.P(u0,y0,d0),F.P(u0,y0,d1),F.P(u0,y1,d1),F.P(u0,y1,d0),cell,col);M.quad(F.P(u1,y0,d1),F.P(u1,y0,d0),F.P(u1,y1,d0),F.P(u1,y1,d1),cell,col);}
 
+// a piece of wall in a wall's own frame, texture running true along it; colours at its foot and its head
+function fT(M,F,ua,ub,ya,yb,d,cell,cA,cB,uo){const s=M.swayV,n=[F.nx,0,F.nz],A=F.P(ua,ya,d),B=F.P(ub,ya,d),C=F.P(ub,yb,d),D=F.P(ua,yb,d),U=u=>(uo+u)/2;M.swayV=tileOf(cell);
+  M.tri(A,B,C,[U(ua),-ya/2],[U(ub),-ya/2],[U(ub),-yb/2],cA,cA,cB,n,n,n);M.tri(A,C,D,[U(ua),-ya/2],[U(ub),-yb/2],[U(ua),-yb/2],cA,cB,cB,n,n,n);M.swayV=s;}
 // a shallow ledge: its face and its top, nothing hidden
 function fLedge(M,F,u0,u1,y0,y1,d,cell,col){fQuad(M,F,u0,u1,y0,y1,d,cell,col);M.quad(F.P(u0,y1,d),F.P(u1,y1,d),F.P(u1,y1,0),F.P(u0,y1,0),cell,col);}
 
@@ -107,16 +110,33 @@ function worldBuilding(M,lv,w,b){const p=b.pp,n=p.length,hd=hood(lv),h=hash(b.i*
     if(!shop&&!small&&frn&&'pst'.includes(frn.r.k)&&frn.d<frn.r.wm/2+9&&!RESID.includes(b.t)&&b.ar>60&&b.ar<1800&&nf<=5&&hash(b.i,3,7)%4)shop=true;}
   let u0=0;for(let i=0;i<n;i++){const a=p[i],c=p[(i+1)%n],F=wallFrame(a,c),L=F.len;if(L<.15){u0+=L/2;continue;}const nr=[F.nx,0,F.nz],mid=F.P(L/2,0,.6),nbr=buildingAt(w,mid[0],mid[2]),party=nbr&&nbr!==b&&!nbr.gone;
     if(party&&nbr.hm>=hm-.5){u0+=L/2;continue;}const yb=party?Math.min(top,nbr.hm):0;
-    if(yb<1.1){wallQuad(M,a,c,0,1.1,wc,wcol,u0,nr,low);wallQuad(M,a,c,1.1,top,wc,wcol,u0,nr);}else wallQuad(M,a,c,yb,top,wc,wcol,u0,nr);u0+=L/2;
+    const rn=party||small?null:roadNear(w,mid[0]+F.nx*2,mid[2]+F.nz*2,26,q=>q.k!='m'&&q.k!='f'&&q.k!='x'),street=!party&&!small&&(!!rn||i==front),nb=Math.max(1,Math.floor((L-.5)/bay)),m0=(L-nb*bay)/2,doorQ=Math.floor(nb/2);
+    // on the street side the windows and door are set back into the wall, so the wall is built in pieces around them
+    const deep=street&&!tower&&!WLOW&&yb==0&&wh>.9&&L>2.2&&nf<=6,RV=.15,bayQ=deep&&resid&&!shop&&i==front&&nb>=3&&nf>=2&&hash(b.i,17,2)%3==0?(hash(b.i,4,4)%2?0:nb-1):-1,bayY0=bayQ>=0&&hash(b.i,11,5)%5?.4+fh:.4;
+    if(deep){const cy=y=>y>=1.1?wcol:low.map((v,k)=>v+(wcol[k]-v)*Math.max(0,y)/1.1),rw=(ua,ub,ya,y2)=>{if(ub-ua<.01||y2-ya<.01)return;if(ya<1.09&&y2>1.11){rw(ua,ub,ya,1.1);rw(ua,ub,1.1,y2);return;}fT(M,F,ua,ub,ya,y2,0,wc,cy(ya),cy(y2),u0*2);};
+      let ue=0;for(let q=0;q<nb;q++){const uc=m0+(q+.5)*bay,ops=[];for(let f=0;f<nf;f++){const y0=.4+f*fh;if(q==bayQ&&y0>=bayY0-.01)continue;if(f==0&&i==front&&q==doorQ){const dw=shop?1.1:.95;ops.push([uc-dw/2,uc+dw/2,0,2.25,0,f]);continue;}if(f==0&&shop)continue;const wy=y0+(fh-wh)*.45;ops.push([uc-ww/2,uc+ww/2,wy,wy+wh,1,f]);}
+        if(!ops.length)continue;const bl=Math.min(...ops.map(o=>o[0])),br=Math.max(...ops.map(o=>o[1]));rw(ue,bl,0,top);let yc=0;
+        for(const [o0,o1,ya,y2,win,f] of ops){rw(bl,br,yc,ya);rw(bl,o0,ya,y2);rw(o1,br,ya,y2);const sh=trim.map(v=>v*.78),dk=trim.map(v=>v*.6);
+          M.quad(F.P(o0,ya,0),F.P(o0,ya,-RV),F.P(o0,y2,-RV),F.P(o0,y2,0),'white',sh);M.quad(F.P(o1,ya,-RV),F.P(o1,ya,0),F.P(o1,y2,0),F.P(o1,y2,-RV),'white',sh);M.quad(F.P(o0,y2,-RV),F.P(o1,y2,-RV),F.P(o1,y2,0),F.P(o0,y2,0),'white',dk);
+          if(win)fQuad(M,F,o0,o1,ya,y2,-RV,lit(q*7+f));else fQuad(M,F,o0,o1,ya,y2,-RV,'door',[[.5,.45,.4],[.35,.2,.18],[.25,.32,.4],[.2,.28,.22]][h%4]);yc=y2;}
+        rw(bl,br,yc,top);ue=br;}
+      rw(ue,L,0,top);}
+    else if(yb<1.1){wallQuad(M,a,c,0,1.1,wc,wcol,u0,nr,low);wallQuad(M,a,c,1.1,top,wc,wcol,u0,nr);}else wallQuad(M,a,c,yb,top,wc,wcol,u0,nr);u0+=L/2;
     if(party||small){if(!party&&L>2&&i==front)fQuad(M,F,L/2-.5,L/2+.5,0,2.1,.03,'door',[.5,.45,.4]);continue;}
-    const rn=roadNear(w,mid[0]+F.nx*2,mid[2]+F.nz*2,26,q=>q.k!='m'&&q.k!='f'&&q.k!='x'),street=!!rn||i==front,nb=Math.max(1,Math.floor((L-.5)/bay)),m0=(L-nb*bay)/2;
+    if(bayQ>=0){// a bay window standing out from the front, three-sided, running up the house
+      const uc=m0+(bayQ+.5)*bay,hb=bay/2-.2,sl=.5,dB=.7,yT=Math.min(top-.5,.4+nf*fh-.1),X=[[uc-hb,0],[uc-hb+sl,dB],[uc+hb-sl,dB],[uc+hb,0]],tw=trim;
+      for(let k=0;k<3;k++){const A=F.P(X[k][0],bayY0,X[k][1]),B=F.P(X[k+1][0],bayY0,X[k+1][1]),C=[B[0],yT,B[2]],D=[A[0],yT,A[2]],l=Math.hypot(B[0]-A[0],B[2]-A[2]),nn=[(B[2]-A[2])/l,0,-(B[0]-A[0])/l],sg=nn[0]*F.nx+nn[2]*F.nz<0?-1:1,N=[nn[0]*sg,0,nn[2]*sg],sv=M.swayV;M.swayV=tileOf(wc);
+        M.tri(A,B,C,[0,-bayY0/2],[l/2,-bayY0/2],[l/2,-yT/2],wcol,wcol,wcol,N,N,N);M.tri(A,C,D,[0,-bayY0/2],[l/2,-yT/2],[0,-yT/2],wcol,wcol,wcol,N,N,N);M.swayV=sv;
+        for(let f=0;f<nf;f++){const y0=.4+f*fh;if(y0<bayY0-.01)continue;const wy=y0+(fh-wh)*.45,in0=k==1?.18:.08,Pp=(t,y,o)=>[A[0]+(B[0]-A[0])*t+N[0]*o,y,A[2]+(B[2]-A[2])*t+N[2]*o],t0=in0/l,t1=1-in0/l;
+          M.quad(Pp(t0,wy-.06,.02),Pp(t1,wy-.06,.02),Pp(t1,wy+wh+.06,.02),Pp(t0,wy+wh+.06,.02),'white',tw);M.quad(Pp(t0+.06/l,wy,.035),Pp(t1-.06/l,wy,.035),Pp(t1-.06/l,wy+wh,.035),Pp(t0+.06/l,wy+wh,.035),lit(k*5+f));}}
+      const T=y=>X.map(q=>F.P(q[0],y,q[1]));{const t=T(yT);M.quad(t[0],t[1],t[2],t[3],'tin',[.5,.5,.54]);const t2=T(yT+.02).map((q,k)=>F.P(X[k][0]+(k<2?-.08:.08),yT,X[k][1]+(k==1||k==2?.08:0)));M.quad(t2[0],t2[1],t2[2],t2[3],'white',tw);}if(bayY0>.5){const t=T(bayY0);M.quad(t[3],t[2],t[1],t[0],'white',tw.map(v=>v*.7));}}
     // base course and cornice
     fLedge(M,F,0,L,0,.35,.05,'granite',[.72,.7,.68]);if(!pitched){fBox(M,F,-.05,L+.05,hm-.25,hm+.05,0,.28,'white',stone);if(street&&!tower&&hd!='works')fQuad(M,F,0,L,hm-.62,hm-.25,.1,'white',stone.map(v=>v*.92));}
     for(let f=0;f<nf;f++){const y0=.4+f*fh;if(f>0&&street&&!tower&&f<5)fQuad(M,F,0,L,y0-.1,y0+.02,.03,'granite',stone);
       if(tower&&(f>0||!shop)){// a tall modern block: one band of glass a floor, with a pier between the bays only on the street side
         const wy=y0+fh*.28,wt=y0+fh*.86;fQuad(M,F,.5,L-.5,wy,wt,.03,(hash(b.i,f,i)%5==0)?'panelit':'pane');if(street&&f<12)for(let q=1;q<nb;q++)fQuad(M,F,m0+q*bay-.09,m0+q*bay+.09,wy,wt,.05,'white',trim);if(f==0&&i==front){const uc=L/2;fQuad(M,F,uc-1.3,uc+1.3,0,2.6,.05,'white',[.14,.14,.16]);fQuad(M,F,uc-1.15,uc+1.15,0,2.45,.07,'door',[.3,.32,.36]);if(b.door)fBox(M,F,uc-1.8,uc+1.8,2.75,2.9,0,1.4,'white',trim);}continue;}
-      for(let q=0;q<nb;q++){const uc=m0+(q+.5)*bay,isDoor=f==0&&i==front&&q==Math.floor(nb/2);
-        if(isDoor){const dw=shop?1.1:.95,dh=2.25;fQuad(M,F,uc-dw/2-.1,uc+dw/2+.1,0,dh+.12,.03,'white',trim);fQuad(M,F,uc-dw/2,uc+dw/2,0,dh,.05,'door',[[.5,.45,.4],[.35,.2,.18],[.25,.32,.4],[.2,.28,.22]][h%4]);fQuad(M,F,uc-dw/2,uc+dw/2,dh+.15,dh+.5,.04,'pane');
+      for(let q=0;q<nb;q++){const uc=m0+(q+.5)*bay,isDoor=f==0&&i==front&&q==doorQ;if(q==bayQ&&y0>=bayY0-.01)continue;
+        if(isDoor){const dw=shop?1.1:.95,dh=2.25;if(!deep){fQuad(M,F,uc-dw/2-.1,uc+dw/2+.1,0,dh+.12,.03,'white',trim);fQuad(M,F,uc-dw/2,uc+dw/2,0,dh,.05,'door',[[.5,.45,.4],[.35,.2,.18],[.25,.32,.4],[.2,.28,.22]][h%4]);}fQuad(M,F,uc-dw/2-.06,uc+dw/2+.06,dh+.12,dh+.56,.02,'white',trim);fQuad(M,F,uc-dw/2,uc+dw/2,dh+.17,dh+.5,.035,'pane');
           fBox(M,F,uc-dw/2-.25,uc+dw/2+.25,0,.16,0,.75,'granite',stone,true);fBox(M,F,uc-dw/2-.1,uc+dw/2+.1,.16,.3,0,.4,'granite',stone,true);if(b.door){fBox(M,F,uc-.9,uc+.9,dh+.6,dh+.72,0,.7,'white',trim);M.sphere(F.P(uc,dh+.5,.3)[0],dh+.5,F.P(uc,dh+.5,.3)[2],.09,6,3,'lampglow');}continue;}
         if(f==0&&shop&&street){// a shop front: glass over a low bulkhead, a sign above, and often an awning
           fQuad(M,F,uc-bay/2+.12,uc+bay/2-.12,.5,2.7,.03,'white',[.14,.14,.16]);fQuad(M,F,uc-bay/2+.2,uc+bay/2-.2,.58,2.62,.045,'pane');fQuad(M,F,uc-.03,uc+.03,.58,2.62,.055,'white',[.14,.14,.16]);
@@ -124,9 +144,9 @@ function worldBuilding(M,lv,w,b){const p=b.pp,n=p.length,hd=hood(lv),h=hash(b.i*
           if(h%3==0){const aw=h%2?'awning':'awning2';M.quad(F.P(uc-bay/2+.1,2.75,0),F.P(uc+bay/2-.1,2.75,0),F.P(uc+bay/2-.1,2.35,1),F.P(uc-bay/2+.1,2.35,1),aw);}continue;}
         const wy=y0+(fh-wh)*.45,w0=uc-ww/2,w1=uc+ww/2;
         if(!street){if((q+f)%2==0&&!WLOW){fQuad(M,F,w0-.06,w1+.06,wy-.06,wy+wh+.06,.02,'white',trim);fQuad(M,F,w0,w1,wy,wy+wh,.035,'pane');}continue;}
-        fQuad(M,F,w0-.08,w1+.08,wy-.04,wy+wh+.08,.03,'white',trim);fQuad(M,F,w0,w1,wy,wy+wh,.045,lit(q*7+f));if(f<4&&!WLOW){fQuad(M,F,w0,w1,wy+wh/2-.025,wy+wh/2+.025,.055,'white',trim);
-        if(ws!=1)fQuad(M,F,uc-.02,uc+.02,wy,wy+wh,.055,'white',trim);
-        fLedge(M,F,w0-.14,w1+.14,wy-.13,wy-.04,.11,'granite',stone);if(f<2)fQuad(M,F,w0-.1,w1+.1,wy+wh+.08,wy+wh+.24,.03,'granite',stone);}
+        const gd=deep?-RV+.012:.055;if(!deep){fQuad(M,F,w0-.08,w1+.08,wy-.04,wy+wh+.08,.03,'white',trim);fQuad(M,F,w0,w1,wy,wy+wh,.045,lit(q*7+f));}if(f<4&&!WLOW){fQuad(M,F,w0,w1,wy+wh/2-.03,wy+wh/2+.03,gd,'white',trim);
+        if(ws!=1)fQuad(M,F,uc-.025,uc+.025,wy,wy+wh,gd,'white',trim);
+        fLedge(M,F,w0-.14,w1+.14,wy-.1,wy,.11,'granite',stone);if(f<2||deep)fQuad(M,F,w0-.1,w1+.1,wy+wh,wy+wh+.2,.03,'granite',stone);}
         if(ws==3&&hd!='works'&&f<3&&!WLOW)for(const [s0,s1] of [[w0-.08-ww*.46,w0-.08],[w1+.08,w1+.08+ww*.46]])fQuad(M,F,s0,s1,wy,wy+wh,.04,'planks',[.17,.26,.19]);}}
     if(nf>=3&&!resid&&street&&hash(b.i,i,43)%5==0&&L>5){for(let f=1;f<nf;f++){const py=.4+f*fh+.6;fBox(M,F,m0+.2,m0+2.2,py,py+.05,0,.8,'grille',[.07,.07,.08]);fQuad(M,F,m0+.2,m0+2.2,py+.05,py+.95,.8,'bars',[.07,.07,.08]);if(f<nf-1)M.quad(F.P(m0+.4,py+.05,.2),F.P(m0+.4,py+.05,.65),F.P(m0+2,py+fh+.05,.65),F.P(m0+2,py+fh+.05,.2),'grille',[.07,.07,.08]);}}}
   // a front porch, the way Richmond's row houses have them: a low deck, slim columns and a flat roof over the door
