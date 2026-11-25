@@ -9,7 +9,7 @@ const ITEMORDER=['lantern','balls','powder','bug','shoes','hook','can','bottle',
 const ITEMNAME={lantern:'Gas Lantern',balls:'Baseballs',powder:'Blasting Powder',bug:'Gold-Bug',shoes:'Running Shoes',hook:'Grappling Hook',can:'Watering Can',bottle:'Ginger Beer',rod:'Fishing Rod',camera:'Camera',basket:'Picnic Basket',bike:'Bicycle'};
 const TRADE={melon:'Watermelon',music:'Sheet Music',rivermap:'River Map'};
 function newState(){return{coins:0,hp:6,max:6,items:{},ammo:{balls:0,powder:0},cap:{balls:30,powder:10},eq:null,keys:{},got:{},f:{},lore:{},pins:{},vis:{},
-  scene:'ow:2,1',x:(15+BIG.ox)*TS+TS/2,z:(9+BIG.oy)*TS+TS/2,big:1,clock:2400,time:0,ret:null,bottle:0,shield:0,trade:null,pieces:0,nightKills:0,sts:{}};}
+  scene:'ow:2,1',x:(15+BIG.ox)*TS+TS/2,z:(9+BIG.oy)*TS+TS/2,big:1,poly:1,clock:2400,time:0,ret:null,bottle:0,shield:0,trade:null,pieces:0,nightKills:0,sts:{}};}
 function newPlayer(){return{x:0,z:0,y:0,yaw:Math.PI,vx:0,vz:0,swing:0,inv:0,kx:0,kz:0,walk:0,hold:0,holdIc:null,moving:false,dash:0,push:0,pushDir:null};}
 const hour=()=>(6+(st?st.clock:2400)/CYC*24)%24;
 function dark(){if(lv&&lv.room)return lv.dungeon?.55:0;const h=hour();return h>=20||h<5?1:h>=17?(h-17)/3:h<7?(7-h)/2:0;}
@@ -21,7 +21,10 @@ function toast(m){toastMsg=m;toastT=170;}
 function tileXZ(x,z){return[Math.floor(x/TS),Math.floor(z/TS)];}
 function tAt(x,z){const [tx,tz]=tileXZ(x,z);return tileAt(lv,tx,tz);}
 function passable(c){return walkable(c)||c=='~'&&st&&st.items.kayak;}
-function blockedCircle(x,z,r){for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r],[0,-r],[0,r],[-r,0],[r,0]]){const c=tAt(x+dx,z+dz);if(c!=null&&!passable(c))return c;}
+function blockedCircle(x,z,r){if(lv.world){const c=worldBlocked(lv.world,x,z,r);if(c)return c;// the notebook grid only holds the things set down on the ground: chests, plaques, lamps
+    for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r]]){const q=tAt(x+dx,z+dz);if(q!=null&&'cMljb%'.includes(q)&&Math.hypot(x-(Math.floor((x+dx)/TS)+.5)*TS,z-(Math.floor((z+dz)/TS)+.5)*TS)<r+.45)return q;}
+    for(const pr of lv.props||[])if(pr.solid&&Math.abs(x-pr.x)<pr.solid[0]+r&&Math.abs(z-pr.z)<pr.solid[1]+r)return'car';if(typeof trafficBlock=='function'&&trafficBlock(x,z,r))return'car';return null;}
+  for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r],[0,-r],[0,r],[-r,0],[r,0]]){const c=tAt(x+dx,z+dz);if(c!=null&&!passable(c))return c;}
   for(const pr of lv.props||[])if(pr.solid&&Math.abs(x-pr.x)<pr.solid[0]+r&&Math.abs(z-pr.z)<pr.solid[1]+r)return'car';if(typeof trafficBlock=='function'&&trafficBlock(x,z,r))return'car';return null;}
 function npcBlock(x,z){for(const n of npcs)if(Math.hypot(n.x-x,n.z-z)<.85)return n;return null;}
 const centerOf=(tx,ty)=>[tx*TS+TS/2,ty*TS+TS/2];
@@ -64,11 +67,13 @@ function loadScene(id,x,z,yaw){
   banner=lv.name;bannerT=150;needSave=true;if(typeof lifeOnLoad=='function')lifeOnLoad(id);
   if(typeof onSceneLoaded=='function')onSceneLoaded();}
 function freeSpot(minD){for(let k=0;k<80;k++){const tx=1+Math.floor(Math.random()*(lv.w-2)),tz=1+Math.floor(Math.random()*(lv.h-2));const x=tx*TS+TS/2,z=tz*TS+TS/2;
-  if(walkable(tileAt(lv,tx,tz))&&Math.hypot(x-p.x,z-p.z)>minD)return[x,z];}return null;}
-function settle(){if(!blockedCircle(p.x,p.z,PR))return;let best=null,bd=1e9;
+  if(walkable(tileAt(lv,tx,tz))&&Math.hypot(x-p.x,z-p.z)>minD&&!(lv.world&&(blockedCircle(x,z,.6)||!onMain(lv.world,x,z))))return[x,z];}return null;}
+function settle(){if(lv.world){const w=lv.world;if(!blockedCircle(p.x,p.z,PR)&&onMain(w,p.x,p.z))return;// the nearest open ground that connects to the rest of the neighborhood
+    const cx=Math.max(1,Math.min(w.w-2,Math.floor(p.x))),cz=Math.max(1,Math.min(w.h-2,Math.floor(p.z)));for(let r=0;r<Math.max(w.w,w.h);r++){let best=null;for(let dz=-r;dz<=r;dz++)for(let dx=-r;dx<=r;dx+=(Math.abs(dz)==r?1:2*r||1)){const a=cx+dx,b=cz+dz;if(a<1||b<1||a>=w.w-1||b>=w.h-1||!w.main[b*w.w+a]||blockedCircle(a+.5,b+.5,PR))continue;const d=Math.hypot(a+.5-p.x,b+.5-p.z);if(!best||d<best[2])best=[a+.5,b+.5,d];}if(best){p.x=best[0];p.z=best[1];return;}}return;}
+  if(!blockedCircle(p.x,p.z,PR))return;let best=null,bd=1e9;
   for(let tz=0;tz<lv.h;tz++)for(let tx=0;tx<lv.w;tx++){if(!walkable(tileAt(lv,tx,tz)))continue;const x=tx*TS+TS/2,z=tz*TS+TS/2,d=Math.hypot(x-p.x,z-p.z);if(d<bd&&!blockedCircle(x,z,PR)){bd=d;best=[x,z];}}
   if(best){p.x=best[0];p.z=best[1];}}
-function dynKey(o){return o.link?'link:'+o.link:'dyn:'+lv.id+':'+o.tx+','+o.ty;}
+function dynKey(o){return o.key?o.key:o.link?'link:'+o.link:'dyn:'+lv.id+':'+o.tx+','+o.ty;}
 function removeDyn(o,silent){o.on=false;for(const [x,y] of o.cells||[[o.tx,o.ty]])lv.g[y][x]=o.under;if(!silent&&o.kind!='bush'&&o.kind!='gate'){st.f[dynKey(o)]=1;needSave=true;}}
 function growSprout(o,silent){o.on=false;o.grown=true;lv.g[o.ty][o.tx]='1';o.vines=[];
   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){let x=o.tx+dx,y=o.ty+dy;while(lv.g[y]&&lv.g[y][x]=='_'){lv.g[y][x]='|';o.vines.push([x,y]);x+=dx;y+=dy;}}
@@ -77,9 +82,11 @@ function growSprout(o,silent){o.on=false;o.grown=true;lv.g[o.ty][o.tx]='1';o.vin
 /* ---------- starting ---------- */
 function startGame(fromSave){st=fromSave?Object.assign(newState(),fromSave):newState();p=newPlayer();cam={yaw:0,pitch:.5,dist:8,x:0,y:0,z:0,manual:0};p.hp=st.hp=st.max;
   loadScene(st.scene,st.x,st.z,Math.PI);mode='play';
+  if(!fromSave&&lv.world){// begin a few steps from the archivist, facing them
+    const a=npcs.find(n=>n.talk=='archivist'||/Archivist/.test(n.who||''));if(a){let best=null;for(let k=0;k<16;k++){const an=k/16*6.283,x=a.x+Math.sin(an)*5,z=a.z+Math.cos(an)*5;if(!blockedCircle(x,z,PR+.3)&&(!best||roadNear(lv.world,x,z,20)&&!best[2])){best=[x,z,!!roadNear(lv.world,x,z,3)];}}if(best){p.x=best[0];p.z=best[1];p.yaw=Math.atan2(a.x-p.x,a.z-p.z);}}settle();cam.yaw=bestYaw(p.yaw+Math.PI);cam.snap=true;st.spawn=[lv.id,p.x,p.z];}
   if(!fromSave)say(['A cold fog has rolled up off the James, and the gas lamps of Richmond are going dark, block by block.','The archivist by the Capitol wants a word. Walk up and press A to talk.']);}
 function saveGame(){if(!st)return;st.x=p.x;st.z=p.z;st.hp=p.hp;try{localStorage.setItem('rcqm-save',JSON.stringify(st));}catch(e){}}
-function loadSave(){try{const s=JSON.parse(localStorage.getItem('rcqm-save')||'null');if(s&&!s.big){/* a save from before the maps grew: move it to where that spot is now */if((s.scene||'').indexOf('ow:')==0){s.x+=BIG.ox*TS;s.z+=BIG.oy*TS;}if(s.ret&&typeof s.ret.x=='number'&&(s.ret.scene||s.ret.id||'ow:').indexOf('ow:')==0){s.ret.x+=BIG.ox*TS;s.ret.z+=BIG.oy*TS;}s.big=1;}return s&&sceneData(s.scene)?s:null;}catch(e){return null;}}
+function loadSave(){try{const s=JSON.parse(localStorage.getItem('rcqm-save')||'null');if(s&&!s.big){/* a save from before the maps grew: move it to where that spot is now */if((s.scene||'').indexOf('ow:')==0){s.x+=BIG.ox*TS;s.z+=BIG.oy*TS;}if(s.ret&&typeof s.ret.x=='number'&&(s.ret.scene||s.ret.id||'ow:').indexOf('ow:')==0){s.ret.x+=BIG.ox*TS;s.ret.z+=BIG.oy*TS;}s.big=1;}if(s&&!s.poly){/* a save from before the streets became the real ones: put it down in the middle of the same neighborhood */const W=id=>typeof WORLD!='undefined'&&WORLD[id];if(W(s.scene)){s.x=W(s.scene).w/2;s.z=W(s.scene).h/2;}if(Array.isArray(s.ret)&&W(s.ret[0])){s.ret[1]=W(s.ret[0]).w/2;s.ret[2]=W(s.ret[0]).h/2;}s.spawn=null;s.poly=1;}return s&&sceneData(s.scene)?s:null;}catch(e){return null;}}
 
 /* ---------- dialog ---------- */
 function say(lines,cb,who,choices){if(!lines||!lines.length){if(cb)cb(0);return;}dlg={lines:lines.slice(),i:0,n:0,cb,who:who||'',choices:choices||null,sel:0};}
@@ -149,14 +156,16 @@ function interact(){
     if(ch&&!ch.open&&chestVisible(ch)){openChest(ch);return true;}
     const raw=lv.d.rows[tz]&&lv.d.rows[tz][tx],r=lv.markers[k]||(lv.d.readsT&&lv.d.readsT[raw])||(c=='X'&&(lmAt(lv,tx,tz)||{}).read);
     if(r){readMarker(r);return true;}
-    if(c=='D'){enterDoor(tx,tz);return true;}
+    if(c=='D'||lv.world&&d<1.3&&doorNear(fx,fz,1.6)){const dn=lv.world&&doorNear(fx,fz,1.6);if(dn)enterDoor(dn.tx,dn.ty);else enterDoor(tx,tz);return true;}
     if(c=='e'){if(chal&&chal.type=='tag'){const kk=tx+','+tz;if(!chal.set.has(kk)){chal.set.add(kk);burst(fx,1.5,fz,10,'#f2c14e');chalProgress();}else toast('Already found that one.');}else say(['A bright mural, painted right onto the wall.'],null,'Mural');return true;}
     if(c=='j'){say(['A cold brazier.',st.items.lantern?'Raise the Gas Lantern beside it with B.':'Something would have to light it.']);return true;}
     if(c=='L'){bump(fx,fz,true);return true;}
     if(c=='l'&&!(chal&&chal.type=='light')){say([lampLitAt(tx,tz)?'A gas lamp, burning low in the fog.':'A cold gas lamp. The lamplighter could use help.'],null,'Gas Lamp');return true;}}
   return false;}
 function lampLitAt(tx,ty){const L=lv.lamps.find(l=>l.tx==tx&&l.ty==ty);return!L||L.lit;}
-function bump(x,z,loud){const [tx,tz]=tileXZ(x,z),c=tileAt(lv,tx,tz);
+function doorNear(x,z,r){let best=null,bd=r;for(const d of lv.doors||[])if(d.x!=null){const k=Math.hypot(d.x-x,d.z-z);if(k<bd){bd=k;best=d;}}return best;}
+function bump(x,z,loud){if(lv.world){const d=doorNear(p.x,p.z,2);if(d&&!(p.bumpT>0)){p.bumpT=40;enterDoor(d.tx,d.ty);}p.push=0;return;}
+  const [tx,tz]=tileXZ(x,z),c=tileAt(lv,tx,tz);
   if(c=='D'&&!(p.bumpT>0)){p.bumpT=40;enterDoor(tx,tz);}
   if(c=='L'){const o=lv.dyn.find(o=>o.kind=='lock'&&o.on&&(o.cells||[]).some(([a,b])=>a==tx&&b==tz));if(o){const ar=lv.id.split(':')[0];
     if((st.keys[ar]||0)>0){st.keys[ar]--;removeDyn(o);sfx('door');toast('The small key turns. The door swings open.');burst(tx*TS+TS/2,1.5,tz*TS+TS/2,10,'#d8a830');}
@@ -170,10 +179,11 @@ function edgeExit(ex,ez){const [a,c]=lv.id.split(':'),[ax,ay]=c.split(',').map(N
 function startTrans(id,x,z,yaw){trans={t:0,id,x,z,yaw,done:false};sfx('whoosh');}
 function transUpdate(){trans.t++;if(trans.t==18&&!trans.done){trans.done=true;loadScene(trans.id,trans.x,trans.z,trans.yaw);}if(trans.t>=36)trans=null;}
 function enterDoor(tx,tz){const dr=(lv.doors||[]).find(d=>d.tx==tx&&d.ty==tz);if(!dr)return;
+  if(dr.sealed&&lv.g[dr.sealed[1]][dr.sealed[0]]=='%'){if(!(p.lockT>0)){p.lockT=120;toast('Fallen stone blocks the door. Blasting powder would clear it.');sfx('no');}return;}
   if(dr.need=='keystones'&&nKeys()<4){say(['The tunnel mouth is sealed. Four hollows in the stone wait for keystones. You have '+nKeys()+'.']);return;}
   if(dr.need=='carkey'&&!st.got.carkey){say(['The Carillon door is locked. The caretaker nearby might know where the key went.']);return;}
   if(!sceneData(dr.to)){say(['The door is shut tight.'],null,lv.name);return;}
-  const fd=faceDir(lv,tx,tz);st.ret=[lv.id,(tx+fd[0])*TS+TS/2,(tz+fd[1])*TS+TS/2,Math.atan2(fd[0],fd[1])];sfx('door');const intro=dr.to=='tunnel:0,1'&&!st.f.tunIntro;
+  if(dr.x!=null)st.ret=[lv.id,dr.x+dr.nx*1.3,dr.z+dr.nz*1.3,Math.atan2(dr.nx,dr.nz)];else{const fd=faceDir(lv,tx,tz);st.ret=[lv.id,(tx+fd[0])*TS+TS/2,(tz+fd[1])*TS+TS/2,Math.atan2(fd[0],fd[1])];}sfx('door');const intro=dr.to=='tunnel:0,1'&&!st.f.tunIntro;
   startTrans(dr.to,8*TS,8.6*TS,Math.PI);
   if(intro){st.f.tunIntro=1;later.push({n:40,f:()=>say(['The keystones crumble into the seal and it splits. Cold air breathes out of the dark.','Rubble chokes the tunnel ahead. Good thing you brought powder.'])});}}
 let later=[];
@@ -296,11 +306,11 @@ function enemiesUpdate(){
   enemies=enemies.filter(e=>!e.dead||e.fade>0&&e.fade--);
   if(lv.room&&lv.d.en.length&&!enemies.some(e=>!e.dead&&!e.chal)&&!st.f['clr:'+lv.id]){st.f['clr:'+lv.id]=1;needSave=true;if(lv.d.solveOf=='clear')solvedNow();}}
 // the named street the player is standing on, if any
-function streetHere(){if(!lv||lv.room||!lv.d.streets)return null;const tx=Math.floor(p.x/TS),ty=Math.floor(p.z/TS);let nm=null,best=1e9;for(const s of lv.d.streets)if(tx>=s.x0&&tx<=s.x1&&ty>=s.y0&&ty<=s.y1){const a=(s.x1-s.x0+1)*(s.y1-s.y0+1);if(a<best){best=a;nm=s.n;}}return nm=='alley'?null:nm;}
+function streetHere(){if(lv&&lv.world)return worldStreet(lv.world,p.x,p.z);if(!lv||lv.room||!lv.d.streets)return null;const tx=Math.floor(p.x/TS),ty=Math.floor(p.z/TS);let nm=null,best=1e9;for(const s of lv.d.streets)if(tx>=s.x0&&tx<=s.x1&&ty>=s.y0&&ty<=s.y1){const a=(s.x1-s.x0+1)*(s.y1-s.y0+1);if(a<best){best=a;nm=s.n;}}return nm=='alley'?null:nm;}
 let STREET_TOTAL=0;
 // walking a street for the first time is worth a little: it goes in the count and pays a few coins
 function streetTick(){if(frame%20||!st||dlg||trans)return;const n=streetHere();if(!n)return;st.sts=st.sts||{};const key=lv.id+'|'+n;if(st.sts[key])return;st.sts[key]=1;
-  if(!STREET_TOTAL){for(const id in RCQ.maps){const seen={};for(const s of RCQ.maps[id].streets||[])if(s.n!='alley')seen[s.n]=1;STREET_TOTAL+=Object.keys(seen).length;}}
+  if(!STREET_TOTAL){for(const id in RCQ.maps){const seen={},W=typeof WORLD!='undefined'&&WORLD[id];if(W)for(const r of W.roads){if(r.n&&'mpstrva'.includes(r.k)&&r.k!='m')for(let i=0;i<r.p.length;i+=2)if(r.p[i]>0&&r.p[i+1]>0&&r.p[i]<W.w*10&&r.p[i+1]<W.h*10){seen[r.n]=1;break;}}else for(const s of RCQ.maps[id].streets||[])if(s.n!='alley')seen[s.n]=1;STREET_TOTAL+=Object.keys(seen).length;}}
   st.coins=Math.min(999,(st.coins||0)+5);needSave=true;sfx('coin');toast('New street: '+n+'  ('+Object.keys(st.sts).length+' of '+STREET_TOTAL+')  +5 coins');}
 function hurtPlayer(dmg,fx,fz){if(p.hold>0||hook&&hook.st=='pull')return;if(typeof lifeDamage=='function')dmg=lifeDamage(dmg);p.hp-=dmg;p.inv=70;const l=Math.hypot(p.x-fx,p.z-fz)||1;p.kx=(p.x-fx)/l*.35;p.kz=(p.z-fz)/l*.35;shake=8;sfx('hurt');vibrate(40);
   if(p.hp<=0){if(st.bottle){st.bottle=0;p.hp=st.max;toast('You gulp down the ginger beer just in time!');sfx('heart');return;}p.hp=0;deathT=90;sfx('die');}}
@@ -454,7 +464,7 @@ function startChal(id,n){const d=RCQ.chal[id];
   if(d.needs=='bug'&&!st.items.bug){say(['You\'d need something that can fly over the water and bring things back.'],null,n.who);return;}
   if(d.type=='light'&&!st.items.lantern){say(['You\'ll need a lantern for this one. The archivist by the Capitol has one.'],null,n.who);return;}
   if(d.type=='quiz'){runQuiz(n);return;}
-  chal={id,d,type:d.type,t:Math.round(d.time*60*2.3),got:0,need:0,who:n.who,scene:lv.id,set:new Set()};const sp=lv.spots;
+  chal={id,d,type:d.type,t:Math.round(d.time*60*2.3*(lv.world?2.4:1)),got:0,need:0,who:n.who,scene:lv.id,set:new Set()};const sp=lv.spots;
   if(d.type=='collect'){chal.need=sp.length;for(const [x,y] of sp){const k=mkPick({ball:'ballfly',tap:'tap',melon:'melonpk',lure:'lure',trash:'trash'}[d.ic]||'token',x*TS+TS/2,y*TS+TS/2);k.chal=1;picks.push(k);}}
   else if(d.type=='race'){chal.need=1;const [x,y]=sp[0];const k=mkPick('flag',x*TS+TS/2,y*TS+TS/2);k.chal=1;picks.push(k);}
   else if(d.type=='defeat'){chal.need=d.n;for(let i=0;i<d.n;i++){const [x,y]=sp[i%sp.length]||[16,10],e=mkEnemy(d.foe,x*TS+TS/2+(i>=sp.length?1:0),y*TS+TS/2);e.chal=1;enemies.push(e);}}
@@ -489,10 +499,11 @@ function camUpdate(){if(!lv||typeof window!='undefined'&&window.__camLock)return
   cam.dist+=(dist-cam.dist)*(cam.snap?1:dist<cam.dist?.35:.08);cam.snap=false;cam.pitch=pitch;
   cam.x=tx+Math.sin(cam.yaw)*cam.dist*Math.cos(pitch);cam.z=tz+Math.cos(cam.yaw)*cam.dist*Math.cos(pitch);cam.y=ty+cam.dist*Math.sin(pitch);cam.tx=tx;cam.ty=ty;cam.tz=tz;}
 // how far the camera can pull back along a yaw before a wall or building gets in the way
-function camClear(yaw,pitch,want){for(let d=1;d<=want;d+=.25){const x=p.x+Math.sin(yaw)*d*Math.cos(pitch),z=p.z+Math.cos(yaw)*d*Math.cos(pitch),y=1.4+d*Math.sin(pitch),c=tAt(x,z);
+function camClear(yaw,pitch,want){if(lv.world){const w=lv.world;for(let d=1;d<=want;d+=.25){const x=p.x+Math.sin(yaw)*d*Math.cos(pitch),z=p.z+Math.cos(yaw)*d*Math.cos(pitch),y=1.4+d*Math.sin(pitch),b=buildingAt(w,x,z);if(b&&!b.gone&&y<b.hm+.6)return d;}return want;}
+  for(let d=1;d<=want;d+=.25){const x=p.x+Math.sin(yaw)*d*Math.cos(pitch),z=p.z+Math.cos(yaw)*d*Math.cos(pitch),y=1.4+d*Math.sin(pitch),c=tAt(x,z);
     if(c&&tallAt(c,y,Math.floor(z/TS)))return d;}return want;}
 // the angle with the clearest view nearest the one we'd like, so stepping out of a door doesn't bury the camera in the building
-function camRoom(x,z,y){let m=4;for(let dz=-2;dz<=2;dz++)for(let dx=-2;dx<=2;dx++){const tx=Math.floor(x/TS)+dx,tz=Math.floor(z/TS)+dz,c=tileAt(lv,tx,tz);
+function camRoom(x,z,y){let m=4;if(lv.world){lv.world.bh.near(x,z,4,s=>{if(s.o.gone||y>s.o.hm+.6)return;const d=segDist(x,z,s.a,s.b);if(d<m)m=d;});const b=buildingAt(lv.world,x,z);return b&&!b.gone&&y<b.hm+.6?0:m;}for(let dz=-2;dz<=2;dz++)for(let dx=-2;dx<=2;dx++){const tx=Math.floor(x/TS)+dx,tz=Math.floor(z/TS)+dz,c=tileAt(lv,tx,tz);
     if(c&&tallAt(c,y,tz)){const ex=Math.max(0,Math.abs(x-(tx+.5)*TS)-TS/2),ez=Math.max(0,Math.abs(z-(tz+.5)*TS)-TS/2);m=Math.min(m,Math.hypot(ex,ez));}}return m;}
 function bestYaw(want){let best=want,bs=-1e9;for(let k=0;k<=12;k++)for(const sgn of k?[1,-1]:[1]){const y=want+sgn*k*Math.PI/12,d=camClear(y,CAMP,CAMD);
     const cx=p.x+Math.sin(y)*d*Math.cos(.42),cz=p.z+Math.cos(y)*d*Math.cos(.42),room=camRoom(cx,cz,1.4+d*Math.sin(.42));

@@ -51,6 +51,17 @@ There's no 3D library: it's hand-written WebGL 2.
 | Camera | Q and E | Right stick, LT / RT | Drag on the right |
 | Menu | Enter or Esc | Start | MENU |
 
+## Real streets, real buildings
+
+Outdoors, the game no longer sits on a grid of squares. Each of the 24 neighborhoods is 400 by 300 metres of the real place, taken from OpenStreetMap: every building stands on its own footprint at its real angle and height, every street is a line with its real width, name and one-way direction, and parks, parking lots, footpaths, fences, rail lines, bridges and the river bank are where they really are. Landmarks from the original game (the Capitol, Main Street Station, St. John's, the Byrd, the Carillon and the rest) are set on the footprints of the real buildings.
+
+- Collision follows the real shapes. You can walk any alley that is really there, at any angle.
+- Everything from the original game (people, doors, chests, enemies, plaques, challenges) was moved onto real ground that connects to the rest of the neighborhood; a test walks every district to prove each one can be reached.
+- Cars follow the real street lines, keep right, stop at lights and wait for you. Parked cars sit along real curbs.
+- Rooms and dungeons are still built from squares. So is the puzzle logic inside them.
+
+The map data is fetched by a GitHub Action (`.github/workflows/osm.yml`, run it from the Actions tab), which saves the raw download on the `osm-raw` branch. `node tools/osm/build.js <folder of raw files>` turns that into `js/worlddata.js`. District centres are in `tools/osm/districts.json`.
+
 ## How it's built
 
 Plain JavaScript and WebGL 2, no build step and no libraries. The scripts load in order from `index.html` and share one global scope.
@@ -58,7 +69,11 @@ Plain JavaScript and WebGL 2, no build step and no libraries. The scripts load i
 - `js/data.js`: the places, people, stories, buildings and dungeons, imported from the 2D game by `tools/import-2d.js`. Don't edit it by hand.
 - `js/mesh.js`: geometry helpers, with normals on every vertex
 - `js/tex.js`, `js/tex2.js`: the materials, painted in code at startup into texture arrays with normal and roughness maps
-- `js/level.js`: turns a 2D tile map into a 3D place
+- `js/level.js`: turns a 2D tile map into a 3D place (rooms and dungeons)
+- `js/worlddata.js`: the real neighborhoods, built from OpenStreetMap by `tools/osm/build.js`. Don't edit it by hand.
+- `js/world.js`: reads that data, answers what is where (wall, water, street), and moves the original game's content onto the real ground
+- `js/worldmesh.js`: builds what you see outdoors: ground, water, streets, buildings, landmarks, trees and street furniture
+- `js/traffic.js`: cars, signals and people walking
 - `js/models.js`: low-poly people, creatures and props
 - `js/game.js`: the game itself, with no drawing in it
 - `js/talk.js`: what everyone says
@@ -84,6 +99,8 @@ node tests/run.js
 The tests load the game into Node without a screen. `playthrough.test.js` has a bot play the opening: get the lantern, walk to Belle Isle, clear the quarry, unlock the door, blow the wall, beat Old Snapper and bring the keystone home. `dungeons.test.js` checks that every door goes somewhere, every dungeon room connects to its entrance, and a bot beats all seven bosses through to the credits. `puzzles.test.js` uses each item on the puzzle it's for. `mini.test.js` has a bot play every mini-game to the end, and `life.test.js` covers the dog, cooking, fishing, photos, the bike, stashes, weather, frogs and First Friday. `camera.test.js` walks out of every building and checks the camera can see you. `modern.test.js` checks the normals, the contact shading and the automatic quality levels. `features.test.js` covers markers, all four challenges, bushes, nighttime, dying and the menu. GitHub Actions runs them on every push.
 
 ## Credits
+
+Streets, buildings, parks and water are map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under the Open Database License (ODbL).
 
 The walk and run animations were baked from the CMU Graphics Lab Motion Capture Database by `tools/bake-mocap.js` (BVH conversion by Bruce Hahne). The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
 

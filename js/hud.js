@@ -1,4 +1,5 @@
 "use strict";
+let hudStreet=null;
 /* River City Quest 3D: everything drawn on top of the 3D view. Blue gradient windows with a
    bevelled border, the way late-90s RPG menus looked. Drawn at 640x480 over the 320x240 scene. */
 const HW=640,HH=480;let hc=null,hx=null;
@@ -24,6 +25,8 @@ function drawHud(){hx.clearRect(0,0,HW,HH);
   win(16,HH-74,170,58);T('B',28,HH-66,{size:14,c:'#9aa4d8'});T(st.eq&&st.items[st.eq]?itemLabel(st.eq):'-',28,HH-46,{size:17});
   if(chal&&chal.t!=null){win(HW/2-110,10,220,40);T(chal.d.name.toUpperCase().slice(0,18)+'  '+Math.ceil(chal.t/60),HW/2,20,{align:'center',size:16,c:chal.t<600&&(frame>>4)&1?'#ff8a8a':'#ffffff'});}
   if(boss&&!boss.dead&&Math.hypot(boss.x-p.x,boss.z-p.z)<26){win(HW/2-128,HH-70,256,54);T((BOSSNAME[boss.type]||'BOSS').toUpperCase(),HW/2,HH-64,{align:'center',size:14,c:'#f2c14e'});hx.fillStyle='#1a0a10';hx.fillRect(HW/2-112,HH-42,224,14);hx.fillStyle='#e83048';hx.fillRect(HW/2-110,HH-40,220*Math.max(0,boss.hp)/(boss.max||EDEF[boss.type].hp),10);}
+  // the street you are on, as a street sign at the top of the screen
+  if(mode=='play'&&lv&&lv.world&&!dlg&&!menu&&!shop&&bannerT<=0){if(frame%15==0)hudStreet=streetHere();if(hudStreet){hx.font='bold 15px "Trebuchet MS", sans-serif';const w=hx.measureText(hudStreet).width+28;hx.fillStyle='rgba(20,84,52,.88)';hx.fillRect(HW/2-w/2,14,w,26);hx.strokeStyle='rgba(255,255,255,.85)';hx.lineWidth=1.5;hx.strokeRect(HW/2-w/2+2.5,16.5,w-5,21);T(hudStreet,HW/2,19,{align:'center',size:15,c:'#ffffff'});}}
   if(bannerT>0&&!dlg){hx.globalAlpha=Math.min(1,bannerT/30);win(HW/2-180,64,360,48);T(banner,HW/2,77,{align:'center',size:22,c:'#fff2a8'});hx.globalAlpha=1;}
   if(toastT>0&&!dlg){hx.globalAlpha=Math.min(1,toastT/20);const L=wrapText(toastMsg,520,17);win(HW/2-280,HH-100-L.length*22,560,24+L.length*22);L.forEach((l,i)=>T(l,HW/2,HH-88-L.length*22+i*22,{align:'center',size:17}));hx.globalAlpha=1;}
   // a prompt over whoever or whatever A would use
@@ -35,7 +38,7 @@ function drawHud(){hx.clearRect(0,0,HW,HH);
   if(deathT>0){hx.fillStyle='rgba(60,0,10,'+Math.min(.7,(90-deathT)/60)+')';hx.fillRect(0,0,HW,HH);}}
 function promptTarget(){for(const n of npcs){const d=Math.hypot(n.x-p.x,n.z-p.z),a=Math.abs(ang(p.yaw,Math.atan2(n.x-p.x,n.z-p.z)));if(d<2.1&&a<1.3)return[n.x,2.5,n.z,'Talk'];}
   for(const d of [1.2,2]){const [fx,fz]=front(d),[tx,tz]=tileXZ(fx,fz),c=tileAt(lv,tx,tz);
-    const ch=chests.find(q=>q.tx==tx&&q.ty==tz);if(ch&&!ch.open&&chestVisible(ch))return[ch.x,1.4,ch.z,'Open'];
+    const ch=chests.find(q=>q.tx==tx&&q.ty==tz);if(ch&&!ch.open&&chestVisible(ch))return[ch.x,1.4,ch.z,'Open'];if(lv.world&&d<1.3){const dn=doorNear(fx,fz,1.6);if(dn)return[dn.x,2.7,dn.z,'Enter'];}
     if((c=='M'||c=='Y')&&lv.markers[tx+','+tz])return[tx*TS+TS/2,2.5,tz*TS+TS/2,'Read'];if(c=='D'||c=='X'&&lv.doors[tx+','+tz])return[tx*TS+TS/2,2.8,tz*TS+TS/2,'Enter'];if(c=='e'&&!lv.room)return[tx*TS+TS/2,2.4,tz*TS+TS/2,'Look'];}return null;}
 function drawDialog(){const d=dlg,L=d.lines[d.i].slice(0,d.n),last=d.i==d.lines.length-1,lines=wrapText(L,560,19),h=Math.max(130,40+lines.length*26+(last&&d.choices&&d.n>=d.lines[d.i].length?d.choices.length*26+6:0));
   const y=HH-h-14;win(20,y,HW-40,h);if(d.who){win(30,y-30,Math.max(120,d.who.length*11+30),36);T(d.who,44,y-22,{size:16,c:'#fff2a8'});}
@@ -86,7 +89,7 @@ function drawTitle(){const t=frame;hx.fillStyle='rgba(0,0,0,.25)';hx.fillRect(0,
   for(let i=6;i>0;i--){hx.fillStyle='rgba(10,12,40,.5)';hx.fillText('RIVER CITY QUEST',i,i);}const g=hx.createLinearGradient(0,-30,0,30);g.addColorStop(0,'#fff2a8');g.addColorStop(.55,'#f2c14e');g.addColorStop(1,'#c07a20');hx.fillStyle=g;hx.fillText('RIVER CITY QUEST',0,0);
   hx.font='bold 22px "Trebuchet MS", sans-serif';hx.fillStyle='#e8ecf8';hx.fillText('T H E   F O G   O V E R   T H E   J A M E S',0,48);hx.restore();
   const o=titleOpts();o.forEach((s,i)=>{const sel=i==titleSel%o.length;T((sel?'> ':'')+s,HW/2,290+i*38,{align:'center',size:24,c:sel?'#fff2a8':'#c8d0f0'});});
-  if((t>>5)&1)T('PRESS START',HW/2,400,{align:'center',size:18,c:'#ffffff'});T('A Richmond, Virginia adventure',HW/2,HH-36,{align:'center',size:14,c:'#9aa4d8'});}
+  if((t>>5)&1)T('PRESS START',HW/2,400,{align:'center',size:18,c:'#ffffff'});T('A Richmond, Virginia adventure',HW/2,HH-46,{align:'center',size:14,c:'#9aa4d8'});T('Streets and buildings \u00a9 OpenStreetMap contributors',HW/2,HH-24,{align:'center',size:12,c:'#8088b8'});}
 function drawEnd(){hx.fillStyle='rgba(0,0,10,'+Math.min(.85,endT/60)+')';hx.fillRect(0,0,HW,HH);if(endT<40)return;
   T('TO BE CONTINUED',HW/2,130,{align:'center',size:40,c:'#f2c14e'});T('Keystones 1 / 4',HW/2,210,{align:'center',size:22});T('Stories '+Object.keys(st.lore).length+'/'+Object.keys(RCQ.lore).length+'   Pins '+Object.keys(st.pins).length+'/'+Object.keys(RCQ.chal).length+'   Time '+fmtTime(st.time),HW/2,250,{align:'center',size:18,c:'#c8d0f0'});
   T('More of Richmond is on the way.',HW/2,310,{align:'center',size:20,c:'#e8ecf8'});if(endT>90&&(frame>>5)&1)T('Press A to keep exploring',HW/2,380,{align:'center',size:18,c:'#fff2a8'});}

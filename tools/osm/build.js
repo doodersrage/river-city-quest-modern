@@ -87,7 +87,8 @@ function build(raw){const d=raw,cosl=Math.cos(d.lat*Math.PI/180),P=(g)=>[(g.lon-
   out.areas.sort((a,b)=>{const A=k=>({yard:0,paved:1,grass:2,park:3,cemetery:3,wood:4,scrub:4,sand:5,parking:6,plaza:6,pitch:7,deck:8}[k]||0);return A(a.k)-A(b.k);});
   const clean=o=>{for(const k in o)if(o[k]===undefined||o[k]===null)delete o[k];return o;};for(const k of ['roads','rails','bld','areas','lines','pts'])out[k]=out[k].map(clean);
   return out;}
-const files=fs.readdirSync(src).filter(f=>/^ow_.*\.json(\.gz)?$/.test(f)&&(!fs.readdirSync(src).some(q=>/\.v2\.json/.test(q))||/\.v2\.json/.test(f))),world={};
+// a district's newer download (with relation members) wins over its older one
+const all=fs.readdirSync(src).filter(f=>/^ow_.*\.json(\.gz)?$/.test(f)),stem=f=>f.replace(/(\.v2)?\.json(\.gz)?$/,''),files=all.filter(f=>/\.v2\.json/.test(f)||!all.some(q=>/\.v2\.json/.test(q)&&stem(q)==stem(f))),world={};
 for(const f of files){const buf=fs.readFileSync(path.join(src,f)),raw=JSON.parse(f.endsWith('.gz')?zlib.gunzipSync(buf):buf),w=build(raw);world[raw.id]=w;
   console.log(raw.id.padEnd(8),w.name.padEnd(30),w.bld.length+' buildings',w.roads.length+' ways',w.areas.length+' areas',w.pts.length+' points',w.lines.length+' fences',w.water?'water':'');}
 fs.writeFileSync(outFile,'"use strict";\n/* The real city: streets, building footprints, parks and water for each neighborhood, from OpenStreetMap.\n   Map data (c) OpenStreetMap contributors, licensed under the Open Database License (ODbL) 1.0. https://www.openstreetmap.org/copyright\n   Built by tools/osm/build.js. Positions are decimetres from the north-west corner of the 400 m by 300 m playable area. */\nconst WORLD='+JSON.stringify(world)+';\n');

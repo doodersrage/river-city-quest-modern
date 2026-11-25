@@ -28,11 +28,11 @@ const VS=`#version 300 es
 precision highp float;
 in vec3 aPos;in vec2 aUV;in vec3 aCol;in float aSway;in vec3 aNrm;in vec3 aBW;
 uniform mat4 uPV,uModel,uLVP;uniform float uTime,uWave,uSkin,uPalOn;uniform mat4 uBones[13];uniform vec3 uPal[12];
-out vec3 vW;out vec3 vN;out vec2 vUV;out vec3 vCol;out vec4 vL;
-void main(){vec4 lp=vec4(aPos,1.);vec3 ln=aNrm;
+out vec3 vW;out vec3 vN;out vec2 vUV;out vec3 vCol;out vec4 vL;out float vTile;
+void main(){vec4 lp=vec4(aPos,1.);vec3 ln=aNrm;float sway=max(aSway,0.);vTile=aSway;
   if(uSkin>.5){mat4 A=uBones[int(aBW.x+.5)],Bm=uBones[int(aBW.y+.5)];lp=mix(A*lp,Bm*lp,aBW.z);ln=mix(mat3(A)*ln,mat3(Bm)*ln,aBW.z);}
   vec4 wp=uModel*lp;
-  wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));
+  wp.xz+=sway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));
   if(uWave>0.)wp.y+=uWave*(sin(wp.x*1.1+uTime*1.4)+cos(wp.z*.9+uTime*1.1))*.035;
   vW=wp.xyz;vN=mat3(uModel)*ln;vUV=aUV;vCol=uPalOn>.5?uPal[int(aCol.x+.5)]:aCol;vL=uLVP*wp;gl_Position=uPV*wp;}`;
 const SKYFN=`
@@ -47,7 +47,7 @@ vec3 sky(vec3 d,bool full){float y=max(d.y,0.);vec3 c=mix(uHorCol,uSkyCol,pow(y,
   if(d.y<0.)c=mix(uHorCol,uHorCol*.45,min(1.,-d.y*3.));return c;}`;
 const FS=`#version 300 es
 precision highp float;precision highp sampler2DArray;precision highp sampler2DShadow;
-in vec3 vW;in vec3 vN;in vec2 vUV;in vec3 vCol;in vec4 vL;
+in vec3 vW;in vec3 vN;in vec2 vUV;in vec3 vCol;in vec4 vL;in float vTile;
 uniform sampler2DArray uAlb,uNrm;uniform sampler2D uTex2;uniform sampler2DShadow uShadow;
 uniform int uMode;uniform vec3 uTint,uGndCol,uFogCol,uCam;uniform float uAlpha,uFlash,uAdd,uFogD,uShadowOn,uAmb,uIndoor;uniform vec2 uOff;
 uniform vec4 uL[16];uniform vec3 uLC[16];uniform int uNL;uniform float uMetal[112];
@@ -67,7 +67,7 @@ vec3 brdf(vec3 N,vec3 V,vec3 L,vec3 alb,float rough,float metal,vec3 rad){vec3 H
   return((1.-F)*(1.-metal)*alb/PI+spec)*rad*nl;}
 vec3 fog(vec3 c){float d=distance(vW,uCam);vec3 V=normalize(vW-uCam);float f=1.-exp(-d*uFogD*exp(-max(vW.y,0.)*.04));
   vec3 fc=uFogCol+uSunCol*pow(max(dot(V,uSunDir),0.),6.)*.35*(1.-uIndoor);return mix(c,fc,f);}
-void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);
+void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);vec2 quv=uv;bool tiled=vTile<-.5;if(tiled){layer=floor(-vTile-.5);quv=vUV;uv=fract(vUV);}vec2 gx=dFdx(quv),gy=dFdy(quv);
   if(uMode==2){// the river
     vec3 V=normalize(uCam-vW);vec2 p=vW.xz;float t=uTime;vec2 g=vec2(0.);
     g+=vec2(.8,.6)*1.1*.05*cos(dot(vec2(.8,.6),p)*1.1+t*1.5);g+=vec2(-.5,.86)*1.7*.03*cos(dot(vec2(-.5,.86),p)*1.7+t*1.9);g+=vec2(.2,-.98)*2.9*.015*cos(dot(vec2(.2,-.98),p)*2.9+t*2.6);
@@ -76,13 +76,13 @@ void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);
     vec3 col=mix(deep,sky(R,false)*.9,fr);float sh=shadowAt(vec3(0,1,0));col+=uSunCol*pow(max(dot(R,uSunDir),0.),280.)*6.*sh;
     for(int i=0;i<16;i++){if(i>=uNL)break;vec3 Lv=uL[i].xyz-vW;float d=length(Lv);float a=clamp(1.-d/uL[i].w,0.,1.);col+=uLC[i]*pow(max(dot(R,Lv/d),0.),60.)*a*a*2.;}
     o=vec4(fog(col),1.);return;}
-  vec4 t=uMode==3?texture(uTex2,vUV+uOff):texture(uAlb,vec3(uv,layer));
+  vec4 t=uMode==3?texture(uTex2,vUV+uOff):textureGrad(uAlb,vec3(uv,layer),gx,gy);
   if(uAdd>.5){o=vec4(lin(t.rgb)*vCol*uTint*t.a*.7,1.);return;}
   if(t.a<.5)discard;
   vec3 alb=lin(t.rgb)*lin(vCol)*uTint;
   vec3 N=dot(vN,vN)>1e-8?normalize(vN):vec3(0,1,0);vec3 V=normalize(uCam-vW);if(dot(N,V)<0.)N=-N;
   float rough=.6,metal=0.,emis=0.;
-  if(uMode!=3){vec4 nt=texture(uNrm,vec3(uv,layer));vec3 tn=vec3(nt.rg*2.-1.,0.);tn.z=sqrt(max(0.,1.-dot(tn.xy,tn.xy)));N=perturb(N,vW,uv,tn);rough=clamp(nt.b,.04,1.);metal=uMetal[int(layer)];emis=nt.a;}
+  if(uMode!=3){vec4 nt=textureGrad(uNrm,vec3(uv,layer),gx,gy);vec3 tn=vec3(nt.rg*2.-1.,0.);tn.z=sqrt(max(0.,1.-dot(tn.xy,tn.xy)));N=perturb(N,vW,quv,tn);rough=clamp(nt.b,.04,1.);metal=uMetal[int(layer)];emis=nt.a;}
   vec3 c=vec3(0.);
   if(uSunCol.r+uSunCol.g+uSunCol.b>.001)c+=brdf(N,V,uSunDir,alb,rough,metal,uSunCol)*shadowAt(N);
   for(int i=0;i<16;i++){if(i>=uNL)break;vec3 Lv=uL[i].xyz-vW;float d=length(Lv);float a=clamp(1.-pow(d/uL[i].w,2.),0.,1.);if(a<=0.)continue;c+=brdf(N,V,Lv/d,alb,rough,metal,uLC[i]*a*a*3.2/(1.+d*d*.06));}
@@ -92,7 +92,7 @@ void main(){float layer=floor(vUV.x);vec2 uv=vec2(vUV.x-layer,vUV.y);
   c=fog(c);c=mix(c,vec3(1.),uFlash);o=vec4(c,uAlpha);}`;
 const SVS=`#version 300 es
 precision highp float;in vec3 aPos;in vec2 aUV;in float aSway;in vec3 aBW;uniform mat4 uPV,uModel;uniform float uTime,uWave,uSkin;uniform mat4 uBones[13];out vec2 vUV;
-void main(){vec4 lp=vec4(aPos,1.);if(uSkin>.5){lp=mix(uBones[int(aBW.x+.5)]*lp,uBones[int(aBW.y+.5)]*lp,aBW.z);}vec4 wp=uModel*lp;wp.xz+=aSway*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));vUV=aUV;gl_Position=uPV*wp;}`;
+void main(){vec4 lp=vec4(aPos,1.);if(uSkin>.5){lp=mix(uBones[int(aBW.x+.5)]*lp,uBones[int(aBW.y+.5)]*lp,aBW.z);}vec4 wp=uModel*lp;vUV=aSway<-.5?vec2(.5,.5):aUV;wp.xz+=max(aSway,0.)*vec2(sin(uTime*1.3+wp.x*.35+wp.z*.2),cos(uTime*1.05+wp.z*.3+wp.x*.1));gl_Position=uPV*wp;}`;
 const SFS=`#version 300 es
 precision mediump float;precision mediump sampler2DArray;in vec2 vUV;uniform sampler2DArray uAlb;void main(){float l=floor(vUV.x);if(texture(uAlb,vec3(vUV.x-l,vUV.y,l)).a<.5)discard;}`;
 const QVS=`#version 300 es
@@ -129,7 +129,7 @@ function texFrom(cv,repeat){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE
   const w=repeat?gl.REPEAT:gl.CLAMP_TO_EDGE;gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,w);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,w);return t;}
 function texArray(data,S,N){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D_ARRAY,t);gl.texImage3D(gl.TEXTURE_2D_ARRAY,0,gl.RGBA8,S,S,N,0,gl.RGBA,gl.UNSIGNED_BYTE,data);gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
   gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_WRAP_T,gl.REPEAT);
   if(aniso)gl.texParameterf(gl.TEXTURE_2D_ARRAY,aniso.TEXTURE_MAX_ANISOTROPY_EXT,8);return t;}
 function colorTex(w,h,hdrOK){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,hdrOK?gl.RGBA16F:gl.RGBA8,w,h,0,gl.RGBA,hdrOK?gl.HALF_FLOAT:gl.UNSIGNED_BYTE,null);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t;}
@@ -176,7 +176,7 @@ function mkVAO(m,dynamic){const vao=gl.createVertexArray();gl.bindVertexArray(va
 function upload(o,m){gl.bindVertexArray(o.vao);ATTR.forEach(([,size,key],i)=>{if(!o.bufs[i])return;gl.bindBuffer(gl.ARRAY_BUFFER,o.bufs[i]);gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.DYNAMIC_DRAW);});o.n=m.count;gl.bindVertexArray(null);}
 function meshGL(m){return m.gl||(m.gl=mkVAO(m));}
 let curSceneId=null;
-function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);sceneGL={lv,main:{chunks:splitMesh(b.main,16).map(c=>({vao:mkVAO(c.m),lo:c.lo,hi:c.hi}))},water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}
+function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);if(!lv.world){bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);}sceneGL={lv,main:{chunks:splitMesh(b.main,16).map(c=>({vao:mkVAO(c.m),lo:c.lo,hi:c.hi}))},water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}
 
 /* ---------- drawing calls the game uses ---------- */
 // the level is cut into pieces about 16 m square so only the ones in view (or casting shadows into view) are drawn
@@ -296,9 +296,10 @@ void main(){float s=sin(aI.z),c=cos(aI.z);vec3 b=vec3(aB.x*c,aB.y,aB.x*s)*vec3(1
 const GFS=`#version 300 es
 precision highp float;in vec3 vC;in vec3 vW;in float vH;uniform vec3 uSunCol,uSkyCol,uFogCol,uCam;uniform float uFogD,uAmb;out vec4 o;
 void main(){vec3 c=vC*vC*(uSunCol*.35+uSkyCol*uAmb*.5);float d=distance(vW,uCam);float f=1.-exp(-d*uFogD);o=vec4(mix(c,uFogCol,f),1.);}`;
-function buildGrass(lv){if(lv.room)return null;const inst=[];
-  for(let z=0;z<lv.h;z++)for(let x=0;x<lv.w;x++){const c=lv.d.rows[z][x];if(c!='.'&&c!=',')continue;const n=c==','?10:44;
-    for(let k=0;k<n;k++){const h=hash(x*7+k,z*13,91);inst.push((x+(h%1000)/1000)*TS,(z+((h>>10)%1000)/1000)*TS,((h>>4)%628)/100,.24+((h>>12)%30)/100,((h>>20)%100)/100);}}
+function buildGrass(lv){if(lv.room)return null;const inst=[],W=lv.world,pavedW=W&&['civic','broad','shockoe','works','cary','jward'].includes(hood(lv));let per=44;
+  if(W){let n=0;for(const r of lv.d.rows)for(const c of r)if(c=='.')n++;per=Math.max(6,Math.min(30,Math.floor(140000/Math.max(1,n))));}
+  for(let z=0;z<lv.h;z++)for(let x=0;x<lv.w;x++){const c=lv.d.rows[z][x];if(c!='.'&&c!=',')continue;if(W&&(pavedW&&!W.areas.some(a=>'park grass cemetery pitch yard'.includes(a.k)&&inPolygon(a.pp,x*2+1,z*2+1))||W.areas.some(a=>(a.k=='wood'||a.k=='scrub')&&inPolygon(a.pp,x*2+1,z*2+1))))continue;const n=c==','?10:per;
+    for(let k=0;k<n;k++){const h=hash(x*7+k,z*13,91);if(W){const px=(x+(h%1000)/1000)*TS,pz=(z+((h>>10)%1000)/1000)*TS,rn=roadNear(W,px,pz,9);if(rn&&rn.d<rn.r.wm/2+(rn.r.car&&!'avm'.includes(rn.r.k)?2.75:.3)||buildingAt(W,px,pz)||W.areas.some(a=>'parking plaza paved sand deck'.includes(a.k)&&inPolygon(a.pp,px,pz)))continue;}inst.push((x+(h%1000)/1000)*TS,(z+((h>>10)%1000)/1000)*TS,((h>>4)%628)/100,.24+((h>>12)%30)/100,((h>>20)%100)/100);}}
   if(!inst.length)return null;if(!gprog){gprog=mkProg(GVS,GFS);GU=uniforms(gprog,['uPV','uTime','uCam','uFocus','uSunCol','uSkyCol','uFogCol','uFogD','uAmb']);
     bladeBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);const w=.032;gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-w,0,0,w,0,0,-w*.7,.4,0, w,0,0,w*.7,.4,0,-w*.7,.4,0, -w*.7,.4,0,w*.7,.4,0,0,.8,0]),gl.STATIC_DRAW);}
   const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,0,0);

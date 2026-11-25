@@ -7,7 +7,8 @@ const settle=()=>{for(let k=0;k<80&&(G.trans||G.dlg);k++){if(G.dlg)talkThrough(0
 const face=(x,z)=>{G.p.yaw=Math.atan2(x-G.p.x,z-G.p.z);};
 const talk=(n,pick)=>{for(const [ox,oz] of [[0,1.6],[1.6,0],[-1.6,0],[0,-1.6]]){G.p.x=n.x+ox;G.p.z=n.z+oz;face(n.x,n.z);step({a:1});if(G.dlg||G.shop)break;}talkThrough(pick);};
 // keep the bot safe from wandering geese and night ghosts while it runs errands
-const go=(id,x,z)=>{G.loadScene(id,x,z,0);step({},2);talkThrough();G.p.inv=1e9;for(const e of G.enemies)e.dead=true;};
+const WH=require('./worldhelp.js')(G);
+const go=(id,x,z)=>{if(id.indexOf('ow:')==0){x=200;z=150;}G.loadScene(id,x,z,0);step({},2);talkThrough();G.p.inv=1e9;for(const e of G.enemies)e.dead=true;};
 G.startGame(null);settle();G.st.coins=300;
 
 ok(G.EXTRA_NPCS.length==4,'four new townspeople found a spot: '+G.EXTRA_NPCS.map(n=>n.who).join(', '));
@@ -30,24 +31,26 @@ G.p.hp=1;G.st.eq='basket';step({b:1});talkThrough(G.st.food.cupcake?1:0);ok(G.p.
 G.p.x=13.5*T;G.p.z=6.2*T;G.p.yaw=0;const c0=G.st.clock;step({a:1});talkThrough(0);ok(G.st.clock>c0,'sleep in your own bed until morning');
 
 // the camera and the album
-G.st.items.camera=1;go('ow:2,1',39*T,20*T);G.st.eq='camera';step({b:1});ok(G.st.photos&&G.st.photos.capitol,'photograph the Capitol');
+G.st.items.camera=1;go('ow:2,1',39*T,20*T);{const L=G.lv.d.lm.find(l=>l.art=='capitol'),q=WH.open((L.x+L.w/2)*T,(L.y+L.h+3)*T,.6);G.p.x=q[0];G.p.z=q[1];}G.st.eq='camera';step({b:1});ok(G.st.photos&&G.st.photos.capitol,'photograph the Capitol');
 
 // fishing
 G.st.items.rod=1;go('ow:2,2',8*T,8*T);const g=G.lv.g;let spot=null;
-for(let y=1;y<g.length-1&&!spot;y++)for(let x=1;x<g[0].length-1;x++)if(g[y][x]=='w'&&G.walkable(g[y+2]&&g[y+2][x])){spot=[x,y+2];break;}
+// stand on the bank, facing the water
+for(let y=3;y<g.length-3&&!spot;y++)for(let x=3;x<g[0].length-3&&!spot;x++){if(g[y][x]!='~')continue;for(const [a,b] of [[0,1],[0,-1],[1,0],[-1,0]]){const px=(x+a*1.5)*T+T/2,pz=(y+b*1.5)*T+T/2;if(G.walkable(g[y+b*2]&&g[y+b*2][x+a*2])&&!G.blockedCircle(px,pz,.45)&&g[y-b]&&g[y-b][x-a]=='~'){spot=[px,pz,Math.atan2(-a,-b)];break;}}}
+ok(!!spot,'Belle Isle has a bank to fish from');
 let tries=0,bit=false,cast=false;
-for(;tries<6&&!Object.keys(G.st.fish||{}).length;tries++){G.p.x=spot[0]*T+T/2;G.p.z=spot[1]*T+T/2;G.p.yaw=Math.PI;G.st.eq='rod';step({b:1});cast=cast||!!(G.fish&&G.fish.ph=='wait');
+for(;tries<6&&!Object.keys(G.st.fish||{}).length;tries++){G.p.x=spot[0];G.p.z=spot[1];G.p.yaw=spot[2];G.st.eq='rod';step({b:1});cast=cast||!!(G.fish&&G.fish.ph=='wait');
   for(let k=0;k<400&&G.fish&&G.fish.ph=='wait';k++)step();bit=bit||!!(G.fish&&G.fish.ph=='bite');step({a:1});
   for(let k=0;k<3000&&G.fish;k++){const f=G.fish;if(f.ph=='reel'&&f.ten<(f.run?25:55)&&k%3==0)step({a:1});else step();}talkThrough();step({},100);}
 ok(cast,'cast into the James');ok(bit,'something bites');ok(Object.keys(G.st.fish||{}).length==1,'reel it in: '+Object.keys(G.st.fish||{}).join('')+' (try '+tries+')');
 
 // the bike
-G.st.items.bike=1;go('ow:3,1',16*T,9*T);G.cam.yaw=Math.PI/2;G.cam.manual=999;let p0=[G.p.x,G.p.z];for(let i=0;i<20;i++)step({z:-1});const walkD=Math.hypot(G.p.x-p0[0],G.p.z-p0[1]);
+G.st.items.bike=1;go('ow:3,1',16*T,9*T);{const q=WH.open(200,150,5);G.p.x=q[0];G.p.z=q[1];G.npcs.length=0;G.traffic().cars.length=0;}G.cam.yaw=Math.PI/2;G.cam.manual=999;let p0=[G.p.x,G.p.z];for(let i=0;i<20;i++)step({z:-1});const walkD=Math.hypot(G.p.x-p0[0],G.p.z-p0[1]);
 G.st.eq='bike';step({b:1});G.p.x=p0[0];G.p.z=p0[1];for(let i=0;i<20;i++)step({z:-1});const rideD=Math.hypot(G.p.x-p0[0],G.p.z-p0[1]);ok(G.st.riding&&rideD>walkD*1.2,'the bike is faster than walking ('+walkD.toFixed(1)+' vs '+rideD.toFixed(1)+')');
 step({b:1});
 
 // a hidden stash
-const sid=Object.keys(G.SECRETS)[0],[sx,sz]=G.SECRETS[sid];go(sid,sx*T+T/2,sz*T+T/2+1.5);const c1=G.st.coins;G.p.x=sx*T+T/2;G.p.z=sz*T+T/2;step({},15);
+const sid=Object.keys(G.SECRETS)[0];G.sceneData(sid);const [sx,sz]=G.SECRETS[sid];go(sid,sx*T+T/2,sz*T+T/2+1.5);const c1=G.st.coins;G.p.x=sx*T+T/2;G.p.z=sz*T+T/2;step({},15);
 ok(G.st.got['sec:'+sid]&&G.st.coins>=c1+25&&G.st.coins<=c1+30,'dig up a hidden stash in '+G.RCQ.maps[sid].name+' (+25 coins)');
 ok(Object.keys(G.SECRETS).length>=20,Object.keys(G.SECRETS).length+' neighborhoods hide a stash');
 

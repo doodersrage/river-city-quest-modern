@@ -7,6 +7,7 @@ const settle=()=>{for(let k=0;k<80&&(G.trans||G.dlg);k++){if(G.dlg)talkThrough(0
 const dirInput=(dx,dz)=>{const cy=G.cam.yaw,l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;return{x:dx*Math.cos(cy)+dz*-Math.sin(cy),z:-(dx*-Math.sin(cy)+dz*-Math.cos(cy))};};
 const walkTo=(x,z,max)=>{for(let k=0;k<(max||600);k++){const dx=x-G.p.x,dz=z-G.p.z;if(Math.hypot(dx,dz)<.4||G.trans)return true;step(dirInput(dx,dz));if(G.dlg)return true;}return false;};
 const face=(x,z)=>{G.p.yaw=Math.atan2(x-G.p.x,z-G.p.z);};
+const WH=require('./worldhelp.js')(G);
 const tile=(tx,tz)=>[tx*T+T/2,tz*T+T/2];
 const killAll=()=>{for(let k=0;k<40;k++){const e=G.enemies.find(e=>!e.dead&&e.type!='turtle');if(!e)break;for(let j=0;j<6&&!e.dead;j++){G.p.x=e.x-1;G.p.z=e.z;e.x=G.p.x+1;e.z=G.p.z;face(e.x,e.z);G.p.inv=999;step({a:1});step({},20);}}G.p.inv=0;};
 G.startGame(null);settle();ok(G.lv.id=='ow:2,1'&&G.st.items.lantern==undefined,'new game in Capitol Square');
@@ -14,11 +15,11 @@ G.startGame(null);settle();ok(G.lv.id=='ow:2,1'&&G.st.items.lantern==undefined,'
 const ar=G.npcs.find(n=>n.talk=='archivist');G.p.x=ar.x;G.p.z=ar.z+1.6;face(ar.x,ar.z);step({a:1});talkThrough();talkThrough();ok(G.st.items.lantern,'the archivist gives you the lantern');
 ok(G.goalScene()=='ow:2,2','the map points to Belle Isle');
 // walk south off the map onto Belle Isle
-G.p.x=32*T;G.p.z=42*T;settle();walkTo(32*T,44*T+2,300);settle();ok(G.lv.id=='ow:2,2','walk south from Capitol Square onto Belle Isle');
+{const q=WH.edgeSpot('s');G.p.x=q[0];G.p.z=q[1];settle();walkTo(q[0],q[1]+8,300);settle();}ok(G.lv.id=='ow:2,2','walk south from Capitol Square onto Belle Isle');
 // every edge leads somewhere now
-G.loadScene('ow:2,1',1,21*T+1,0);settle();walkTo(-1,21*T+1,120);settle();ok(G.lv.id=='ow:1,1','west of Capitol Square is '+G.lv.d.name);
+G.loadScene('ow:2,1',200,150,0);settle();{const q=WH.edgeSpot('w');G.p.x=q[0];G.p.z=q[1];walkTo(q[0]-8,q[1],300);settle();}ok(G.lv.id=='ow:1,1','west of Capitol Square is '+G.lv.d.name);
 // into the quarry
-G.loadScene('ow:2,2',35*T+T/2,17*T+T/2,Math.PI);settle();walkTo(35*T+T/2,16*T+.2,200);settle();ok(G.lv.id=='quarry:0,1','bump the quarry door to go in');
+G.loadScene('ow:2,2',200,150,Math.PI);settle();{const d=WH.atDoor('quarry:0,1');walkTo(d.x-d.nx,d.z-d.nz,200);settle();}ok(G.lv.id=='quarry:0,1','bump the quarry door to go in');
 ok(G.lv.g[0][7]=='L','the north door is locked');
 killAll();step({},5);ok(G.st.f['clr:quarry:0,1'],'clearing the quarry floor');
 const c1=G.chests.find(c=>c.id=='q1');G.p.x=c1.x;G.p.z=c1.z+1.6;face(c1.x,c1.z);step({a:1});talkThrough();ok(G.st.keys.quarry==1,'the chest that appears holds a small key');

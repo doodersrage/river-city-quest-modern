@@ -7,7 +7,7 @@ const files=[...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m=>m[1])
 const store={};
 const sb={atob,console,Math,JSON,Object,Array,String,Number,Set,Map,Error,Float32Array,performance,
   document:{getElementById:()=>null,createElement:()=>({getContext:()=>null}),querySelectorAll:()=>[]},
-  addEventListener(){},requestAnimationFrame(){},navigator:{},location:{protocol:'file:'},
+  addEventListener(){},requestAnimationFrame(){},navigator:{userAgent:process.env.RCQ_UA||''},location:{protocol:'file:'},
   localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=String(v);}}};
 sb.window=sb;vm.createContext(sb);
 for(const f of files)vm.runInContext(fs.readFileSync(path.join(ROOT,f),'utf8'),sb,{filename:f});

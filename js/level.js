@@ -6,7 +6,7 @@ const GROUND={'.':'grass',',':'flowers','p':'cobble','s':'sidewalk','S':'steps',
 const WATER='w~';
 const DUNGEONS=['quarry','pyramid','poe','carillon','tredegar','conserv','tunnel','libby','ruins'];
 const LEVELS={};
-function sceneData(id){return RCQ.maps[id]||RCQ.rooms[id]||null;}
+function sceneData(id){return(RCQ.maps[id]&&typeof worldReady=='function'?worldReady(id):RCQ.maps[id])||RCQ.rooms[id]||null;}
 function edgeLink(id,cells,h){const [cx,cy]=cells[0],[ar,co]=id.split(':'),[ax,ay]=co.split(',').map(Number);
   const n=cy==0?[ax,ay-1]:cy==h-1?[ax,ay+1]:cx==0?[ax-1,ay]:[ax+1,ay];return[id,ar+':'+n[0]+','+n[1]].sort().join('|');}
 function buildLevel(id){
@@ -14,7 +14,7 @@ function buildLevel(id){
   const g=d.rows.map(r=>r.split('')),room=id.indexOf('ow:')!=0,lv={id,d,name:d.name,w:d.w,h:d.h,base:d.base,room,dungeon:room&&DUNGEONS.includes(d.area),
     g,dyn:[],glows:[],markers:{},doors:d.doors,lamps:d.lamps.map(([x,y])=>({tx:x,ty:y,lit:false})),spots:d.spots||[]};
   for(const k in d.reads)lv.markers[k]=d.reads[k];
-  lv.props=room?[]:scatterProps(lv);
+  if(d.world){lv.world=worldOf(d.world);lv.props=worldProps(lv);lv.waterPts=[];}else lv.props=room?[]:scatterProps(lv);
   // things that can change while you play live outside the static mesh
   for(let y=0;y<lv.h;y++)for(let x=0;x<lv.w;x++){const c=g[y][x];
     if(c=='b')lv.dyn.push({kind:'bush',tx:x,ty:y,on:true,under:lv.base=='F'?'F':lv.base});
@@ -24,7 +24,7 @@ function buildLevel(id){
   for(const dd of d.dyn){const [cx,cy]=dd.cells[0],edge=room&&(cy==0||cy==lv.h-1||cx==0||cx==lv.w-1);
     if(dd.closed=='L')lv.dyn.push({kind:'lock',cells:dd.cells,on:true,under:dd.open,tx:cx,ty:cy,link:edgeLink(id,dd.cells,lv.h)});
     else if(dd.closed=='H')lv.dyn.push({kind:'gate',cells:dd.cells,on:true,under:dd.open,tx:cx,ty:cy,solved:dd.solved});
-    else if(dd.closed=='%')lv.dyn.push({kind:edge?'crack':'rubble',cells:dd.cells,on:true,under:dd.open,tx:cx,ty:cy,link:edge?edgeLink(id,dd.cells,lv.h):null});}
+    else if(dd.closed=='%')lv.dyn.push({kind:edge?'crack':'rubble',cells:dd.cells,on:true,under:dd.open,tx:cx,ty:cy,key:dd.key,link:edge?edgeLink(id,dd.cells,lv.h):null});}
   for(const o of lv.dyn)for(const [x,y] of o.cells||[[o.tx,o.ty]])g[y][x]={bush:'b',lock:'L',gate:'H',crack:'%',rubble:'%',block:'#',sprout:'z',brazier:'j'}[o.kind];
   for(let y=0;y<lv.h;y++)for(let x=0;x<lv.w;x++)if(g[y][x]=='#'&&!lv.dyn.some(o=>o.kind=='block'&&o.tx==x&&o.ty==y))g[y][x]='F';
   return lv;}
@@ -84,7 +84,7 @@ function lmAt(lv,x,y){return(lv.d.lm||[]).find(L=>x>=L.x&&x<L.x+L.w&&y>=L.y&&y<L
 function streetKind(lv){if(lv._st)return lv._st;const n=lv.d.rows.join('').split('B').length-1,id=lv.d.id||'';
   return lv._st=['ow:3,1','ow:3,0'].includes(id)?'cobble':n>=30?'asphalt':'park';}
 function groundCell(lv,c,x,y){if(!lv.room&&(c=='p'||c=='s')){const k=streetKind(lv);if(c=='p')return k=='park'?'gravel':k;return k=='park'?'sidewalk':'bricksw';}if(GROUND[c])return c=='.'&&hash(x,y,3)%3==0?'grass2':GROUND[c];const b=lv.base;return GROUND[b]?(b=='.'&&hash(x,y,3)%3==0?'grass2':GROUND[b]):'grass';}
-function buildMesh(lv){
+function buildMesh(lv){if(lv.world)return buildWorldMesh(lv);
   const M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh(),rows=lv.d.rows,comp=compOf(lv),H={};
   const src=(x,y)=>x<0||y<0||x>=lv.w||y>=lv.h?null:rows[y][x];
   const bh=(x,y)=>{const c=src(x,y);if(comp[x+','+y]!=null){const k=comp[x+','+y],v=hash(k,lv.d.ax*7+lv.d.ay,11)%3;return(2+v)*FLOOR_H;}if(c=='X'||c=='D'&&!lmAt(lv,x,y))return 2*FLOOR_H;return 0;};

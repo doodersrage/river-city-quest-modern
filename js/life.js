@@ -43,7 +43,7 @@ const PHOTOCAP={grandstand:'The Diamond, home of the Flying Squirrels',store:'Th
   armory:'The old Blues Armory',stage:'The stage on Brown\'s Island'};
 const PHOTOS=[];for(const id in RCQ.maps)for(const L of RCQ.maps[id].lm||[])if(PHOTOCAP[L.art]&&!PHOTOS.some(q=>q.art==L.art))PHOTOS.push({id,art:L.art});
 function snapPhoto(){flash=10;sfx('snap');
-  const L=(lv.d.lm||[]).filter(L=>PHOTOCAP[L.art]).map(L=>[L,Math.hypot((L.x+L.w/2)*TS-p.x,(L.y+L.h/2)*TS-p.z)]).sort((a,b)=>a[1]-b[1])[0];
+  const L=(lv.d.lm||[]).filter(L=>PHOTOCAP[L.art]).map(L=>[L,lv.world?Math.hypot(Math.max(0,Math.abs((L.x+L.w/2)*TS-p.x)-L.w*TS/2),Math.max(0,Math.abs((L.y+L.h/2)*TS-p.z)-L.h*TS/2))+6:Math.hypot((L.x+L.w/2)*TS-p.x,(L.y+L.h/2)*TS-p.z)]).sort((a,b)=>a[1]-b[1])[0];
   if(!L||L[1]>22||lv.room){toast('Nice shot! Find a landmark to fill your album.');return;}
   st.photos=st.photos||{};const k=L[0].art,isNew=!st.photos[k];st.photos[k]={night:dark()>.5,wx:st.wxk>.5?st.wx:'clear',ssn:season()};needSave=true;
   toast((isNew?'New photo: ':'Retook: ')+PHOTOCAP[k]+' ('+Object.keys(st.photos).length+'/'+PHOTOS.length+')');}
@@ -140,7 +140,7 @@ function weatherLook(e){const k=wxNow();if(!k)return e;const dk=dark(),mix=(a,b,
 function frogTick(){for(const k of picks)if(k.kind=='frog'){if(k.jump>0){k.jump--;k.y=.5+Math.sin(k.jump/12*Math.PI)*.6;}if(--k.hop<=0){k.hop=50+rnd(70);const a=rnd(4)*Math.PI/2,nx=k.x+Math.sin(a)*1.4,nz=k.z+Math.cos(a)*1.4;
     if(walkable(tAt(nx,nz))){k.x=nx;k.z=nz;k.yaw=a;k.jump=12;}}}
   if(frame%90||lv.room||st.wx!='rain'||st.wxk<.5||st.f.frogsDone)return;if(picks.filter(k=>k.kind=='frog').length>=3)return;
-  for(let i=0;i<40;i++){const tx=1+rnd(lv.w-2),tz=1+rnd(lv.h-2);if(lv.g[tz][tx]!='.')continue;if(![[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>lv.g[tz+b][tx+a]=='w'))continue;
+  for(let i=0;i<40;i++){const tx=1+rnd(lv.w-2),tz=1+rnd(lv.h-2);if(lv.g[tz][tx]!='.')continue;if(![[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>WATER.includes(lv.g[tz+b]&&lv.g[tz+b][tx+a])))continue;
     const x=tx*TS+TS/2,z=tz*TS+TS/2;if(Math.hypot(x-p.x,z-p.z)<6)continue;const k=mkPick('frog',x,z);k.life=1500;k.hop=30+rnd(40);k.jump=0;k.yaw=0;picks.push(k);break;}}
 
 /* ---------- each scene: dog, stash, tomatoes, First Friday and festival crowds ---------- */
@@ -161,14 +161,14 @@ function lifeOnLoad(id){dogReset();runners=[];lv.strings=null;if(typeof trafficI
     toast('First Friday! Galleries open late.');}
   const ev=events();
   if((ev.includes('folk')||ev.includes('riverrock'))&&id=='ow:4,1')for(let i=0;i<6;i++){const c=FOLKC[i];addFolk(ev.includes('folk')?'Festivalgoer':'Riverrock Fan','folk',[['This band came all the way from Mali!','Free music on the river. Only in Richmond.','Have you tried the funnel cake?'][i%3]],c[0],c[1]);}
-  if(ev.includes('10k')&&id=='ow:1,1'){for(let i=0;i<7;i++){const c=FOLKC[i%6];runners.push({x:-2-i*5,z:(9+BIG.oy+(i%3)*.6)*TS,v:.055+Math.random()*.02,walk:i,m:{hat:c[0],shirt:c[1]}});}
+  if(ev.includes('10k')&&id=='ow:1,1'){for(let i=0;i<7;i++){const c=FOLKC[i%6];runners.push({x:-2-i*5,z:lv.world?lv.world.h/2+(i%3)*.6:(9+BIG.oy+(i%3)*.6)*TS,v:.055+Math.random()*.02,walk:i,m:{hat:c[0],shirt:c[1]}});}
     if(!st.f['ev10k'+today().getFullYear()]){st.f['ev10k'+today().getFullYear()]=1;toast('It\'s Monument Avenue 10K season! Runners everywhere.');}}
   if(ev.includes('lights')&&(id=='ow:1,1'||id=='ow:0,1')&&!st.f['evlights'+today().getFullYear()]){st.f['evlights'+today().getFullYear()]=1;toast('Holiday lights are up! They look best after dark.');}}
 
 /* ---------- each frame ---------- */
 let fireflies=[];
 function lifeUpdate(){if(typeof trafficUpdate=='function')trafficUpdate();wxTick();if(warm>0)warm--;if(zoom>0)zoom--;dogUpdate();frogTick();for(const r of runners){r.x+=r.v;r.walk+=.3;if(r.x>lv.w*TS+2)r.x=-2;}
-  const ffOn=!lv.room&&dark()>.6&&!(st.wx=='rain'||st.wx=='snow')&&st.wxk<.5&&lv.d.rows.some(r=>r.includes('T'));
+  const ffOn=!lv.room&&dark()>.6&&!(st.wx=='rain'||st.wx=='snow')&&st.wxk<.5&&(lv.world?lv.world.trees.length>30:lv.d.rows.some(r=>r.includes('T')));
   if(!ffOn)fireflies.length=0;else{while(fireflies.length<14)fireflies.push({x:p.x+(Math.random()-.5)*24,z:p.z+(Math.random()-.5)*24,y:.6+Math.random()*1.6,ph:Math.random()*6,b:rnd(90)});
     for(const f of fireflies){f.ph+=.03;f.x+=Math.cos(f.ph)*.03;f.z+=Math.sin(f.ph*1.3)*.03;f.y+=Math.sin(f.ph*2)*.006;f.b=(f.b+1)%90;if(Math.hypot(f.x-p.x,f.z-p.z)>16){f.x=p.x+(Math.random()-.5)*20;f.z=p.z+(Math.random()-.5)*20;}}}}
 function lifeSpeed(){let s=1;if(st.riding&&!lv.room)s*='psSkKn=-|'.includes(tAt(p.x,p.z))?1.55:1.3;if(zoom>0)s*=1.2;return s;}
@@ -262,7 +262,7 @@ function lifeGlow(g,rx,rz,dk){if(lv.room)return;const q=(x,y,z,s,c)=>g.quad([x-r
   for(const f of fireflies)if(f.b<55){const a=Math.sin(f.b/55*Math.PI);q(f.x,f.y,f.z,.22,[.8*a,.8*a,.25*a]);}
   for(const k of picks)if(k.kind=='secret'&&Math.hypot(k.x-p.x,k.z-p.z)<(dog?11:7)&&(frame+Math.floor(k.x*10))%80<16){const a=Math.sin(((frame+Math.floor(k.x*10))%80)/16*Math.PI);q(k.x,.6,k.z,.5,[a,.9*a,.5*a]);}
   const ff=firstFriday()&&(lv.id=='ow:1,0'||lv.id=='ow:2,0'),hol=events().includes('lights')&&(lv.id=='ow:1,1'||lv.id=='ow:0,1')&&dk>.3;
-  if(ff||hol){if(!lv.strings){lv.strings=[];for(let ty=0;ty<lv.h-1;ty++)for(let tx=0;tx<lv.w;tx++)if(lv.d.rows[ty][tx]=='B'&&lv.d.rows[ty+1][tx]!='B')for(let i=0;i<4;i++)lv.strings.push([tx*TS+.25+i*.5,3.1+((i+tx)&1)*.12,(ty+1)*TS+.12,(i+tx)%4]);}
+  if(ff||hol){if(!lv.strings){lv.strings=[];if(!lv.world)for(let ty=0;ty<lv.h-1;ty++)for(let tx=0;tx<lv.w;tx++)if(lv.d.rows[ty][tx]=='B'&&lv.d.rows[ty+1][tx]!='B')for(let i=0;i<4;i++)lv.strings.push([tx*TS+.25+i*.5,3.1+((i+tx)&1)*.12,(ty+1)*TS+.12,(i+tx)%4]);}
     const C=[[1,.2,.25],[.25,.75,1],[1,.9,.3],[.35,1,.4]];for(const [x,y,z,c] of lv.strings){if(Math.abs(x-p.x)>26||Math.abs(z-p.z)>26)continue;q(x,y,z,.16,C[(c+(frame>>5))%4].map(v=>v*Math.max(.5,dk)));}}}
 
 /* ---------- HUD bits: fishing and the album page ---------- */
