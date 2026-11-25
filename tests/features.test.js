@@ -39,3 +39,10 @@ step({menu:1});ok(G.menu&&G.menu.tab==0,'MENU opens the pause menu');step({right
 // pigeons scatter when you walk up
 go('ow:2,1',4,3);const pg=G.birds;ok(pg.length>=5,'pigeons peck around Capitol Square ('+pg.length+')');const b0=pg[0];G.p.x=b0.x+5;G.p.z=b0.z;step({},5);ok(b0.state=='peck','they stay put while you keep your distance');
 G.p.x=b0.x+1;G.p.z=b0.z;step({},5);ok(b0.state=='fly','and scatter when you come close');step({},200);ok(b0.state=='gone','then fly off over the rooftops');
+// the bigger maps play: the jog opens into a run, streets count as you walk them, and the new ground has life on it
+{const run=(n,o)=>{for(let i=0;i<n;i++){I.a=I.b=I.item=I.menu=I.start=I.up=I.down=I.left=I.right=0;I.x=I.z=0;Object.assign(I,o||{});G.update();}};
+G.loadScene('ow:2,1',20*T,8*T,0);for(let k=0;k<60&&(G.trans||G.dlg);k++){if(G.dlg)G.dlg=null;run(1);}G.enemies.length=0;G.st.sts={};const c0=G.st.coins||0,x0=G.p.x;G.p.runT=0;
+run(30,{x:1});const slow=G.p.sprint;run(150,{x:1});ok(slow<1.05&&G.p.sprint>1.4,'keep moving on a clear street and the jog becomes a run ('+G.p.sprint.toFixed(2)+'x)');
+ok(Object.keys(G.st.sts).length>=1&&G.st.coins>=c0+5,'walking a named street for the first time counts and pays ('+Object.keys(G.st.sts).join(', ')+')');
+const M=G.RCQ.maps;let nb=0,st2=0,foes=0;for(const id in M){if(id.indexOf('ow:'))continue;nb+=M[id].npcs.filter(n=>n.who=='Neighbor').length;st2+=M[id].chests.filter(c=>c.id.indexOf('ch:big:')==0).length;foes+=M[id].en.filter(e=>e[1]<15||e[1]>48||e[2]<10||e[2]>33).length;}
+ok(nb>=30&&st2>=30&&foes>=40,nb+' neighbors on the named streets, '+st2+' stashes and '+foes+' enemies out on the new ground');}

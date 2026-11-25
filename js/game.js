@@ -9,7 +9,7 @@ const ITEMORDER=['lantern','balls','powder','bug','shoes','hook','can','bottle',
 const ITEMNAME={lantern:'Gas Lantern',balls:'Baseballs',powder:'Blasting Powder',bug:'Gold-Bug',shoes:'Running Shoes',hook:'Grappling Hook',can:'Watering Can',bottle:'Ginger Beer',rod:'Fishing Rod',camera:'Camera',basket:'Picnic Basket',bike:'Bicycle'};
 const TRADE={melon:'Watermelon',music:'Sheet Music',rivermap:'River Map'};
 function newState(){return{coins:0,hp:6,max:6,items:{},ammo:{balls:0,powder:0},cap:{balls:30,powder:10},eq:null,keys:{},got:{},f:{},lore:{},pins:{},vis:{},
-  scene:'ow:2,1',x:(15+BIG.ox)*TS+TS/2,z:(9+BIG.oy)*TS+TS/2,big:1,clock:2400,time:0,ret:null,bottle:0,shield:0,trade:null,pieces:0,nightKills:0};}
+  scene:'ow:2,1',x:(15+BIG.ox)*TS+TS/2,z:(9+BIG.oy)*TS+TS/2,big:1,clock:2400,time:0,ret:null,bottle:0,shield:0,trade:null,pieces:0,nightKills:0,sts:{}};}
 function newPlayer(){return{x:0,z:0,y:0,yaw:Math.PI,vx:0,vz:0,swing:0,inv:0,kx:0,kz:0,walk:0,hold:0,holdIc:null,moving:false,dash:0,push:0,pushDir:null};}
 const hour=()=>(6+(st?st.clock:2400)/CYC*24)%24;
 function dark(){if(lv&&lv.room)return lv.dungeon?.55:0;const h=hour();return h>=20||h<5?1:h>=17?(h-17)/3:h<7?(7-h)/2:0;}
@@ -104,7 +104,7 @@ function update(){frame++;
   st.clock++;st.time++;if(p.inv>0)p.inv--;if(p.hold>0)p.hold--;
   if(chal&&chal.t!=null&&--chal.t<=0)chalFail();
   playerUpdate();if(hook)hookUpdate();if(bug)bugUpdate();blocksUpdate();
-  enemiesUpdate();shotsUpdate();npcUpdate();birdsUpdate();picksUpdate();bombsUpdate();partsUpdate();if(typeof lifeUpdate=='function')lifeUpdate();camUpdate();
+  enemiesUpdate();shotsUpdate();npcUpdate();birdsUpdate();picksUpdate();bombsUpdate();partsUpdate();streetTick();if(typeof lifeUpdate=='function')lifeUpdate();camUpdate();
   if(needSave&&frame%30==0){saveGame();needSave=false;}}
 
 function playerUpdate(){
@@ -115,9 +115,12 @@ function playerUpdate(){
   const onRiver=tAt(p.x,p.z)=='~';
   // a real running pace (about 4 m/s), matched to the stride of the motion capture so feet don't slide
   let sp=(p.swing>0?.02:onRiver?.03:.034)*TS;p.moving=ml>.15||p.dash>0;if(typeof lifeSpeed=='function')sp*=lifeSpeed();
+  // keep moving in the open with nothing hunting you and the jog opens up into a run; it drops the moment you stop, swing or meet trouble
+  {const foe=!lv.room&&enemies.some(e=>!e.dead&&Math.hypot(e.x-p.x,e.z-p.z)<11);if(p.moving&&ml>.6&&!lv.room&&p.swing<=0&&!foe&&!st.riding&&!onRiver&&!chal)p.runT=Math.min(140,(p.runT||0)+1);else p.runT=Math.max(0,(p.runT||0)-(foe?3:8));
+    const k=Math.max(0,Math.min(1,((p.runT||0)-50)/60));p.sprint=1+.5*k*k*(3-2*k);sp*=p.sprint;}
   if(p.dash>0){p.dash--;const f=fwd(p.yaw);mx=f[0];mz=f[1];sp=.1*TS;
     for(const e of enemies)if(!e.dead&&!e.boss&&Math.hypot(e.x-p.x,e.z-p.z)<1.2)hitEnemy(e,1,f[0],f[1],'dash');}
-  else if(p.moving){mx/=Math.max(1,ml);mz/=Math.max(1,ml);p.yaw+=ang(p.yaw,Math.atan2(mx,mz))*.35;p.walk+=ml*.251*(typeof lifeSpeed=='function'?lifeSpeed():1);}
+  else if(p.moving){mx/=Math.max(1,ml);mz/=Math.max(1,ml);p.yaw+=ang(p.yaw,Math.atan2(mx,mz))*.35;p.walk+=ml*.251*(typeof lifeSpeed=='function'?lifeSpeed():1)*(p.sprint||1);}
   let dx=(p.moving?mx*sp:0)+p.kx,dz=(p.moving?mz*sp:0)+p.kz;p.kx*=.8;p.kz*=.8;
   const bx=!blockedCircle(p.x+dx,p.z,PR)&&!npcBlock(p.x+dx,p.z),bz=!blockedCircle(p.x,p.z+dz,PR)&&!npcBlock(p.x,p.z+dz);
   const hitX=bx?null:blockedCircle(p.x+dx,p.z,PR),hitZ=bz?null:blockedCircle(p.x,p.z+dz,PR);
@@ -292,6 +295,13 @@ function enemiesUpdate(){
     if(dist<d.r+.45&&p.inv==0&&p.dash==0)hurtPlayer(d.dmg,e.x,e.z);}
   enemies=enemies.filter(e=>!e.dead||e.fade>0&&e.fade--);
   if(lv.room&&lv.d.en.length&&!enemies.some(e=>!e.dead&&!e.chal)&&!st.f['clr:'+lv.id]){st.f['clr:'+lv.id]=1;needSave=true;if(lv.d.solveOf=='clear')solvedNow();}}
+// the named street the player is standing on, if any
+function streetHere(){if(!lv||lv.room||!lv.d.streets)return null;const tx=Math.floor(p.x/TS),ty=Math.floor(p.z/TS);let nm=null,best=1e9;for(const s of lv.d.streets)if(tx>=s.x0&&tx<=s.x1&&ty>=s.y0&&ty<=s.y1){const a=(s.x1-s.x0+1)*(s.y1-s.y0+1);if(a<best){best=a;nm=s.n;}}return nm=='alley'?null:nm;}
+let STREET_TOTAL=0;
+// walking a street for the first time is worth a little: it goes in the count and pays a few coins
+function streetTick(){if(frame%20||!st||dlg||trans)return;const n=streetHere();if(!n)return;st.sts=st.sts||{};const key=lv.id+'|'+n;if(st.sts[key])return;st.sts[key]=1;
+  if(!STREET_TOTAL){for(const id in RCQ.maps){const seen={};for(const s of RCQ.maps[id].streets||[])if(s.n!='alley')seen[s.n]=1;STREET_TOTAL+=Object.keys(seen).length;}}
+  st.coins=Math.min(999,(st.coins||0)+5);needSave=true;sfx('coin');toast('New street: '+n+'  ('+Object.keys(st.sts).length+' of '+STREET_TOTAL+')  +5 coins');}
 function hurtPlayer(dmg,fx,fz){if(p.hold>0||hook&&hook.st=='pull')return;if(typeof lifeDamage=='function')dmg=lifeDamage(dmg);p.hp-=dmg;p.inv=70;const l=Math.hypot(p.x-fx,p.z-fz)||1;p.kx=(p.x-fx)/l*.35;p.kz=(p.z-fz)/l*.35;shake=8;sfx('hurt');vibrate(40);
   if(p.hp<=0){if(st.bottle){st.bottle=0;p.hp=st.max;toast('You gulp down the ginger beer just in time!');sfx('heart');return;}p.hp=0;deathT=90;sfx('die');}}
 function swingHits(){

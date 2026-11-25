@@ -51,6 +51,17 @@ const BIG={ox:16,oy:11};
     // street lamps along the new sidewalks
     if(urban||plan)for(let Y=2;Y<H-2;Y++)for(let X=2;X<W-2;X++){const x=X-OX,y=Y-OY;if(x>=-1&&y>=-1&&x<=w&&y<=h)continue;if(g[Y][X]=='s'&&hs(X,Y,seed+3)%23==0)m.lamps.push([X,Y]);}
   }
+  // the new ground is lived in: neighbors out on the named streets, trouble in the back streets, and a stash or two worth the walk
+  const TALK={'ow:2,1':['Session days, you can\'t get a seat at any lunch counter near the Capitol.','They ring the Bell Tower to call the General Assembly in.'],'ow:3,1':['When the James floods, the Bottom floods first.','You can hear the trains over on the viaduct all night.'],'ow:3,0':['Patrick Henry gave the liberty-or-death speech in that church in 1775.','Gas lamps and brick sidewalks. Church Hill hasn\'t changed much.'],
+    'ow:0,1':['A movie at the Byrd, then ice cream. That\'s a Carytown Saturday.','Nine blocks of shops and not a chain store I can think of.'],'ow:1,1':['They call it the Fan because the streets spread out like one, heading west.','Every porch on this block is somebody\'s living room come spring.'],'ow:2,0':['They called Second Street the Deuce. Ellington played here. Ella too.','Look up at the ironwork on these porches. Nobody makes it like that now.']};
+  const COL=[['#6a4020','#3d63c8'],['#2e2e3a','#b84a3a'],['#8a5a30','#58a850'],['#3a2414','#d8b03a'],['#4a2c14','#7a5ab8'],['#20242c','#d8692a']];
+  for(const id in RCQ.maps){if(id.indexOf('ow:')!=0)continue;const m=RCQ.maps[id],W=m.w,H=m.h,seed=m.ax*7+m.ay*13+5,band=(x,y)=>!(x>=OX-1&&y>=OY-1&&x<=W-OX&&y<=H-OY)&&x>2&&y>2&&x<W-3&&y<H-3,used=[],far=(x,y,r)=>used.every(q=>Math.abs(q[0]-x)+Math.abs(q[1]-y)>=r),at=(x,y)=>m.rows[y][x];
+    const pick=(ok,n,r,salt)=>{const out=[],c=[];for(let y=3;y<H-3;y++)for(let x=3;x<W-3;x++)if(band(x,y)&&ok(x,y))c.push([hs(x,y,seed+salt),x,y]);c.sort((a,b)=>a[0]-b[0]);for(const [,x,y] of c){if(out.length>=n)break;if(far(x,y,r)){out.push([x,y]);used.push([x,y]);}}return out;};
+    const town=m.streets&&m.streets.length>0,open=(x,y)=>'s.'.includes(at(x,y));
+    if(town){let i=0;const seen={};for(const s of m.streets){if(seen[s.n]||s.n=='alley'||i>=6)continue;seen[s.n]=1;const sp=pick((x,y)=>at(x,y)=='s'&&x>=s.x0&&x<=s.x1&&y>=s.y0&&y<=s.y1,1,6,11+i)[0];if(!sp)continue;const c=COL[(i+m.ax+m.ay*2+6)%6],t=TALK[id]||[];
+        m.npcs.push({who:'Neighbor',tx:sp[0],ty:sp[1],talk:'folk',lines:['This is '+s.n+'.',t[i%Math.max(1,t.length)]||'Nice day for a walk.'],chal:null,hat:[c[0]],shirt:[c[1]]});i++;}}
+    const kinds=(m.en||[]).map(e=>e[0]);if(kinds.length)for(const [x,y] of pick((x,y)=>open(x,y)||at(x,y)=='p',town?5:4,9,31))m.en.push([kinds[hs(x,y,seed)%kinds.length],x,y]);
+    pick((x,y)=>open(x,y)&&[[1,0],[-1,0],[0,1],[0,-1]].filter(([a,b])=>'BTX'.includes(at(x+a,y+b))).length>=(town?1:2),2,14,53).forEach(([x,y],n)=>m.chests.push({id:'ch:big:'+id+':'+n,tx:x,ty:y,item:n?'coins20':'coins50',appear:false}));}
   // where a road reaches the edge but the map next door has trees there, clear a way through them
   const WK='.,psSKk=-FEn^|1',set=(m,x,y,c)=>{m.rows[y]=m.rows[y].slice(0,x)+c+m.rows[y].slice(x+1);},carve=(m,x,y,sx,sy)=>{for(let k=0;k<14&&m.rows[y]&&m.rows[y][x]=='T';k++,x+=sx,y+=sy)set(m,x,y,'.');};
   for(const id in RCQ.maps){if(id.indexOf('ow:')!=0)continue;const m=RCQ.maps[id],[ax,ay]=id.slice(3).split(',').map(Number),E=RCQ.maps['ow:'+(ax+1)+','+ay],S=RCQ.maps['ow:'+ax+','+(ay+1)];
