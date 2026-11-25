@@ -111,7 +111,9 @@ function worldBuilding(M,lv,w,b){const p=b.pp,n=p.length,hd=hood(lv),h=hash(b.i*
   if(b.door){let bd=1e9;for(let i=0;i<n;i++){const d=segDist(b.door.x,b.door.z,p[i],p[(i+1)%n]);if(d<bd){bd=d;front=i;}}}
   // an untyped building fronting a main street is most likely a shop
   let frn=null;if(front>=0){const a=p[front],c=p[(front+1)%n],l=Math.hypot(c[0]-a[0],c[1]-a[1])||1;frn=roadNear(w,(a[0]+c[0])/2+(c[1]-a[1])/l*2,(a[1]+c[1])/2-(c[0]-a[0])/l*2,30,q=>q.car&&q.k!='m'&&q.k!='a'&&q.k!='v');
-    if(!shop&&!small&&frn&&'pst'.includes(frn.r.k)&&frn.d<frn.r.wm/2+9&&!RESID.includes(b.t)&&b.ar>60&&b.ar<1800&&nf<=5&&hash(b.i,3,7)%4)shop=true;}
+    if(!shop&&!small&&frn&&'pst'.includes(frn.r.k)&&frn.d<frn.r.wm/2+9&&!RESID.includes(b.t)&&b.ar>60&&b.ar<1800&&nf<=5&&hash(b.i,3,7)%4)shop=true;
+    // on the main street of a shopping district the ground floor is a shop whatever the building once was
+    if(!shop&&!small&&frn&&'pst'.includes(frn.r.k)&&frn.d<frn.r.wm/2+11&&['cary','broad','shockoe'].includes(hd)&&b.ar>40&&b.ar<2500&&nf<=6&&hash(b.i,8,2)%7)shop=true;}
   let u0=0;for(let i=0;i<n;i++){const a=p[i],c=p[(i+1)%n],F=wallFrame(a,c),L=F.len;if(L<.15){u0+=L/2;continue;}const nr=[F.nx,0,F.nz],mid=F.P(L/2,0,.6),nbr=buildingAt(w,mid[0],mid[2]),party=nbr&&nbr!==b&&!nbr.gone;
     if(party&&nbr.hm>=hm-.5){u0+=L/2;continue;}const yb=party?Math.min(top,nbr.hm):0;
     const rn=party||small?null:roadNear(w,mid[0]+F.nx*2,mid[2]+F.nz*2,26,q=>q.k!='m'&&q.k!='f'&&q.k!='x'),street=!party&&!small&&(!!rn||i==front),nb=Math.max(1,Math.floor((L-.5)/bay)),m0=(L-nb*bay)/2,doorQ=Math.floor(nb/2);
@@ -146,7 +148,7 @@ function worldBuilding(M,lv,w,b){const p=b.pp,n=p.length,hd=hood(lv),h=hash(b.i*
         if(f==0&&shop&&street){// a shop front: glass over a low bulkhead, a sign above, and often an awning
           fQuad(M,F,uc-bay/2+.12,uc+bay/2-.12,.5,2.7,.03,'white',[.14,.14,.16]);fQuad(M,F,uc-bay/2+.2,uc+bay/2-.2,.58,2.62,.045,'pane');fQuad(M,F,uc-.03,uc+.03,.58,2.62,.055,'white',[.14,.14,.16]);
           if(q==Math.floor(nb/2)-1||nb==1){fQuad(M,F,uc-bay/2+.05,uc+bay/2-.05,2.85,3.25,.06,'white',[.2,.2,.22]);textQuad(M,F.P(uc-bay/2+.1,2.89,.07),F.P(uc+bay/2-.1,2.89,.07),F.P(uc+bay/2-.1,3.21,.07),F.P(uc-bay/2+.1,3.21,.07),SHOPSIGNS[hash(b.i,i,lv.d.ax*5+lv.d.ay)%SHOPSIGNS.length]);}
-          if(h%3==0){const aw=h%2?'awning':'awning2';M.quad(F.P(uc-bay/2+.1,2.75,0),F.P(uc+bay/2-.1,2.75,0),F.P(uc+bay/2-.1,2.35,1),F.P(uc-bay/2+.1,2.35,1),aw);}continue;}
+          if(h%3==0||hd=='cary'&&h%3==1){const aw=h%2?'awning':'awning2';M.quad(F.P(uc-bay/2+.1,2.75,0),F.P(uc+bay/2-.1,2.75,0),F.P(uc+bay/2-.1,2.35,1),F.P(uc-bay/2+.1,2.35,1),aw);}continue;}
         const wy=y0+(fh-wh)*.45,w0=uc-ww/2,w1=uc+ww/2;
         if(!street){if((q+f)%2==0&&!WLOW){fQuad(M,F,w0-.06,w1+.06,wy-.06,wy+wh+.06,.02,'white',trim);fQuad(M,F,w0,w1,wy,wy+wh,.035,'pane');}continue;}
         const gd=deep?-RV+.012:.055;if(!deep){fQuad(M,F,w0-.08,w1+.08,wy-.04,wy+wh+.08,.03,'white',trim);fQuad(M,F,w0,w1,wy,wy+wh,.045,lit(q*7+f));}if(f<4&&!WLOW){fQuad(M,F,w0,w1,wy+wh/2-.03,wy+wh/2+.03,gd,'white',trim);
@@ -258,7 +260,7 @@ function worldFurniture(M,lv,w){// trees and parked cars are not built into the 
   // plaques you can read, each on a short post
   for(const k in lv.markers){const [tx,ty]=k.split(',').map(Number),cx=tx*2+1,cz=ty*2+1;M.box(cx-.05,0,cz-.05,cx+.05,1,cz+.05,'black');M.quad([cx-.4,.95,cz+.12],[cx+.4,.95,cz+.12],[cx+.4,1.35,cz-.12],[cx-.4,1.35,cz-.12],'gold',[.7,.6,.4]);M.quad([cx+.4,.95,cz+.1],[cx-.4,.95,cz+.1],[cx-.4,1.35,cz-.14],[cx+.4,1.35,cz-.14],'black');}}
 
-function buildWorldMesh(lv){const w=lv.world,M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh();
+function buildWorldMesh(lv){textDistrict(lv.d.world);const w=lv.world,M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh();
   worldGround(M,Wm,lv,w);worldRoads(M,lv,w);
   for(const b of w.bld){if(b.gone||b.lm)continue;worldBuilding(M,lv,w,b);}
   for(const lm of w.landmarks||[])worldLandmark(M,lv,w,lm);

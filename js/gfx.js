@@ -127,6 +127,10 @@ function uniforms(p,names){const o={};for(const n of names)o[n]=gl.getUniformLoc
 function texFrom(cv,repeat){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv);gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   const w=repeat?gl.REPEAT:gl.CLAMP_TO_EDGE;gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,w);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,w);return t;}
+let atlasS=0;
+// repaint the lettering layers that change from neighborhood to neighborhood
+function textReupload(){if(typeof gl=='undefined'||!gl||!atlasTex||!atlasS)return;const S=atlasS,D=new Uint8ClampedArray(S*S*4),H=new Float32Array(S*S),E=new Float32Array(S*S);gl.bindTexture(gl.TEXTURE_2D_ARRAY,atlasTex);
+  for(let n=TEXT_FIXED/TEXT_PER;n<TEXT_LAYERS;n++){paintText(D,H,E,S,n);gl.texSubImage3D(gl.TEXTURE_2D_ARRAY,0,0,0,CELL['text'+(n+1)],S,S,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(D.buffer));}gl.generateMipmap(gl.TEXTURE_2D_ARRAY);}
 function texArray(data,S,N){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D_ARRAY,t);gl.texImage3D(gl.TEXTURE_2D_ARRAY,0,gl.RGBA8,S,S,N,0,gl.RGBA,gl.UNSIGNED_BYTE,data);gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
   gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D_ARRAY,gl.TEXTURE_WRAP_T,gl.REPEAT);
@@ -141,7 +145,7 @@ function initGL(canvas){gl=canvas.getContext('webgl2',{antialias:false,alpha:fal
   skyProg=mkProg(QVS,SKYFS);postProgs.sky=uniforms(skyProg,['uInvPV','uCam','uSunDir','uSunCol','uSkyCol','uHorCol','uNight','uTime','uCloud']);
   for(const [k,f] of [['down',DOWNFS],['up',UPFS],['fin',FINFS]]){const p=mkProg(QVS,f);postProgs[k]={p,u:uniforms(p,['uTex','uBloom','uPx','uThresh','uFade','uBloomK','uExpo','uFxaa'])};}
   if(typeof BODY_RES!='undefined')BODY_RES=[1.8,1.3,1][QUAL.lvl];
-  const L=makeLayers(Q().tex);atlasTex=texArray(L.alb,L.S,L.N);nrmTex=texArray(L.nrm,L.S,L.N);waterTex=texFrom(makeWaterTex(),true);foamTex=texFrom(makeFoamTex(),true);
+  const L=makeLayers(Q().tex);atlasS=L.S;atlasTex=texArray(L.alb,L.S,L.N);nrmTex=texArray(L.nrm,L.S,L.N);waterTex=texFrom(makeWaterTex(),true);foamTex=texFrom(makeFoamTex(),true);
   gl.useProgram(prog);gl.uniform1i(U.uAlb,0);gl.uniform1i(U.uNrm,1);gl.uniform1i(U.uTex2,2);gl.uniform1i(U.uShadow,3);
   gl.uniform1fv(U.uMetal,new Float32Array(112).map((_,i)=>CELLS[i]?matOf(CELLS[i])[1]:0));
   quadVAO=gl.createVertexArray();gl.bindVertexArray(quadVAO);const qb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,qb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,1,1,-1,-1,1,1,-1,1]),gl.STATIC_DRAW);
