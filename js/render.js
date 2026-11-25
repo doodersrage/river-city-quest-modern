@@ -23,8 +23,10 @@ function drawModel(parts,base,pose,opt){
 function envLook(){const e=envLook0();return typeof weatherLook=='function'?weatherLook(e):e;}
 function envLook0(){const dk=dark();if(lv.room)return lv.dungeon?{fog:[10,30],fogCol:[.03,.03,.05],amb:.5}:{fog:[16,46],fogCol:[.1,.1,.11],amb:.92};// lived-in rooms are bright; dungeons stay dim
   const day=[.66,.72,.78],night=[.05,.06,.12],dusk=[.62,.45,.42],h=hour(),ds=h>=17&&h<20?Math.sin((h-17)/3*Math.PI):0;
-  const fc=day.map((v,i)=>v*(1-dk)+night[i]*dk).map((v,i)=>v*(1-ds*.5)+dusk[i]*ds*.5);return{fog:[14-dk*5,40-dk*12],fogCol:fc,amb:1-dk*.66};}
+  const fc=day.map((v,i)=>v*(1-dk)+night[i]*dk).map((v,i)=>v*(1-ds*.5)+dusk[i]*ds*.5);return{fog:[14-dk*4,40-dk*6],fogCol:fc,amb:1-dk*.58};}// nights are dim, not black
 function lightsNow(){const L=[],dk=lv.room?1:dark();
+  // a flashlight, on by itself after dark and in dungeons: three pools of light reaching out the way you face
+  if((!lv.room&&dk>.3)||lv.dungeon){const fx=Math.sin(p.yaw),fz=Math.cos(p.yaw),k=lv.room?.6:Math.min(1,(dk-.3)/.4);for(const [d,y,r,b] of [[-1.4,2.6,6,.5],[1.5,1.7,9,.85],[7,1.5,12,.8],[14,1.3,13,.6]])L.push([p.x+fx*d,y,p.z+fz*d,r,[.95,.97,1].map(v=>v*b*k)]);}
   if(st.items.lantern&&(dk>.3||lv.room))L.push([p.x,2,p.z,lv.room?11:9,[1,.78,.45].map(v=>v*(p.raise>0?1.3:.9))]);
   for(const b of bombs)if(b.t<20)L.push([b.x,1,b.z,8,[1,.6,.2]]);
   for(const o of lv.dyn)if(o.kind=='brazier'&&o.lit)L.push([o.tx*TS+TS/2,2,o.ty*TS+TS/2,9,[1,.6,.25]]);
