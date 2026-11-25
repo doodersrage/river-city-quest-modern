@@ -36,12 +36,14 @@ function waterField(w,x,z){if(!w.wf)return 0;const cw=w.water.cw,ch=w.water.ch,u
 function roadNear(w,x,z,rad,pred){let best=null;w.rh.near(x,z,rad,s=>{if(pred&&!pred(s.o))return;const d=segDist(x,z,s.a,s.b);if(d<=rad&&(!best||d-s.o.wm/2<best.d-best.r.wm/2))best={r:s.o,d,a:s.a,b:s.b};});return best;}
 function buildingAt(w,x,z){let hit=null;w.bh.near(x,z,.01,s=>{const b=s.o;if(x>=b.bb[0]&&x<=b.bb[2]&&z>=b.bb[1]&&z<=b.bb[3]&&inPolygon(b.pp,x,z)){hit=b;return true;}});return hit;}
 // what stops a body of radius r standing at (x,z): 'B' a wall, 'D' a door you can go through, '~' water, 'T' a tree trunk, or nothing
+// set while a district's people and things are being placed, so that they go on ground you can reach on foot, boat or no boat
+let WDRY=0;
 function worldBlocked(w,x,z,r){let hit=null;
   w.bh.near(x,z,r,s=>{if(s.o.gone)return;if(segDist(x,z,s.a,s.b)<r){hit=s.o;return true;}});
   if(!hit){const b=buildingAt(w,x,z);if(b&&!b.gone)hit=b;}
   if(hit){for(const d of w.doorAt||[])if(Math.abs(x-d.x)<1.5+r&&Math.abs(z-d.z)<1.5+r&&Math.hypot(x-d.x,z-d.z)<1.5+r)return'D';return hit.lm?'X':'B';}
   for(const q of w.solid||[])if(Math.abs(x-q[0])<r+q[2]&&Math.abs(z-q[1])<r+q[2]&&Math.hypot(x-q[0],z-q[1])<r+q[2])return'T';
-  if(w.wf&&waterField(w,x,z)>.5&&!(typeof passable=='function'&&passable('~'))&&!onDeck(w,x,z))return'~';
+  if(w.wf&&waterField(w,x,z)>.5&&!(!WDRY&&typeof passable=='function'&&passable('~'))&&!onDeck(w,x,z))return'~';
   return null;}
 function onDeck(w,x,z){let ok=false;w.rh.near(x,z,12,s=>{if(s.o.b&&s.o.k!='m'&&!(s.o.ly>=2)&&segDist(x,z,s.a,s.b)<s.o.wm/2+.3){ok=true;return true;}});if(ok)return true;for(const a of w.areas)if(a.k=='deck'&&inPolygon(a.pp,x,z))return true;return false;}
 
@@ -113,7 +115,7 @@ function worldContent(id,m){const w=worldOf(id);if(!w)return false;let main=worl
   m.dyn=sealed;{const L=[];for(const a of m.lamps||[]){if(L.length>=28)break;const [X,Z]=T(a[0],a[1]),[x,y]=snap(X,Z,c=>c=='s',true);if(L.some(q=>Math.abs(q[0]-x)+Math.abs(q[1]-y)<6)){used.delete(x+','+y);continue;}g[y][x]='l';L.push([x,y]);}m.lamps=L;}m.lm=w.landmarks.map(q=>({art:q.art,x:Math.floor(q.b.bb[0]/2),y:Math.floor(q.b.bb[1]/2),w:Math.max(1,Math.ceil((q.b.bb[2]-q.b.bb[0])/2)),h:Math.max(1,Math.ceil((q.b.bb[3]-q.b.bb[1])/2)),read:q.read,world:true}));m.doors=doors;m.streets=[];m.signs=[];m.lots=[];m.world=id;m.oldRows=old;m.w=tw;m.h=th;m.rows=g.map(r=>r.join(''));m.base='.';return true;}
 
 // a neighborhood is moved onto its real ground the first time anything asks for it
-function worldReady(id){const m=RCQ.maps[id];if(!m||m.world||typeof WORLD=='undefined'||!WORLD[id])return m;const t0=Date.now();worldContent(id,m);
+function worldReady(id){const m=RCQ.maps[id];if(!m||m.world||typeof WORLD=='undefined'||!WORLD[id])return m;const t0=Date.now();WDRY=1;try{worldContent(id,m);}finally{WDRY=0;}
   if(typeof EXTRA_NPCS!='undefined')for(const n of EXTRA_NPCS)if(n.scene==id&&!n.moved){const q=m.toWorld(n.tx,n.ty,null,true);n.tx=q[0];n.ty=q[1];n.moved=1;}
   if(typeof SECRETS!='undefined'&&SECRETS[id]){// a stash sits at the foot of a tree, off the street
     const w=WORLD[id],s=SECRETS[id],q=m.toWorld(s[0],s[1],c=>c=='.',true);SECRETS[id]=q;}
@@ -133,7 +135,8 @@ function worldStreet(w,x,z){const rn=roadNear(w,x,z,14,r=>r.n&&r.car);return rn&
 
 // the ground you can actually walk to: the largest connected stretch of open ground, on a one-metre grid.
 // People, chests and arrivals are only ever put on it, so nobody ends up shut in a courtyard.
-function worldMain(w){if(w.main)return w.main;const N=w.w,H=w.h,comp=new Int32Array(N*H),sizes=[0];let nc=0;const st=[];
+// the largest stretch of ground you can cross in one piece. With a boat the water joins it, so it is worked out again once you have one.
+function worldMain(w){const wet=!WDRY&&typeof passable=='function'&&!!passable('~');if(w.main&&!!w.mainWet==wet)return w.main;w.mainWet=wet;const N=w.w,H=w.h,comp=new Int32Array(N*H),sizes=[0];let nc=0;const st=[];
   const free=(a,b)=>!worldBlocked(w,a+.5,b+.5,.45);
   for(let b0=0;b0<H;b0++)for(let a0=0;a0<N;a0++){if(comp[b0*N+a0])continue;if(!free(a0,b0)){comp[b0*N+a0]=-1;continue;}nc++;let sz=0;comp[b0*N+a0]=nc;st.push(a0,b0);
     while(st.length){const z=st.pop(),x=st.pop();sz++;for(let k=0;k<4;k++){const a=x+(k==0?1:k==1?-1:0),b=z+(k==2?1:k==3?-1:0);if(a<0||b<0||a>=N||b>=H||comp[b*N+a])continue;if(!free(a,b)){comp[b*N+a]=-1;continue;}comp[b*N+a]=nc;st.push(a,b);}}sizes.push(sz);}

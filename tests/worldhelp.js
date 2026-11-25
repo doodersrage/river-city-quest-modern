@@ -1,7 +1,8 @@
 // Helpers for tests in the polygon world: places are found by what they are, not by fixed squares.
 module.exports=G=>({
   // a spot a few steps in from an edge with a clear run out to it: side is 'n','s','e' or 'w'
-  edgeSpot(side){const w=G.lv.world,W=w.w,H=w.h;for(let k=0;k<400;k++){const t=((k*37)%100+.5)/100,x=side=='w'?5:side=='e'?W-5:6+t*(W-12),z=side=='n'?5:side=='s'?H-5:6+t*(H-12);let ok=true;
+  // with main set, the spot must also join up with the rest of the district
+  edgeSpot(side,main){const w=G.lv.world,W=w.w,H=w.h;for(let k=0;k<400;k++){const t=((k*37)%100+.5)/100,x=side=='w'?5:side=='e'?W-5:6+t*(W-12),z=side=='n'?5:side=='s'?H-5:6+t*(H-12);let ok=!main||G.onMain(w,x,z);
       for(let s=0;s<=5.5;s+=.4){const px=side=='w'?x-s:side=='e'?x+s:x,pz=side=='n'?z-s:side=='s'?z+s:z;if(px>.3&&pz>.3&&px<W-.3&&pz<H-.3&&G.blockedCircle(px,pz,.6)){ok=false;break;}}if(ok)return[x,z];}return null;},
   door(to){return(G.lv.doors||[]).find(d=>d.to==to);},
   // stand just outside a door, facing it

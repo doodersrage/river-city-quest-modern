@@ -10,11 +10,12 @@ Every quest, door and boss was moved onto real ground by code. Tests prove thing
 
 Already covered by tests: the opening, the walk to Belle Isle, the whole first dungeon, every boss fight, the credits, and that all 55 rooms connect.
 
-- [ ] Walk the whole story in order in a test: for each goal, the place it points to can be reached from the last one, and its door can be opened with what you hold at that point
-- [ ] Each sealed door needs the item it should (no shortcuts, no dead ends)
+- [x] Walk the whole story in order in a test (`tests/story.test.js`): for each goal, the place it points to can be reached from the last one, and its door can be opened with what you hold at that point
+- [x] Each sealed door needs the item it should (no shortcuts, no dead ends). Found and fixed: the south bank could be walked to without the kayak, which skipped the whole trade chain
+  - Still loose: the Carillon key used to sit inside a rubble ring that needed powder; it now lies on open ground in Forest Hill Park
 - [ ] Every side challenge can be started and finished on the real streets (timers suit the bigger maps)
-- [ ] The map screen and the goal text point to the right place in every district
-- [ ] Old saves load into a sensible spot
+- [ ] The map screen and the goal text point to the right place in every district (goal text read through and one wrong direction fixed; the map screen has not been looked at)
+- [x] Old saves load into a sensible spot
 - [ ] Play-test: a fresh game through the first two dungeons
 
 Done when the game can be finished from a fresh save.

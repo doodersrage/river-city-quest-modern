@@ -177,6 +177,8 @@ function bump(x,z,loud){if(lv.world){const d=doorNear(p.x,p.z,2);if(d&&!(p.bumpT
   if(c=='#')pushBlock(tx,tz);else p.push=0;}
 function edgeExit(ex,ez){const [a,c]=lv.id.split(':'),[ax,ay]=c.split(',').map(Number),nid=a+':'+(ax+ex)+','+(ay+ez);
   const W=lv.w*TS,H=lv.h*TS;
+  // the James lies between the city and the south bank
+  if(ez>0&&ay<3&&ay+ez>=3&&sceneData(nid)&&!st.items.kayak){p.z=Math.min(H-.6,p.z);if(!p.edgeT||frame-p.edgeT>200){p.edgeT=frame;toast('The James runs deep past here. You\'d need a boat to reach the south bank.');}return;}
   if(sceneData(nid)){const nd=sceneData(nid),NW=nd.w*TS,NH=nd.h*TS;let nx=p.x,nz=p.z;if(ex<0)nx=NW-.8;if(ex>0)nx=.8;if(ez<0)nz=NH-.8;if(ez>0)nz=.8;startTrans(nid,nx,nz,p.yaw);return;}
   p.x=Math.max(.6,Math.min(W-.6,p.x));p.z=Math.max(.6,Math.min(H-.6,p.z));
   if(!p.edgeT||frame-p.edgeT>200){p.edgeT=frame;toast('The fog is too thick to go any farther that way.');}}
@@ -537,7 +539,7 @@ function goalText(){
     return st.trade=='melon'?'Someone hungry in Jackson Ward might trade for that watermelon.':st.trade=='music'?'The organist at the Byrd Theatre would love that sheet music.':st.trade=='rivermap'?'The kayaker on Belle Isle wants that river map.':'Ask the Carillon caretaker in Byrd Park, then visit the melon vendor in Carytown.';}
   if(!st.f.won)return'Take all four keystones to the tunnel on Church Hill.';
   if(!st.f['boss:tredegar:0,0'])return'Explore Tredegar Iron Works, in the corner of Hollywood Cemetery.';
-  if(!st.f['boss:conserv:0,0'])return'Explore the conservatory at Lewis Ginter Botanical Garden, north of Bryan Park.';
+  if(!st.f['boss:conserv:0,0'])return'Explore the conservatory at Lewis Ginter Botanical Garden, north of Broad Street.';
   if(!st.f.bateau)return'Help the river historian at Ancarrow\'s Landing rebuild a bateau.';
   return'Win every neighborhood pin and fill your journal.';}
 function goalScene(){if(!st.items.lantern)return'ow:2,1';if(!st.got.granite)return'ow:2,2';if(!st.got.iron)return'ow:1,2';if(!st.got.brick)return'ow:3,1';
