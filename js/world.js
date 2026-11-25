@@ -138,3 +138,16 @@ function worldMain(w){if(w.main)return w.main;const N=w.w,H=w.h,comp=new Int32Ar
     while(st.length){const z=st.pop(),x=st.pop();sz++;for(let k=0;k<4;k++){const a=x+(k==0?1:k==1?-1:0),b=z+(k==2?1:k==3?-1:0);if(a<0||b<0||a>=N||b>=H||comp[b*N+a])continue;if(!free(a,b)){comp[b*N+a]=-1;continue;}comp[b*N+a]=nc;st.push(a,b);}}sizes.push(sz);}
   let big=1;for(let i=1;i<=nc;i++)if(sizes[i]>sizes[big])big=i;const m=new Uint8Array(N*H);for(let i=0;i<N*H;i++)m[i]=comp[i]==big?1:0;w.main=m;return m;}
 const onMain=(w,x,z)=>{const a=Math.floor(x),b=Math.floor(z);return a>=0&&b>=0&&a<w.w&&b<w.h&&!!worldMain(w)[b*w.w+a];};
+
+/* ---------- the lie of the land ---------- */
+// the height of the ground above the district's lowest point, in metres
+function worldElev(w){if(w.el!==undefined)return w.el;const E=typeof WELEV!='undefined'&&WELEV.d[w.id];if(!E){w.el=null;return null;}const raw=atob(E.h),n=E.nx*E.nz,a=new Float32Array(n);for(let i=0;i<n;i++)a[i]=raw.charCodeAt(i)*WELEV.q;
+  // one soft pass takes the quarter-metre steps out
+  const h=new Float32Array(n);for(let j=0;j<E.nz;j++)for(let i=0;i<E.nx;i++){let s=0,c=0;for(let b=-1;b<=1;b++)for(let d=-1;d<=1;d++){const x=i+d,y=j+b;if(x<0||y<0||x>=E.nx||y>=E.nz)continue;const k=d==0&&b==0?4:d==0||b==0?2:1;s+=a[y*E.nx+x]*k;c+=k;}h[j*E.nx+i]=s/c;}
+  w.el={nx:E.nx,nz:E.nz,step:WELEV.step,x0:WELEV.x0,z0:WELEV.z0,h};return w.el;}
+// The land is a sheet of flat triangles: each 10 m square of the height grid is cut corner to corner, and a point takes the
+// height of the triangle it is over. The shader does exactly the same sum, so the two always agree.
+function worldY(w,x,z){const e=w.el===undefined?worldElev(w):w.el;if(!e)return 0;const fx=Math.max(0,Math.min(e.nx-1.001,(x-e.x0)/e.step)),fz=Math.max(0,Math.min(e.nz-1.001,(z-e.z0)/e.step)),i=Math.floor(fx),j=Math.floor(fz),u=fx-i,v=fz-j,h=e.h,k=j*e.nx+i,a=h[k],b=h[k+1],c=h[k+e.nx],d=h[k+e.nx+1];
+  return u+v<=1?a+u*(b-a)+v*(c-a):d+(1-u)*(c-d)+(1-v)*(b-d);}
+// the same, for wherever the game is now (zero indoors)
+function gY(x,z){return typeof lv!='undefined'&&lv&&lv.world?worldY(lv.world,x,z):0;}

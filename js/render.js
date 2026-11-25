@@ -107,4 +107,4 @@ function drawBillboards(env){if(PASS=='shadow')return;const m=new Mesh(),rx=Math
   for(const b of bombs)if(b.t<6){const s=3,x=b.x,y=1,z=b.z;g.quad([x-rx*s,y-s,z-rz*s],[x+rx*s,y-s,z+rz*s],[x+rx*s,y+s,z+rz*s],[x-rx*s,y+s,z-rz*s],'lampglow',[1,.7,.3]);}
   if(typeof lifeGlow=='function')lifeGlow(g,rx,rz,dk);
   if(g.count){gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.depthMask(false);gl.uniform1f(U.uAdd,1);gl.uniform2f(U.uFog,999,1000);upload(dynBuf,g);drawVAO(dynBuf);gl.uniform1f(U.uAdd,0);gl.depthMask(true);gl.disable(gl.BLEND);gl.uniform2f(U.uFog,env.fog[0],env.fog[1]);}}
-function project(x,y,z){if(!PV)return null;const v=[x,y,z,1],o=[0,0,0,0];for(let i=0;i<4;i++)o[i]=PV[i]*v[0]+PV[4+i]*v[1]+PV[8+i]*v[2]+PV[12+i];if(o[3]<=0)return null;return[(o[0]/o[3]*.5+.5)*RW,(1-(o[1]/o[3]*.5+.5))*RH];}
+function project(x,y,z){if(!PV)return null;const v=[x,y+gY(x,z),z,1],o=[0,0,0,0];for(let i=0;i<4;i++)o[i]=PV[i]*v[0]+PV[4+i]*v[1]+PV[8+i]*v[2]+PV[12+i];if(o[3]<=0)return null;return[(o[0]/o[3]*.5+.5)*RW,(1-(o[1]/o[3]*.5+.5))*RH];}

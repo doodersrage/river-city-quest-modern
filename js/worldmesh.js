@@ -49,12 +49,15 @@ function worldGround(M,Wm,lv,w){const x0=-w.mx,x1=w.w+w.mx,z0=-w.mz,z1=w.h+w.mz,
   else{// the bank is traced through the smoothed water, square by square; open land is merged into long strips
     const cw=w.water.cw,ch=w.water.ch,f=w.wf,X=i=>x0+i*2+1,Z=j=>z0+j*2+1,bank=[.5,.44,.36];
     Wm.quad([x0,-.35,z1],[x1,-.35,z1],[x1,-.35,z0],[x0,-.35,z0],'white');
-    for(let j=0;j<ch-1;j++){let run=-1;for(let i=0;i<cw;i++){const land=i<cw-1&&f[j*cw+i]<.5&&f[j*cw+i+1]<.5&&f[(j+1)*cw+i]<.5&&f[(j+1)*cw+i+1]<.5;
-        if(land&&run<0)run=i;if((!land||i==cw-1)&&run>=0){const a=[X(run),0,Z(j)],b=[X(i),0,Z(j)],c=[X(i),0,Z(j+1)],d=[X(run),0,Z(j+1)];gTri(M,a,b,c,base,bc);gTri(M,a,c,d,base,bc);run=-1;}
-        if(i<cw-1&&!land){const v=[f[j*cw+i],f[j*cw+i+1],f[(j+1)*cw+i+1],f[(j+1)*cw+i]],P=[[X(i),Z(j)],[X(i+1),Z(j)],[X(i+1),Z(j+1)],[X(i),Z(j+1)]],poly=[];if(v.every(q=>q>=.5))continue;
+    const landAt=(i,j)=>i<cw-1&&j<ch-1&&f[j*cw+i]<.5&&f[j*cw+i+1]<.5&&f[(j+1)*cw+i]<.5&&f[(j+1)*cw+i+1]<.5,quad=(i0,j0,i1,j1)=>{const a=[X(i0),0,Z(j0)],b=[X(i1),0,Z(j0)],c=[X(i1),0,Z(j1)],d=[X(i0),0,Z(j1)];gTri(M,a,b,c,base,bc);gTri(M,a,c,d,base,bc);};
+    // open land goes down in eight-metre squares, which bend well over hills; only along the bank is it cut cell by cell
+    for(let bj=0;bj<ch-1;bj+=4)for(let bi=0;bi<cw-1;bi+=4){const i1=Math.min(cw-1,bi+4),j1=Math.min(ch-1,bj+4);let all=true;for(let j=bj;j<j1&&all;j++)for(let i=bi;i<i1;i++)if(!landAt(i,j)){all=false;break;}
+      if(all){quad(bi,bj,i1,j1);continue;}
+      for(let j=bj;j<j1;j++)for(let i=bi;i<i1;i++){if(landAt(i,j)){quad(i,j,i+1,j+1);continue;}
+          const v=[f[j*cw+i],f[j*cw+i+1],f[(j+1)*cw+i+1],f[(j+1)*cw+i]],P=[[X(i),Z(j)],[X(i+1),Z(j)],[X(i+1),Z(j+1)],[X(i),Z(j+1)]],poly=[];if(v.every(q=>q>=.5))continue;
           for(let k=0;k<4;k++){const k2=(k+1)%4;if(v[k]<.5)poly.push(P[k]);if((v[k]<.5)!=(v[k2]<.5)){const t=(.5-v[k])/(v[k2]-v[k]);poly.push([P[k][0]+(P[k2][0]-P[k][0])*t,P[k][1]+(P[k2][1]-P[k][1])*t,1]);}}
           for(let k=1;k<poly.length-1;k++)gTri(M,[poly[0][0],0,poly[0][1]],[poly[k][0],0,poly[k][1]],[poly[k+1][0],0,poly[k+1][1]],base,bc);
-          for(let k=0;k<poly.length;k++){const a=poly[k],b=poly[(k+1)%poly.length];if(a[2]&&b[2]){const l=Math.hypot(b[0]-a[0],b[1]-a[1])||1;wallQuad(M,a,b,-.9,0,'dirt',bank,a[0]/2,[(b[1]-a[1])/l,0,-(b[0]-a[0])/l]);}}}}}
+          for(let k=0;k<poly.length;k++){const a=poly[k],b=poly[(k+1)%poly.length];if(a[2]&&b[2]){const l=Math.hypot(b[0]-a[0],b[1]-a[1])||1;wallQuad(M,a,b,-.9,0,'dirt',bank,a[0]/2,[(b[1]-a[1])/l,0,-(b[0]-a[0])/l]);}}}}
     // the edge strips the half-cell border leaves out
     for(const [a,b,c,d] of [[[x0,z0],[x1,z0],[x1,z0+1],[x0,z0+1]],[[x0,z1-1],[x1,z1-1],[x1,z1],[x0,z1]]])if(waterField(w,(a[0]+b[0])/2,a[1])<.5){gTri(M,[a[0],0,a[1]],[b[0],0,b[1]],[c[0],0,c[1]],base,bc);gTri(M,[a[0],0,a[1]],[c[0],0,c[1]],[d[0],0,d[1]],base,bc);}}
   {const F=500,ring=[[x0-F,z0-F,x1+F,z0],[x0-F,z1,x1+F,z1+F],[x0-F,z0,x0,z1],[x1,z0,x1+F,z1]];for(const [a,b,c,d] of ring){const wet=w.wf&&waterField(w,Math.max(x0+1,Math.min(x1-1,(a+c)/2)),Math.max(z0+1,Math.min(z1-1,(b+d)/2)))>.5;
@@ -65,12 +68,12 @@ function worldGround(M,Wm,lv,w){const x0=-w.mx,x1=w.w+w.mx,z0=-w.mz,z1=w.h+w.mz,
       const o=obbOf(a.pp);if(o&&o.hu>6&&o.hv>4){const Wt=[.86,.86,.84];for(let u=-o.hu+1.4;u<o.hu-1;u+=2.7)for(const sv of [-1,1]){const v0=sv*(o.hv-.4),v1=sv*(o.hv-5),P=(uu,vv)=>[o.cx+o.ux*uu-o.uz*vv,.05,o.cz+o.uz*uu+o.ux*vv];if(!inPolygon(a.pp,P(u,(v0+v1)/2)[0],P(u,(v0+v1)/2)[2]))continue;M.quad(P(u-.05,v0),P(u+.05,v0),P(u+.05,v1),P(u-.05,v1),'white',Wt);}}}});}
 
 /* ---------- streets, paths, rails, bridges ---------- */
-function worldRoads(M,lv,w){const cob=streetKind(lv)=='cobble',brickWalk=cob||['fan','jward','chill','shockoe'].includes(hood(lv)),walk=brickWalk?'bricksw':'sidewalk',Y=[.86,.66,.12],Wt=[.86,.86,.84];
+function worldRoads(M,lv,w){w.level=[];const cob=streetKind(lv)=='cobble',brickWalk=cob||['fan','jward','chill','shockoe'].includes(hood(lv)),walk=brickWalk?'bricksw':'sidewalk',Y=[.86,.66,.12],Wt=[.86,.86,.84];
   worldJunctions(w);const nodes=w.nodes,key=w.nodeKey;
   for(const r of w.roads){const hw=r.wm/2,p=r.pp;if(p.length<2)continue;
     if(r.b&&(r.k=='m'||r.ly>=2)){// an elevated highway or a high bridge passing overhead: deck, edge walls and piers
-      const y=r.k=='m'?6.6:13;ribbon(M,p,hw,y,'asphalt',null);for(const sd of [-1,1]){const e=offsetLine(p,sd*hw);for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1,nr=[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd];wallQuad(M,e[i],e[i+1],y-1.1,y+.9,'concrete',[.8,.8,.78],0,nr);}}
-      const L=lineLen(p);for(let s=6;s<L-4;s+=22){const q=lineAt(p,s);if(waterField(w,q.x,q.z)>.5&&!w.wf)continue;for(const o of [-hw*.6,hw*.6]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-.6,-1,pz-.6,px+.6,y-1.1,pz+.6,'concrete',[.74,.74,.72],{bottom:1,top:1},true);}M.box(q.x-Math.abs(q.dz)*hw-.7,y-1.9,q.z-Math.abs(q.dx)*hw-.7,q.x+Math.abs(q.dz)*hw+.7,y-1.1,q.z+Math.abs(q.dx)*hw+.7,'concrete',[.74,.74,.72]);}continue;}
+      const y=r.k=='m'?6.6:13,s0=M.count;ribbon(M,p,hw,y,'asphalt',null);for(const sd of [-1,1]){const e=offsetLine(p,sd*hw);for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1,nr=[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd];wallQuad(M,e[i],e[i+1],y-1.1,y+.9,'concrete',[.8,.8,.78],0,nr);}}
+      const L=lineLen(p);for(let s=6;s<L-4;s+=22){const q=lineAt(p,s);if(waterField(w,q.x,q.z)>.5&&!w.wf)continue;for(const o of [-hw*.6,hw*.6]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-.6,-45,pz-.6,px+.6,y-1.1,pz+.6,'concrete',[.74,.74,.72],{bottom:1,top:1},true);}M.box(q.x-Math.abs(q.dz)*hw-.7,y-1.9,q.z-Math.abs(q.dx)*hw-.7,q.x+Math.abs(q.dz)*hw+.7,y-1.1,q.z+Math.abs(q.dx)*hw+.7,'concrete',[.74,.74,.72]);}w.level.push([s0,M.count,p,y]);continue;}
     if(r.car){const side=r.k!='a'&&r.k!='v'&&r.k!='m'&&!r.b,surf=r.c||cob&&r.k=='v'||hood(lv)=='shockoe'&&r.k=='r'&&r.wm<9.5?'cobble':'asphalt';if(side)ribbon(M,p,hw+2.5,.03,walk,null);ribbon(M,p,hw+.2,.048,'curb',[.86,.84,.8]);ribbon(M,p,hw,surf=='cobble'?.058:r.k=='a'||r.k=='v'?.062:.066,surf,r.k=='a'?[.92,.9,.88]:null,true);
       if(surf=='asphalt'&&!r.b&&'pstr'.includes(r.k)&&!WLOW){// what years of use leave on a street: manhole covers and patches of newer tar
         const L=lineLen(p);for(let s=9+hash(r.p[0],r.p[1],7)%23;s<L-6;s+=41){const q=lineAt(p,s),o=((hash(Math.round(s),r.p[0],3)%5)-2)*hw*.28,x=q.x-q.dz*o,z=q.z+q.dx*o;
@@ -89,11 +92,12 @@ function worldRoads(M,lv,w){const cob=streetKind(lv)=='cobble',brickWalk=cob||['
     const cell=r.k=='d'?walk:r.k=='x'?'steps':r.sw?walk:streetKind(lv)=='park'?'gravel':'sidewalk';ribbon(M,p,hw,r.b?.07:.036,cell,null,true);
     if(r.b)for(const sd of [-1,1]){const e=offsetLine(p,sd*(hw+.05));for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1;wallQuad(M,e[i],e[i+1],.07,1.1,'bars',[.2,.2,.22],0,[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd]);wallQuad(M,e[i],e[i+1],-.5,.07,'planks',[.6,.55,.5],0,[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd]);}}}
   // railways: ballast, sleepers and two rails; on a viaduct where the real one is
-  for(const r of w.rails){const p=r.pp,y=r.b?7.2:.07;if(p.length<2)continue;ribbon(M,p,1.7,y,'gravel',r.x?[.7,.72,.66]:null);if(!r.x||r.b)for(const o of [-.72,.72])ribbon(M,offsetLine(p,o),.05,y+.09,'chrome',[.55,.5,.46]);
+  for(const r of w.rails){const p=r.pp,y=r.b?7.2:.07,s0=M.count;if(p.length<2)continue;ribbon(M,p,1.7,y,'gravel',r.x?[.7,.72,.66]:null);if(!r.x||r.b)for(const o of [-.72,.72])ribbon(M,offsetLine(p,o),.05,y+.09,'chrome',[.55,.5,.46]);
     {const L=lineLen(p);for(let s=.4;s<L;s+=WLOW?1.3:.65){const q=lineAt(p,s);ribbon(M,[[q.x-q.dz*1.25,q.z+q.dx*1.25],[q.x+q.dz*1.25,q.z-q.dx*1.25]],.11,y+.03,'wood',[.36,.3,.26]);}}
     if(r.b){for(const sd of [-1,1]){const e=offsetLine(p,sd*1.9);for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1;wallQuad(M,e[i],e[i+1],y-1.2,y+.05,'tin',[.32,.3,.3],0,[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd]);}}
-      const L=lineLen(p);for(let s=4;s<L-2;s+=14){const q=lineAt(p,s);for(const o of [-1.5,1.5]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-.28,-1,pz-.28,px+.28,y-1.2,pz+.28,'tin',[.3,.28,.28],{bottom:1,top:1});}}}}
+      const L=lineLen(p);for(let s=4;s<L-2;s+=14){const q=lineAt(p,s);for(const o of [-1.5,1.5]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-.28,-45,pz-.28,px+.28,y-1.2,pz+.28,'tin',[.3,.28,.28],{bottom:1,top:1});}}}if(r.b)w.level.push([s0,M.count,p,y]);}
   // fences, walls and hedges, where the real ones are
+  
   for(const l of w.lines){const p=l.pp;for(let i=0;i<p.length-1;i++){const d=Math.hypot(p[i+1][0]-p[i][0],p[i+1][1]-p[i][1])||1,n=[(p[i+1][1]-p[i][1])/d,0,-(p[i+1][0]-p[i][0])/d];
       if(l.k=='fence')wallQuad(M,p[i],p[i+1],0,l.h?l.h/10:1.3,'bars',[.16,.16,.18],0,n);else if(l.k=='hedge'){for(const o of [-.35,.35]){const e=offsetLine([p[i],p[i+1]],o);wallQuad(M,e[0],e[1],0,1.1,'leaves2',null,0,n);}ribbon(M,[p[i],p[i+1]],.35,1.1,'leaves2',null);}
       else{for(const o of [-.2,.2]){const e=offsetLine([p[i],p[i+1]],o);wallQuad(M,e[0],e[1],0,l.h?l.h/10:1.4,'stonewall',null,0,n);}ribbon(M,[p[i],p[i+1]],.24,(l.h?l.h/10:1.4)+.01,'granite',null);}}}}
@@ -260,18 +264,51 @@ function worldFurniture(M,lv,w){// trees and parked cars are not built into the 
   // plaques you can read, each on a short post
   for(const k in lv.markers){const [tx,ty]=k.split(',').map(Number),cx=tx*2+1,cz=ty*2+1;M.box(cx-.05,0,cz-.05,cx+.05,1,cz+.05,'black');M.quad([cx-.4,.95,cz+.12],[cx+.4,.95,cz+.12],[cx+.4,1.35,cz-.12],[cx-.4,1.35,cz-.12],'gold',[.7,.6,.4]);M.quad([cx+.4,.95,cz+.1],[cx-.4,.95,cz+.1],[cx-.4,1.35,cz-.14],[cx+.4,1.35,cz-.14],'black');}}
 
-function buildWorldMesh(lv){textDistrict(lv.d.world);const w=lv.world,M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh();
+function buildWorldMesh(lv){textDistrict(lv.d.world);const w=lv.world,M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh(),el=worldElev(w),rigid=[];
   worldGround(M,Wm,lv,w);worldRoads(M,lv,w);
-  for(const b of w.bld){if(b.gone||b.lm)continue;worldBuilding(M,lv,w,b);}
-  for(const lm of w.landmarks||[])worldLandmark(M,lv,w,lm);
+  // a bridge deck or viaduct stays level: it rides clear of the highest ground beneath it
+  if(el)for(const [s0,s1,p,y] of w.level){let lo=1e9,hi=-1e9;const L=lineLen(p);for(let d=0;d<=L;d+=5){const q=lineAt(p,d),g=worldY(w,q.x,q.z);lo=Math.min(lo,g);hi=Math.max(hi,g);}rigid.push([s0,s1,Math.max(hi+1.5,lo+y)-y]);}
+  // a footing down to the lowest ground a building stands over, so nothing floats on a slope
+  const footing=(pp,ay)=>{let lo=ay;for(const q of pp)lo=Math.min(lo,worldY(w,q[0],q[1]));if(ay-lo<.12)return;const n=pp.length;for(let i=0;i<n;i++){const a=pp[i],c=pp[(i+1)%n],l=Math.hypot(c[0]-a[0],c[1]-a[1]);if(l>.1)wallQuad(M,a,c,lo-ay-.4,.02,'granite',[.62,.6,.58],0,[(c[1]-a[1])/l,0,-(c[0]-a[0])/l]);}};
+  for(const b of w.bld){if(b.gone||b.lm)continue;const s0=M.count;worldBuilding(M,lv,w,b);if(!el||M.count==s0)continue;
+    // it stands at the height of the ground by its door, or by the wall nearest a street
+    let ax=b.c[0],az=b.c[1];if(b.door){ax=b.door.x;az=b.door.z;}else{let bd=1e9;const pp=b.pp,n=pp.length;for(let i=0;i<n;i++){const mx=(pp[i][0]+pp[(i+1)%n][0])/2,mz=(pp[i][1]+pp[(i+1)%n][1])/2,rn=roadNear(w,mx,mz,40,q=>q.car);if(rn&&rn.d<bd){bd=rn.d;ax=mx;az=mz;}}}
+    const ay=worldY(w,ax,az);footing(b.pp,ay);rigid.push([s0,M.count,ay]);}
+  for(const lm of w.landmarks||[]){const s0=M.count;worldLandmark(M,lv,w,lm);if(!el||M.count==s0)continue;const f=lm.front||{x:lm.obb.cx,z:lm.obb.cz},ay=worldY(w,f.x,f.z);if(lm.b&&lm.b.pp)footing(lm.b.pp,ay);rigid.push([s0,M.count,ay]);}
   worldFurniture(M,lv,w);for(const pr of lv.props||[])if(pr.kind!='car')propMesh(M,pr);
+  if(el){worldDrape(M,w,rigid);worldDrape(Wm,w,[]);}
   return{main:M,water:Wm,foam:Fm,froth:Fr};}
-
+/* Fitting the flat-built world to the land. The shader lifts every vertex by the ground height beneath it, so the ground
+   only has to be cut finely enough to bend, and anything that must stay level (a building, a bridge deck) has its
+   vertices set so that, once lifted, they all end up at one height. */
+function worldDrape(M,w,rigid){const n=M.count,flag=new Float32Array(n).fill(NaN);for(const [s0,s1,ay] of rigid)for(let i=s0;i<s1;i++)flag[i]=ay;
+  const e=w.el,st=e.step,X0=e.x0,Z0=e.z0,NX=e.nx-1,NZ=e.nz-1,X1=X0+NX*st,Z1=Z0+NZ*st,P=M.pos,UV=M.uv,C=M.col,S=M.sw,N=M.nrm,pos=[],uv=[],col=[],sw=[],nrm=[];
+  const slope=(x,z,o,i)=>{if(x<X0||x>X1||z<Z0||z>Z1)return;const gx=(worldY(w,x+4,z)-worldY(w,x-4,z))/8,gz=(worldY(w,x,z+4)-worldY(w,x,z-4))/8,l=Math.hypot(gx,1,gz);o[i]=-gx/l;o[i+1]=1/l;o[i+2]=-gz/l;};
+  const put=v=>{pos.push(v[0],v[1],v[2]);uv.push(v[3],v[4]);col.push(v[5],v[6],v[7]);sw.push(v[8]);const k=nrm.length;nrm.push(v[9],v[10],v[11]);if(v[10]>.9&&!(v[8]>0))slope(v[0],v[2],nrm,k);},
+    mix=(a,b,t)=>{const m=new Array(12);for(let k=0;k<12;k++)m[k]=a[k]+(b[k]-a[k])*t;m[8]=a[8]<0||b[8]<0?a[8]:m[8];const l=Math.hypot(m[9],m[10],m[11])||1;m[9]/=l;m[10]/=l;m[11]/=l;return m;};
+  // which flat piece of the land a point is over: the square, and which side of its diagonal
+  const piece=(x,z)=>{const fx=(x-X0)/st,fz=(z-Z0)/st,i=fx<0?-1:fx>=NX?NX:Math.floor(fx),j=fz<0?-1:fz>=NZ?NZ:Math.floor(fz);return(i+1)*4096+(j+1)*2+(i>=0&&i<NX&&j>=0&&j<NZ&&(fx-i)+(fz-j)>1?1:0);};
+  // cut a shape along a line; d says how far each point is past it
+  const cut=(poly,d)=>{const D=poly.map(d);let lo=false,hi=false;for(const v of D){if(v<-1e-6)lo=true;if(v>1e-6)hi=true;}if(!lo)return[null,poly];if(!hi)return[poly,null];const A=[],B=[];
+    for(let i=0;i<poly.length;i++){const j=(i+1)%poly.length,a=poly[i],b=poly[j],da=D[i],db=D[j];if(da<=1e-6)A.push(a);if(da>=-1e-6)B.push(a);if((da<-1e-6&&db>1e-6)||(da>1e-6&&db<-1e-6)){const m=mix(a,b,da/(da-db));A.push(m);B.push(m);}}return[A.length>2?A:null,B.length>2?B:null];};
+  const V=i=>[P[i*3],P[i*3+1],P[i*3+2],UV[i*2],UV[i*2+1],C[i*3],C[i*3+1],C[i*3+2],S[i],N[i*3],N[i*3+1],N[i*3+2]],dead=[];
+  for(let t=0;t<n;t+=3){const ay=flag[t];if(ay==ay){// level: cancel the lift under each vertex, add the one height
+      for(let i=t;i<t+3;i++)P[i*3+1]+=ay-worldY(w,P[i*3],P[i*3+2]);continue;}
+    const k0=piece(P[t*3],P[t*3+2]);if(k0==piece(P[t*3+3],P[t*3+5])&&k0==piece(P[t*3+6],P[t*3+8])){for(let i=t;i<t+3;i++)if(N[i*3+1]>.9&&!(S[i]>0))slope(P[i*3],P[i*3+2],N,i*3);continue;}
+    // the triangle lies over more than one piece of land: cut it along the grid lines and the diagonals, so each part lies flat on one piece
+    let polys=[[V(t),V(t+1),V(t+2)]];const xs=[P[t*3],P[t*3+3],P[t*3+6]],zs=[P[t*3+2],P[t*3+5],P[t*3+8]];
+    for(const [vals,ax,o,nmax] of [[xs,0,X0,NX],[zs,2,Z0,NZ]]){const lo=Math.max(0,Math.ceil((Math.min(...vals)-o)/st-1e-9)),hi=Math.min(nmax,Math.floor((Math.max(...vals)-o)/st+1e-9));for(let k=lo;k<=hi;k++){const L=o+k*st,next=[];for(const q of polys){const [a,b]=cut(q,v=>v[ax]-L);if(a)next.push(a);if(b)next.push(b);}polys=next;}}
+    for(const q of polys){let cx=0,cz=0;for(const v of q){cx+=v[0];cz+=v[2];}cx/=q.length;cz/=q.length;const i=Math.floor((cx-X0)/st),j=Math.floor((cz-Z0)/st);let parts=[q];if(i>=0&&i<NX&&j>=0&&j<NZ){const [a,b]=cut(q,v=>(v[0]-X0)/st-i+(v[2]-Z0)/st-j-1);parts=[a,b].filter(Boolean);}
+      for(const g of parts)for(let k=1;k<g.length-1;k++){const a=g[0],b=g[k],c=g[k+1];if(Math.abs((b[0]-a[0])*(c[2]-a[2])-(b[2]-a[2])*(c[0]-a[0]))<1e-7&&Math.abs(a[1]-b[1])+Math.abs(a[1]-c[1])<1e-6)continue;put(a);put(b);put(c);}}
+    dead.push(t);}
+  // each triangle that was cut gives up its place to one of the pieces (or to nothing); the rest of the pieces go on the end
+  let m=pos.length/3;for(const t of dead){if(m>=3){m-=3;for(let k=0;k<3;k++){const i=t+k,j=m+k;P[i*3]=pos[j*3];P[i*3+1]=pos[j*3+1];P[i*3+2]=pos[j*3+2];UV[i*2]=uv[j*2];UV[i*2+1]=uv[j*2+1];C[i*3]=col[j*3];C[i*3+1]=col[j*3+1];C[i*3+2]=col[j*3+2];S[i]=sw[j];N[i*3]=nrm[j*3];N[i*3+1]=nrm[j*3+1];N[i*3+2]=nrm[j*3+2];}}else for(let k=0;k<3;k++){const i=t+k;P[i*3]=P[t*3];P[i*3+1]=P[t*3+1];P[i*3+2]=P[t*3+2];}}
+  for(let i=0;i<m*3;i++){P.push(pos[i]);C.push(col[i]);N.push(nrm[i]);}for(let i=0;i<m*2;i++)UV.push(uv[i]);for(let i=0;i<m;i++)S.push(sw[i]);}
 /* ---------- drawn every frame: the same few trees and cars, placed many times, skipped when out of sight ---------- */
 function wTreeModel(con,v){return getModel('wtree:'+con+':'+v,()=>{const m=new Mesh();if(con){conifer(m,0,0,v*7919+7,1);m.lathe(0,0,0,[[1.3,1.25],[4.6,.75],[7.4,.06]],7,'leaves2',[.42,.55,.42]);}else deciduous(m,0,0,v*7919+13,1);return[{mesh:m,pivot:[0,0,0],name:'t'}];});}
 function worldDraw(){const w=lv.world,sh=PASS=='shadow',V=sh?LVP:PV,far=sh?50:(WLOW?85:150),f2=far*far,cx=sh?p.x:camPos[0],cz=sh?p.z:camPos[2];let n=0;
-  for(const t of w.trees||[]){const x=t[0],z=t[1],dx=x-cx,dz=z-cz;if(dx*dx+dz*dz>f2||!boxVisible(V,[x-5,0,z-5],[x+5,11,z+5],sh))continue;const h=t[2]>>>0,con=h%7==0&&!t[3]?1:0,sc=con?.95+((h>>>9)%4)*.06:t[3]?.72+((h>>>9)%4)*.05:.9+((h>>>9)%4)*.07;
+  for(const t of w.trees||[]){const x=t[0],z=t[1],dx=x-cx,dz=z-cz;if(dx*dx+dz*dz>f2)continue;const ty=worldY(w,x,z);if(!boxVisible(V,[x-5,ty-1,z-5],[x+5,ty+11,z+5],sh))continue;const h=t[2]>>>0,con=h%7==0&&!t[3]?1:0,sc=con?.95+((h>>>9)%4)*.06:t[3]?.72+((h>>>9)%4)*.05:.9+((h>>>9)%4)*.07;
     drawModel(wTreeModel(con,con?h%2:h%6),M4.mul(M4.mul(M4.tr(x,0,z),M4.ry((h%628)/100)),M4.sc(sc)));n++;}
-  const cf=sh?40:(WLOW?70:110);for(const c of lv.props||[]){if(c.kind!='car')continue;const dx=c.x-cx,dz=c.z-cz;if(dx*dx+dz*dz>cf*cf||!boxVisible(V,[c.x-2.6,0,c.z-2.6],[c.x+2.6,2,c.z+2.6],sh))continue;
+  const cf=sh?40:(WLOW?70:110);for(const c of lv.props||[]){if(c.kind!='car')continue;const dx=c.x-cx,dz=c.z-cz;if(dx*dx+dz*dz>cf*cf)continue;const cy=worldY(w,c.x,c.z);if(!boxVisible(V,[c.x-2.6,cy-.5,c.z-2.6],[c.x+2.6,cy+2,c.z+2.6],sh))continue;
     drawModel(getModel('pcar:'+c.col+':'+(c.tx%3),()=>[{mesh:sedan(c.col,(c.tx%3)*7+3),pivot:[0,0,0],name:'body'}]),M4.mul(M4.tr(c.x,.065,c.z),M4.ry(c.yaw)));}
   if(!sh)w.drawn=n;}

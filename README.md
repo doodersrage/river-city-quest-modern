@@ -58,6 +58,15 @@ Outdoors, the game no longer sits on a grid of squares. Each of the 24 neighborh
 - Everything from the original game (people, doors, chests, enemies, plaques, challenges) was moved onto real ground that connects to the rest of the neighborhood; a test walks every district to prove each one can be reached.
 - Cars follow the real street lines, keep right, stop at lights and wait for you. Parked cars sit along real curbs.
 
+## Hills
+
+The ground is no longer flat. Each district carries the real height of the land every 10 metres, so Church Hill climbs 31 metres across the map, Capitol Square stands on its rise, and Belle Isle has its hill above the river.
+
+- The heights are a small texture. The shader lifts every vertex by the ground beneath it, so people, cars, trees and grass all follow the land without each needing to know its height.
+- Buildings and landmarks stay level: each stands at the height of the ground by its door, with a stone footing down the slope. Bridge decks and viaducts ride level above the highest ground under them.
+- The camera, shadows, lamps and on-screen prompts follow the ground too. Collision is unchanged: slopes do not block or slow you.
+- `tools/osm/elev.js` (run by the same GitHub Action as the map data) downloads the heights; `node tools/osm/elevbuild.js <folder>` turns them into `js/worldelev.js`.
+
 ## Free-form rooms
 
 Indoors, every room used to be the same 16 by 11 box. Now each of the 55 rooms and dungeon chambers has its own floor plan: the Capitol is a rotunda, St. John's has an apse, the pyramid's chambers narrow, the quarry and the tunnel are ragged caves, houses are L-shaped or have a slanted wall, and plain walls get curved bays. Pillars are round.
@@ -112,6 +121,8 @@ The tests load the game into Node without a screen. `playthrough.test.js` has a 
 ## Credits
 
 Streets, buildings, parks and water are map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under the Open Database License (ODbL).
+
+Ground heights are from [Terrain Tiles](https://registry.opendata.aws/terrain-tiles) (Mapzen/Tilezen, hosted on the Registry of Open Data on AWS); for Richmond the underlying source is the U.S. Geological Survey's 3D Elevation Program.
 
 The walk and run animations were baked from the CMU Graphics Lab Motion Capture Database by `tools/bake-mocap.js` (BVH conversion by Bruce Hahne). The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
 
