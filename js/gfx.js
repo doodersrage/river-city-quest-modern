@@ -300,24 +300,45 @@ function bakeAO(lv,m){const tall=c=>c!=null&&'BXDWe'.includes(c),T=(x,z)=>tall(t
 let gprog=null,GU={},bladeBuf=null;
 const GVS=`#version 300 es
 precision highp float;layout(location=0) in vec3 aB;layout(location=1) in vec4 aI;layout(location=2) in float aV;
-uniform mat4 uPV;uniform float uTime;uniform vec3 uCam,uFocus;out vec3 vC;out vec3 vW;out float vH;
+uniform mat4 uPV;uniform float uTime;uniform vec3 uCam,uFocus;uniform vec4 uGW;uniform sampler2D uMask;out vec3 vC;out vec3 vW;out float vH;
 uniform highp sampler2D uHgt;uniform vec4 uHG;uniform vec2 uHN;float hgt(vec2 p){if(uHG.w<.5)return 0.;vec2 f=clamp((p-uHG.xy)/uHG.z,vec2(0.),uHN-1.001);ivec2 i=ivec2(floor(f));vec2 t=f-vec2(i);float a=texelFetch(uHgt,i,0).r,b=texelFetch(uHgt,i+ivec2(1,0),0).r,c=texelFetch(uHgt,i+ivec2(0,1),0).r,d=texelFetch(uHgt,i+ivec2(1,1),0).r;return t.x+t.y<=1.?a+t.x*(b-a)+t.y*(c-a):d+(1.-t.x)*(c-d)+(1.-t.y)*(b-d);}
-void main(){float s=sin(aI.z),c=cos(aI.z);vec3 b=vec3(aB.x*c,aB.y,aB.x*s)*vec3(1.,aI.w,1.);float d=distance(aI.xy,uFocus.xz);b.y*=smoothstep(30.,18.,d);
-  float w=sin(uTime*1.7+aI.x*.45+aI.y*.3)*.5+sin(uTime*3.1+aI.x*1.3)*.2;vec3 p=vec3(aI.x,hgt(aI.xy),aI.y)+b+vec3(w*.18,0.,w*.08)*aB.y*aB.y;
+void main(){float s=sin(aI.z),c=cos(aI.z);vec3 b=vec3(aB.x*c,aB.y,aB.x*s)*vec3(1.,aI.w,1.);vec2 q=aI.xy;float fade;
+  // outdoors the blades are one dense patch that follows you, wrapping round as you walk; a mask says where lawn is
+  if(uGW.w>.5){q+=uGW.x*floor((uFocus.xz-q)/uGW.x+.5);vec2 m=q/uGW.yz;fade=smoothstep(uGW.x*.5,uGW.x*.5-7.,distance(q,uFocus.xz))*smoothstep(.45,.7,texture(uMask,m).r)*step(0.,m.x)*step(m.x,1.)*step(0.,m.y)*step(m.y,1.);}
+  else fade=smoothstep(30.,18.,distance(q,uFocus.xz));
+  b*=vec3(step(.02,fade),fade,step(.02,fade));
+  float w=sin(uTime*1.7+q.x*.45+q.y*.3)*.5+sin(uTime*3.1+q.x*1.3)*.2;vec3 p=vec3(q.x,hgt(q),q.y)+b+vec3(w*.18,0.,w*.08)*aB.y*aB.y*aI.w;
   vW=p;vH=aB.y;vC=mix(vec3(.2,.34,.1),vec3(.36,.48,.16),aV)*(.45+aB.y*.8);gl_Position=uPV*vec4(p,1.);}`;
 const GFS=`#version 300 es
 precision highp float;in vec3 vC;in vec3 vW;in float vH;uniform vec3 uSunCol,uSkyCol,uFogCol,uCam;uniform float uFogD,uAmb;out vec4 o;
 void main(){vec3 c=vC*vC*(uSunCol*.35+uSkyCol*uAmb*.5);float d=distance(vW,uCam);float f=1.-exp(-d*uFogD);o=vec4(mix(c,uFogCol,f),1.);}`;
-function buildGrass(lv){if(lv.room)return null;const inst=[],W=lv.world,pavedW=W&&['broad','shockoe','works','cary','jward'].includes(hood(lv));let per=44;
+function buildGrass(lv){if(lv.room)return null;if(lv.world)return buildLawn(lv);const inst=[],W=lv.world,pavedW=W&&['broad','shockoe','works','cary','jward'].includes(hood(lv));let per=44;
   if(W){let n=0;for(const r of lv.d.rows)for(const c of r)if(c=='.')n++;per=Math.max(6,Math.min(30,Math.floor(140000/Math.max(1,n))));}
   for(let z=0;z<lv.h;z++)for(let x=0;x<lv.w;x++){const c=lv.d.rows[z][x];if(c!='.'&&c!=',')continue;if(W&&(pavedW&&!W.areas.some(a=>'park grass cemetery pitch yard'.includes(a.k)&&inPolygon(a.pp,x*2+1,z*2+1))||W.areas.some(a=>(a.k=='wood'||a.k=='scrub')&&inPolygon(a.pp,x*2+1,z*2+1))))continue;const n=c==','?10:per;
     for(let k=0;k<n;k++){const h=hash(x*7+k,z*13,91);if(W){const px=(x+(h%1000)/1000)*TS,pz=(z+((h>>10)%1000)/1000)*TS,rn=roadNear(W,px,pz,9,r=>r.car&&!'avm'.includes(r.k)),rf=roadNear(W,px,pz,5,r=>!r.car||'av'.includes(r.k));if(rn&&rn.d<rn.r.wm/2+2.8||rf&&rf.d<rf.r.wm/2+.35||buildingAt(W,px,pz)||W.areas.some(a=>'parking plaza paved sand deck'.includes(a.k)&&inPolygon(a.pp,px,pz)))continue;}inst.push((x+(h%1000)/1000)*TS,(z+((h>>10)%1000)/1000)*TS,((h>>4)%628)/100,.24+((h>>12)%30)/100,((h>>20)%100)/100);}}
-  if(!inst.length)return null;if(!gprog){gprog=mkProg(GVS,GFS);GU=uniforms(gprog,['uHgt','uHG','uHN','uPV','uTime','uCam','uFocus','uSunCol','uSkyCol','uFogCol','uFogD','uAmb']);
+  if(!inst.length)return null;if(!gprog){gprog=mkProg(GVS,GFS);GU=uniforms(gprog,['uGW','uMask','uHgt','uHG','uHN','uPV','uTime','uCam','uFocus','uSunCol','uSkyCol','uFogCol','uFogD','uAmb']);
     bladeBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);const w=.032;gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-w,0,0,w,0,0,-w*.7,.4,0, w,0,0,w*.7,.4,0,-w*.7,.4,0, -w*.7,.4,0,w*.7,.4,0,0,.8,0]),gl.STATIC_DRAW);}
   const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,0,0);
   const ib=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,ib);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(inst),gl.STATIC_DRAW);
   gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,4,gl.FLOAT,false,20,0);gl.vertexAttribDivisor(1,1);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,1,gl.FLOAT,false,20,16);gl.vertexAttribDivisor(2,1);
   gl.bindVertexArray(null);return{vao,n:inst.length/5};}
-function drawGrass(G){gl.useProgram(gprog);bindHeights(GU);gl.uniformMatrix4fv(GU.uPV,false,PV);gl.uniform1f(GU.uTime,frame/60);gl.uniform3fv(GU.uCam,camPos);gl.uniform3f(GU.uFocus,p.x,0,p.z);
+// Lawn for the real neighborhoods: a mask of where grass grows (one sample a metre), and one patch of short dense blades
+// that is drawn around you wherever you are.
+const LAWN_T=44;
+function buildLawn(lv){const W=lv.world,R=lv.d.rows,paved=['broad','shockoe','works','cary','jward'].includes(hood(lv)),mw=W.w,mh=W.h,mask=new Uint8Array(mw*mh);
+  const green=W.areas.filter(a=>'park grass cemetery pitch yard'.includes(a.k)),bare=W.areas.filter(a=>'wood scrub parking plaza paved sand deck'.includes(a.k)),bb=a=>{if(!a.bb){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const q of a.pp){x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);z0=Math.min(z0,q[1]);z1=Math.max(z1,q[1]);}a.bb=[x0,z0,x1,z1];}return a.bb;},
+    inAny=(L,x,z)=>L.some(a=>{const b=bb(a);return x>=b[0]&&x<=b[2]&&z>=b[1]&&z<=b[3]&&inPolygon(a.pp,x,z);});
+  for(let z=0;z<mh;z++)for(let x=0;x<mw;x++){const c=R[z>>1][x>>1];if(c!='.'&&c!=',')continue;const px=x+.5,pz=z+.5;if(buildingAt(W,px,pz)||inAny(bare,px,pz)||paved&&!inAny(green,px,pz))continue;
+    const rn=roadNear(W,px,pz,9,r=>r.car&&!'avm'.includes(r.k));if(rn&&rn.d<rn.r.wm/2+3.1)continue;const rf=roadNear(W,px,pz,5,r=>!r.car||'av'.includes(r.k));if(rf&&rf.d<rf.r.wm/2+.6)continue;mask[z*mw+x]=255;}
+  if(!gprog){gprog=mkProg(GVS,GFS);GU=uniforms(gprog,['uGW','uMask','uHgt','uHG','uHN','uPV','uTime','uCam','uFocus','uSunCol','uSkyCol','uFogCol','uFogD','uAmb']);
+    bladeBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);const w=.032;gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-w,0,0,w,0,0,-w*.7,.4,0, w,0,0,w*.7,.4,0,-w*.7,.4,0, -w*.7,.4,0,w*.7,.4,0,0,.8,0]),gl.STATIC_DRAW);}
+  const tex=gl.createTexture();gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,mw,mh,0,gl.RED,gl.UNSIGNED_BYTE,mask);gl.pixelStorei(gl.UNPACK_ALIGNMENT,4);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
+  const n=(typeof WLOW!='undefined'&&WLOW?26000:QUAL.lvl==2?90000:60000),inst=new Float32Array(n*5);{let sd=0x9e3779b9;const rnd=()=>{sd=(sd+0x6D2B79F5)|0;let t=Math.imul(sd^(sd>>>15),1|sd);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};for(let k=0;k<n;k++){inst[k*5]=rnd()*LAWN_T;inst[k*5+1]=rnd()*LAWN_T;inst[k*5+2]=rnd()*6.283;inst[k*5+3]=.12+rnd()*.2;inst[k*5+4]=rnd();}}
+  const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,bladeBuf);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,0,0);
+  const ib=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,ib);gl.bufferData(gl.ARRAY_BUFFER,inst,gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,4,gl.FLOAT,false,20,0);gl.vertexAttribDivisor(1,1);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,1,gl.FLOAT,false,20,16);gl.vertexAttribDivisor(2,1);
+  gl.bindVertexArray(null);return{vao,n,mask:tex,w:mw,h:mh};}
+function drawGrass(G){gl.useProgram(gprog);bindHeights(GU);if(G.mask){gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,G.mask);gl.activeTexture(gl.TEXTURE0);gl.uniform1i(GU.uMask,5);gl.uniform4f(GU.uGW,LAWN_T,G.w,G.h,1);}else gl.uniform4f(GU.uGW,1,1,1,0);gl.uniformMatrix4fv(GU.uPV,false,PV);gl.uniform1f(GU.uTime,frame/60);gl.uniform3fv(GU.uCam,camPos);gl.uniform3f(GU.uFocus,p.x,0,p.z);
   gl.uniform3fv(GU.uSunCol,SUN.col);gl.uniform3fv(GU.uSkyCol,SUN.sky);const e=envLook();gl.uniform3fv(GU.uFogCol,e.fogCol.map(v=>Math.pow(v,2.2)));gl.uniform1f(GU.uFogD,HAZE*1.15/Math.max(8,e.fog[1])/3.4);gl.uniform1f(GU.uAmb,e.amb);
   gl.bindVertexArray(G.vao);gl.drawArraysInstanced(gl.TRIANGLES,0,9,G.n);gl.bindVertexArray(null);gl.useProgram(prog);}
