@@ -186,7 +186,7 @@ function worldProps(lv){const w=lv.world,out=[];worldJunctions(w);const seed=lv.
   const lamps=[];for(const q of w.pts)if(q.k=='lamp'&&q.xm>2&&q.zm>2&&q.xm<w.w-2&&q.zm<w.h-2)lamps.push([q.xm,q.zm]);
   for(const r of w.roads){if(!'pstr'.includes(r.k)||r.b)continue;const L=lineLen(r.pp);for(let s=12+hash(r.p[0],r.p[1],5)%9,i=0;s<L-6;s+=31,i++){const q=lineAt(offsetLine(r.pp,(i%2?1:-1)*(r.wm/2+.9)),s);if(q.x<3||q.z<3||q.x>w.w-3||q.z>w.h-3||buildingAt(w,q.x,q.z)||lamps.some(l=>Math.hypot(l[0]-q.x,l[1]-q.z)<16)||lamps.length>44)continue;lamps.push([q.x,q.z]);}}
   w.lampsDeco=lamps.filter(([x,z])=>!lv.lamps.some(l=>Math.hypot(l.tx*2+1-x,l.ty*2+1-z)<12));return out;}
-function worldFurniture(M,lv,w){for(const t of w.trees){const [x,z,h,street]=t;if(h%7==0&&!street){const sc=.95+((h>>>9)%4)*.06;conifer(M,x,z,h,sc);M.lathe(x,0,z,[[1.3*sc,1.25*sc],[4.6*sc,.75*sc],[7.4*sc,.06]],7,'leaves2',[.42,.55,.42]);}else deciduous(M,x,z,h,street?.72+((h>>>9)%4)*.05:.9+((h>>>9)%4)*.07);}
+function worldFurniture(M,lv,w){// trees and parked cars are not built into the ground: a few shapes are drawn again and again, only where you can see them (worldDraw)
   for(const [x,z,h] of w.graves||[]){const k=h%4,g=[[.74,.74,.72],[.6,.6,.6],[.8,.78,.72],[.5,.52,.5]][k];if(k==3){M.box(x-.22,0,z-.22,x+.22,.5,z+.22,'granite',g);M.lathe(x,.5,z,[[0,.14],[1.5,.08],[1.7,0]],4,'granite',g);}else{M.box(x-.32,0,z-.09,x+.32,.75+k*.15,z+.09,k==1?'granite':'marble',g);if(k==2)M.box(x-.38,0,z-.14,x+.38,.12,z+.14,'granite',g);}}
   lv.sigHeads=[];const dk=[.12,.13,.14],gas=['chill','shockoe','fan','jward','civic'].includes(hood(lv));
   const gasLamp=(cx,cz,tx,ty)=>{M.lathe(cx,0,cz,[[0,.2],[.25,.18],[.35,.1],[.6,.07],[2.5,.06],[2.6,.1]],6,'black');M.box(cx-.22,2.6,cz-.22,cx+.22,2.68,cz+.22,'black');M.lathe(cx,2.68,cz,[[0,.16],[.4,.24],[.55,.26]],4,'glass',null,1,1);M.lathe(cx,3.23,cz,[[0,.3],[.12,.28],[.32,.06],[.42,0]],4,'black');M.sphere(cx,3.68,cz,.05,4,2,'black');lv.glows.push([cx,2.95,cz,tx,ty]);};
@@ -223,5 +223,14 @@ function buildWorldMesh(lv){const w=lv.world,M=new Mesh(),Wm=new Mesh(),Fm=new M
   worldGround(M,Wm,lv,w);worldRoads(M,lv,w);
   for(const b of w.bld){if(b.gone||b.lm)continue;worldBuilding(M,lv,w,b);}
   for(const lm of w.landmarks||[])worldLandmark(M,lv,w,lm);
-  worldFurniture(M,lv,w);for(const pr of lv.props||[])propMesh(M,pr);
+  worldFurniture(M,lv,w);for(const pr of lv.props||[])if(pr.kind!='car')propMesh(M,pr);
   return{main:M,water:Wm,foam:Fm,froth:Fr};}
+
+/* ---------- drawn every frame: the same few trees and cars, placed many times, skipped when out of sight ---------- */
+function wTreeModel(con,v){return getModel('wtree:'+con+':'+v,()=>{const m=new Mesh();if(con){conifer(m,0,0,v*7919+7,1);m.lathe(0,0,0,[[1.3,1.25],[4.6,.75],[7.4,.06]],7,'leaves2',[.42,.55,.42]);}else deciduous(m,0,0,v*7919+13,1);return[{mesh:m,pivot:[0,0,0],name:'t'}];});}
+function worldDraw(){const w=lv.world,sh=PASS=='shadow',V=sh?LVP:PV,far=sh?50:(WLOW?85:150),f2=far*far,cx=sh?p.x:camPos[0],cz=sh?p.z:camPos[2];let n=0;
+  for(const t of w.trees||[]){const x=t[0],z=t[1],dx=x-cx,dz=z-cz;if(dx*dx+dz*dz>f2||!boxVisible(V,[x-5,0,z-5],[x+5,11,z+5],sh))continue;const h=t[2]>>>0,con=h%7==0&&!t[3]?1:0,sc=con?.95+((h>>>9)%4)*.06:t[3]?.72+((h>>>9)%4)*.05:.9+((h>>>9)%4)*.07;
+    drawModel(wTreeModel(con,con?h%2:h%6),M4.mul(M4.mul(M4.tr(x,0,z),M4.ry((h%628)/100)),M4.sc(sc)));n++;}
+  const cf=sh?40:(WLOW?70:110);for(const c of lv.props||[]){if(c.kind!='car')continue;const dx=c.x-cx,dz=c.z-cz;if(dx*dx+dz*dz>cf*cf||!boxVisible(V,[c.x-2.6,0,c.z-2.6],[c.x+2.6,2,c.z+2.6],sh))continue;
+    drawModel(getModel('pcar:'+c.col+':'+(c.tx%3),()=>[{mesh:sedan(c.col,(c.tx%3)*7+3),pivot:[0,0,0],name:'body'}]),M4.mul(M4.tr(c.x,.065,c.z),M4.ry(c.yaw)));}
+  if(!sh)w.drawn=n;}
