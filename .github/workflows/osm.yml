@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir -p osm-raw
           git fetch -q --depth 1 origin osm-raw 2>/dev/null && git archive FETCH_HEAD | tar -x -C osm-raw || echo "nothing yet"
-          rm -f osm-raw/index.json; ls osm-raw | wc -l
+          rm -f osm-raw/index.json; find osm-raw -type f ! -name '*.v2.json.gz' -delete; ls osm-raw | wc -l
       - name: Download from OpenStreetMap
         run: node tools/osm/fetch.js osm-raw
       - name: Store on the osm-raw branch
