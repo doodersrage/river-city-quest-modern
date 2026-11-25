@@ -9,7 +9,8 @@ const WUP=[0,1,0];
 const WLOW=typeof navigator!='undefined'&&/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
 const tileOf=cell=>-(CELL[cell]+1);// sway below zero tells the shader this surface repeats its texture
 // flat ground triangle, texture laid out by position so neighbors always match
-function gTri(M,a,b,c,cell,col){const k=col||[1,1,1],s=M.swayV;M.swayV=tileOf(cell);M.tri(a,b,c,[a[0]/2,a[2]/2],[b[0]/2,b[2]/2],[c[0]/2,c[2]/2],k,k,k,WUP,WUP,WUP);M.swayV=s;}
+function gTri(M,a,b,c,cell,col){const k=col||[1,1,1],s=M.swayV,q=cell=='asphalt'?1.15:2;// asphalt's grain is finer than paving's
+  M.swayV=tileOf(cell);M.tri(a,b,c,[a[0]/q,a[2]/q],[b[0]/q,b[2]/q],[c[0]/q,c[2]/q],k,k,k,WUP,WUP,WUP);M.swayV=s;}
 // cut a simple outline into triangles
 function earcut(pp){const n=pp.length,out=[];if(n<3)return out;const idx=[];for(let i=0;i<n;i++)idx.push(i);const sgn=polyArea(pp)>0?1:-1;let guard=n*n+10;
   const cross=(a,b,c)=>((pp[b][0]-pp[a][0])*(pp[c][1]-pp[a][1])-(pp[b][1]-pp[a][1])*(pp[c][0]-pp[a][0]))*sgn;
