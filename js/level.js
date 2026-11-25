@@ -11,7 +11,8 @@ function edgeLink(id,cells,h){const [cx,cy]=cells[0],[ar,co]=id.split(':'),[ax,a
   const n=cy==0?[ax,ay-1]:cy==h-1?[ax,ay+1]:cx==0?[ax-1,ay]:[ax+1,ay];return[id,ar+':'+n[0]+','+n[1]].sort().join('|');}
 function buildLevel(id){
   const d=sceneData(id);if(!d)return null;
-  const g=d.rows.map(r=>r.split('')),room=id.indexOf('ow:')!=0,lv={id,d,name:d.name,w:d.w,h:d.h,base:d.base,room,dungeon:room&&DUNGEONS.includes(d.area),
+  if(id.indexOf('ow:')!=0&&typeof roomPlan=='function')roomPlan(id,d);
+  const g=d.rows.map(r=>r.split('')),room=id.indexOf('ow:')!=0,lv={id,d,plan:d.plan||null,name:d.name,w:d.w,h:d.h,base:d.base,room,dungeon:room&&DUNGEONS.includes(d.area),
     g,dyn:[],glows:[],markers:{},doors:d.doors,lamps:d.lamps.map(([x,y])=>({tx:x,ty:y,lit:false})),spots:d.spots||[]};
   for(const k in d.reads)lv.markers[k]=d.reads[k];
   if(d.world){lv.world=worldOf(d.world);lv.props=worldProps(lv);lv.waterPts=[];}else lv.props=room?[]:scatterProps(lv);
@@ -92,6 +93,7 @@ function buildMesh(lv){if(lv.world)return buildWorldMesh(lv);
   const flC=room?tint((sty.fl||[])[0],lit?.86:.37):null,wlC=room?tint((sty.wl||[])[0],lit?.86:.42):null,flCell=lit?(sty.wood?'woodfl':'tilefl'):'floor',wlCell=lit?(lv.d.area=='conserv'?'glass':'plaster'):'qwall';
   lv.flC=flC;
   for(let y=0;y<lv.h;y++)for(let x=0;x<lv.w;x++){const c=rows[y][x],X0=x*TS,Z0=y*TS,X1=X0+TS,Z1=Z0+TS,cx=X0+TS/2,cz=Z0+TS/2,h=hash(x,y,lv.d.ax*31+lv.d.ay);
+    if(lv.plan&&c=='W')continue;
     // ground
     if(WATER.includes(c)){(c=='~'?Fm:Wm).floor(X0,Z0,X1,Z1,-.35,'white');
       for(const [dx,dy,a,b] of [[0,-1,[X1,Z0],[X0,Z0]],[0,1,[X0,Z1],[X1,Z1]],[-1,0,[X0,Z0],[X0,Z1]],[1,0,[X1,Z1],[X1,Z0]]]){const n=src(x+dx,y+dy);if(n!=null&&!WATER.includes(n)&&n!='='&&n!='-')M.wall(a[0],a[1],b[0],b[1],-1.2,0,room?'qwall':'dirt',null,.7);}
@@ -106,7 +108,7 @@ function buildMesh(lv){if(lv.world)return buildWorldMesh(lv);
       for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const n=src(x+dx,y+dy);if(n&&WATER.includes(n)){const ax=dx?(dx>0?X1-.15:X0):X0,az=dy?(dy>0?Z1-.15:Z0):Z0;M.box(ax,.06,az,dx?ax+.15:X1,1,dy?az+.15:Z1,'wood');}}
       Wm.floor(X0,Z0,X1,Z1,-.35,'white');continue;}
     if(c=='_'){M.floor(X0,Z0,X1,Z1,-3,'black');for(const [dx,dy,a,b] of [[0,-1,[X1,Z0],[X0,Z0]],[0,1,[X0,Z1],[X1,Z1]],[-1,0,[X0,Z0],[X0,Z1]],[1,0,[X1,Z1],[X1,Z0]]]){const n=src(x+dx,y+dy);if(n!='_'&&n!='|')M.wall(a[0],a[1],b[0],b[1],-3,0,wlCell,[wlC[0]*.4,wlC[1]*.4,wlC[2]*.4]);}continue;}
-    M.floor(X0,Z0,X1,Z1,0,room?flCell:groundCell(lv,c,x,y),room?(c=='E'?[.8,.8,.8]:flC):null);
+    if(!lv.plan)M.floor(X0,Z0,X1,Z1,0,room?flCell:groundCell(lv,c,x,y),room?(c=='E'?[.8,.8,.8]:flC):null);
     if(!room)groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h);
     // things standing on the tile
     switch(c){
@@ -196,6 +198,7 @@ function buildMesh(lv){if(lv.world)return buildWorldMesh(lv);
     else if(fd[1]==-1)M.quad([cx+w,0,Z0-o],[cx-w,0,Z0-o],[cx-w,2.4,Z0-o],[cx+w,2.4,Z0-o],'planks',[.22,.15,.1]);
     else if(fd[0]==1)M.quad([X0+TS+o,0,cz+w],[X0+TS+o,0,cz-w],[X0+TS+o,2.4,cz-w],[X0+TS+o,2.4,cz+w],'door');
     else M.quad([X0-o,0,cz-w],[X0-o,0,cz+w],[X0-o,2.4,cz+w],[X0-o,2.4,cz-w],'door');}
+  if(lv.plan)roomPlanMesh(M,lv,flCell,flC,wlCell,wlC,lit);
   return{main:M,water:Wm,foam:Fm,froth:Fr};}
 function tuftAt(M,x,z,s,cell,yaw){const c=Math.cos(yaw)*s,n=Math.sin(yaw)*s;M.swayV=.035;M.quad([x-c,0,z-n],[x+c,0,z+n],[x+c,s*.9,z+n],[x-c,s*.9,z-n],cell);M.quad([x+n,0,z-c],[x-n,0,z+c],[x-n,s*.9,z+c],[x+n,s*.9,z-c],cell);M.swayV=0;}
 function groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h){

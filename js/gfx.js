@@ -176,7 +176,7 @@ function mkVAO(m,dynamic){const vao=gl.createVertexArray();gl.bindVertexArray(va
 function upload(o,m){gl.bindVertexArray(o.vao);ATTR.forEach(([,size,key],i)=>{if(!o.bufs[i])return;gl.bindBuffer(gl.ARRAY_BUFFER,o.bufs[i]);gl.bufferData(gl.ARRAY_BUFFER,attrData(m,key,size),gl.DYNAMIC_DRAW);});o.n=m.count;gl.bindVertexArray(null);}
 function meshGL(m){return m.gl||(m.gl=mkVAO(m));}
 let curSceneId=null;
-function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);if(!lv.world){bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);}sceneGL={lv,main:{chunks:splitMesh(b.main,16).map(c=>({vao:mkVAO(c.m),lo:c.lo,hi:c.hi}))},water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}
+function sceneMeshes(){if(curSceneId!==lv.id||!sceneGL||sceneGL.lv!==lv){const b=buildMesh(lv);if(!lv.world){if(!lv.plan)bakeAO(lv,b.main);if(!lv.room)skirt(lv,b);}sceneGL={lv,main:{chunks:splitMesh(b.main,16).map(c=>({vao:mkVAO(c.m),lo:c.lo,hi:c.hi}))},water:mkVAO(b.water),foam:mkVAO(b.foam),froth:mkVAO(b.froth),grass:typeof buildGrass=='function'?buildGrass(lv):null};curSceneId=lv.id;}return sceneGL;}
 
 /* ---------- drawing calls the game uses ---------- */
 // the level is cut into pieces about 16 m square so only the ones in view (or casting shadows into view) are drawn

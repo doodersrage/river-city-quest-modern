@@ -48,3 +48,19 @@ ok2(M['ow:2,1'].lm.some(L=>L.art=='cityhall')&&M['ow:2,1'].lm.some(L=>L.art=='te
 {const lv=G.buildLevel('ow:1,1'),w=lv.world;let wrong=0,n=0;for(const b of w.bld){if(b.gone||b.t=='roof'||b.ar<60)continue;n++;if(G.worldBlocked(w,b.c[0],b.c[1],.4)==null&&G.buildingAt(w,b.c[0],b.c[1]))wrong++;}
   let onRoad=0,rb=0;for(const r of w.roads){if(!r.car||r.b)continue;for(let i=0;i<r.pp.length-1;i++){const a=r.pp[i],b=r.pp[i+1],x=(a[0]+b[0])/2,z=(a[1]+b[1])/2;if(x<5||z<5||x>395||z>295)continue;onRoad++;if(G.buildingAt(w,x,z))rb++;}}
   ok2(n>100&&!wrong&&onRoad>50&&rb<onRoad*.03,'in the Fan, '+n+' buildings are solid and '+onRoad+' stretches of street are open ('+rb+' under a roof)');}}
+// free-form rooms: every room has its own outline, the walls are that outline, and nothing is walled off
+{const ok3=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};const R=G.RCQ.rooms,kinds={},cut=[];let n=0,boxes=0,open=0;
+for(const id in R){const lv=G.buildLevel(id),pl=lv.plan,d=lv.d;n++;if(!pl){cut.push(id+' has no plan');continue;}const fam=pl.name.split(' ')[0];kinds[fam]=(kinds[fam]||0)+1;if(fam=='box')boxes++;
+  const free=(x,z)=>{if(pl.sdf(x,z)>-.42)return false;const c=lv.g[Math.floor(z/2)]&&lv.g[Math.floor(z/2)][Math.floor(x/2)];return c==null||c=='W'||'LH%'.includes(c)||G.walkable(c)||c=='_'||c=='w';};
+  const N=64,H=44,seen=new Uint8Array(N*H),q=[];let s=null;for(let j=0;j<H&&!s;j++)for(let i=0;i<N&&!s;i++)if(free(i/2+.25,j/2+.25)&&Math.abs(i/2-16)<3&&Math.abs(j/2-11)<3)s=[i,j];if(!s){cut.push(id+' has no floor in the middle');continue;}
+  seen[s[1]*N+s[0]]=1;q.push(s);while(q.length){const [x,z]=q.pop();for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1]]){const i=x+a,j=z+b;if(i<0||j<0||i>=N||j>=H||seen[j*N+i]||!free(i/2+.25,j/2+.25))continue;seen[j*N+i]=1;q.push([i,j]);}}
+  const reach=(tx,ty,r)=>{const R2=Math.ceil(r*2);for(let b=-R2;b<=R2;b++)for(let a=-R2;a<=R2;a++){const i=Math.floor((tx*2+1)*2)+a,j=Math.floor((ty*2+1)*2)+b;if(i>=0&&j>=0&&i<N&&j<H&&seen[j*N+i])return true;}return false;};
+  for(const c of d.npcs||[])if(!reach(c.tx,c.ty,2.2))cut.push(id+' '+(c.who||c.talk));for(const k of ['chests','items'])for(const c of d[k]||[])if(!reach(c.tx,c.ty,2.2))cut.push(id+' '+k+' '+c.id);for(const e of d.en||[])if(!reach(e[1],e[2],1.5))cut.push(id+' enemy '+e[0]);
+  for(let y=0;y<d.h;y++)for(let x=0;x<d.w;x++){const c=d.rows[y][x],ring=x==0||y==0||x==d.w-1||y==d.h-1;if(ring&&c!='W'){open++;if(!reach(x,y,.9))cut.push(id+' way out at '+x+','+y);}else if(!ring&&c!='W'&&c!='F'&&!reach(x,y,4.2))cut.push(id+' '+c+' at '+x+','+y);}
+  // and the old square corners really are wall now where the outline cut them off
+  if(fam!='box'&&pl.carved<1&&!pl.bays)cut.push(id+' kept its old box');}
+ok3(n==55&&Object.keys(kinds).length>=8&&boxes<=4,n+' rooms drawn as free-form floor plans in '+Object.keys(kinds).length+' kinds of outline ('+Object.entries(kinds).map(e=>e[1]+' '+e[0]).join(', ')+')');
+ok3(!cut.length,'every person, chest, enemy, fixture and way out ('+open+' of them) is on floor you can walk to'+(cut.length?' (cut off: '+cut.slice(0,10).join('; ')+')':''));
+// the wall is the outline, not the squares: you can stand in an old corner square only where the outline lets you
+{G.startGame(null);G.dlg=null;G.loadScene('capitol:0,0',16,12,0);const pl=G.lv.plan;let agree=0,tot=0;for(let k=0;k<600;k++){const x=1+(k*7.31)%30,z=1+(k*3.17)%20;tot++;if((pl.sdf(x,z)>-.42)==(G.blockedCircle(x,z,.42)=='W'))agree++;else if(G.blockedCircle(x,z,.42))agree++;}
+  ok3(agree==tot&&G.blockedCircle(3.2,3.2,.42)=='W'&&!G.blockedCircle(16,11,.42),"the Capitol's rotunda is round to walk in: its old corners are solid and its middle is open");}}

@@ -57,7 +57,18 @@ Outdoors, the game no longer sits on a grid of squares. Each of the 24 neighborh
 - Collision follows the real shapes. You can walk any alley that is really there, at any angle.
 - Everything from the original game (people, doors, chests, enemies, plaques, challenges) was moved onto real ground that connects to the rest of the neighborhood; a test walks every district to prove each one can be reached.
 - Cars follow the real street lines, keep right, stop at lights and wait for you. Parked cars sit along real curbs.
-- Rooms and dungeons are still built from squares. So is the puzzle logic inside them.
+
+## Free-form rooms
+
+Indoors, every room used to be the same 16 by 11 box. Now each of the 55 rooms and dungeon chambers has its own floor plan: the Capitol is a rotunda, St. John's has an apse, the pyramid's chambers narrow, the quarry and the tunnel are ragged caves, houses are L-shaped or have a slanted wall, and plain walls get curved bays. Pillars are round.
+
+- A room's outline is a distance field (`js/roomplan.js`). The floor, walls and wall tops are traced from it, and collision uses the same field, so walls can curve or run at any angle.
+- Each room picks the strongest shape that still leaves every person, chest, switch, block and way out on open floor, with everything that could be walked to before still walkable. A test checks all 55.
+- Squares remain only as a notebook for puzzles (which square a block or switch is on). Pools and pits still have straight edges.
+
+| | |
+|---|---|
+| ![St. John's, with its apse and side bays](screenshots/room-st-johns.jpg) | ![The quarry, a cave](screenshots/room-quarry.jpg) |
 
 The map data is fetched by a GitHub Action (`.github/workflows/osm.yml`, run it from the Actions tab), which saves the raw download on the `osm-raw` branch. `node tools/osm/build.js <folder of raw files>` turns that into `js/worlddata.js`. District centres are in `tools/osm/districts.json`.
 
@@ -73,6 +84,7 @@ Plain JavaScript and WebGL 2, no build step and no libraries. The scripts load i
 - `js/world.js`: reads that data, answers what is where (wall, water, street), and moves the original game's content onto the real ground
 - `js/worldmesh.js`: builds what you see outdoors: ground, water, streets, buildings, landmarks, trees and street furniture
 - `js/traffic.js`: cars, signals and people walking
+- `js/roomplan.js`: the free-form floor plan of each room and dungeon chamber
 - `js/models.js`: low-poly people, creatures and props
 - `js/game.js`: the game itself, with no drawing in it
 - `js/talk.js`: what everyone says

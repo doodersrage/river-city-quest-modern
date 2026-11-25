@@ -24,7 +24,9 @@ function passable(c){return walkable(c)||c=='~'&&st&&st.items.kayak;}
 function blockedCircle(x,z,r){if(lv.world){const c=worldBlocked(lv.world,x,z,r);if(c)return c;// the notebook grid only holds the things set down on the ground: chests, plaques, lamps
     for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r]]){const q=tAt(x+dx,z+dz);if(q!=null&&'cMljb%'.includes(q)&&Math.hypot(x-(Math.floor((x+dx)/TS)+.5)*TS,z-(Math.floor((z+dz)/TS)+.5)*TS)<r+.45)return q;}
     for(const pr of lv.props||[])if(pr.solid&&Math.abs(x-pr.x)<pr.solid[0]+r&&Math.abs(z-pr.z)<pr.solid[1]+r)return'car';if(typeof trafficBlock=='function'&&trafficBlock(x,z,r))return'car';return null;}
-  for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r],[0,-r],[0,r],[-r,0],[r,0]]){const c=tAt(x+dx,z+dz);if(c!=null&&!passable(c))return c;}
+  if(lv.plan){if(planBlocked(lv.plan,x,z,r))return'W';// walls are the room's own outline; the squares only hold what stands on the floor
+    for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r],[0,-r],[0,r],[-r,0],[r,0]]){const c=tAt(x+dx,z+dz);if(c!=null&&c!='W'&&!passable(c))return c;}}
+  else for(const [dx,dz] of [[-r,-r],[r,-r],[-r,r],[r,r],[0,-r],[0,r],[-r,0],[r,0]]){const c=tAt(x+dx,z+dz);if(c!=null&&!passable(c))return c;}
   for(const pr of lv.props||[])if(pr.solid&&Math.abs(x-pr.x)<pr.solid[0]+r&&Math.abs(z-pr.z)<pr.solid[1]+r)return'car';if(typeof trafficBlock=='function'&&trafficBlock(x,z,r))return'car';return null;}
 function npcBlock(x,z){for(const n of npcs)if(Math.hypot(n.x-x,n.z-z)<.85)return n;return null;}
 const centerOf=(tx,ty)=>[tx*TS+TS/2,ty*TS+TS/2];
