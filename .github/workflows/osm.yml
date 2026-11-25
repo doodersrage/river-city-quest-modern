@@ -1,11 +1,12 @@
 name: map data
-# Downloads the real streets and buildings for each neighborhood from OpenStreetMap and stores the raw files
+# Downloads the real streets and buildings for each neighborhood from OpenStreetMap, and the ground heights from
+# the Terrain Tiles open data set, and stores the raw files
 # on the osm-raw branch, where tools/osm/build.js turns them into the game's maps.
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['tools/osm/fetch.js', 'tools/osm/districts.json', '.github/workflows/osm.yml']
+    paths: ['tools/osm/fetch.js', 'tools/osm/elev.js', 'tools/osm/districts.json', '.github/workflows/osm.yml']
 permissions:
   contents: write
 concurrency:
@@ -27,6 +28,9 @@ jobs:
           rm -f osm-raw/index.json; find osm-raw -type f ! -name '*.v2.json.gz' -delete; ls osm-raw | wc -l
       - name: Download from OpenStreetMap
         run: node tools/osm/fetch.js osm-raw
+      - name: Download ground heights
+        if: always()
+        run: node tools/osm/elev.js osm-raw || echo "no heights this time"
       - name: Store on the osm-raw branch
         if: always()
         run: |
