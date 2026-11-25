@@ -33,6 +33,11 @@ function walkable(c){return c!=null&&WALK.includes(c);}
 function setTile(lv,tx,ty,c){lv.g[ty][tx]=c;}
 
 /* ---------- street clutter: hydrants, cans, boxes, signs and parked cars ---------- */
+// what kind of roadway a tile is: part of a street running east-west or north-south (with how far in from each curb), a crossing, or neither
+function roadKind(lv,x,y){const C=lv._rk||(lv._rk=new Map()),key=x+y*512;if(C.has(key))return C.get(key);const R=lv.d.rows,p=(a,b)=>R[b]&&R[b][a]=='p';let o={t:null};
+  if(p(x,y)){let a=0,b=0,l=0,r=0;while(a<14&&p(x,y-a-1))a++;while(b<14&&p(x,y+b+1))b++;while(l<14&&p(x-l-1,y))l++;while(r<14&&p(x+r+1,y))r++;const n=a+b+1,m=l+r+1;
+    o={a,b,l,r,n,m,t:n<=6&&m>=10?'ew':m<=6&&n>=10?'ns':n>6&&m>6?'x':null};}
+  C.set(key,o);return o;}
 function scatterProps(lv){const rows=lv.d.rows,out=[],busy=new Set(),avoid=new Set();
   for(const k in lv.d.reads){const [x,y]=k.split(',').map(Number);for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)avoid.add((x+a)+','+(y+b));}
   for(const [x,y] of (lv.d.spots||[]).concat((lv.d.doors||[]).map(d=>[d.tx,d.ty]),(lv.d.npcs||[]).map(n=>[n.tx,n.ty]),(lv.d.chests||[]).map(c=>[c.tx,c.ty])))for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)avoid.add((x+a)+','+(y+b));
@@ -43,12 +48,17 @@ function scatterProps(lv){const rows=lv.d.rows,out=[],busy=new Set(),avoid=new S
         if(kind)out.push({kind,tx:x,ty:y,x:x*TS+TS/2+wall[0]*.62,z:y*TS+TS/2+wall[1]*.62,yaw:Math.atan2(-wall[0],-wall[1])});}
       const road=[[0,-1],[0,1],[-1,0],[1,0]].find(([dx,dy])=>c(x+dx,y+dy)=='p');if(t=='s'&&road&&h%17==0&&!near(x,y,4))out.push({kind:'sign',tx:x,ty:y,x:x*TS+TS/2+road[0]*.7,z:y*TS+TS/2+road[1]*.7,yaw:Math.atan2(road[0],road[1])});}
     if(t=='.'&&[[0,-1],[0,1],[-1,0],[1,0]].some(([dx,dy])=>c(x+dx,y+dy)=='i')&&h%2==0&&!near(x,y,2))out.push({kind:'can',tx:x,ty:y,x:x*TS+TS/2,z:y*TS+TS/2,yaw:0});}
-  // parked cars along the curb of a wide street
+  // parked cars: parallel to the curb and wholly on the roadway, clear of corners, on streets running either way; and nose-in in parking lots
   const av1=new Set();for(const [x,y] of (lv.d.spots||[]).concat((lv.d.npcs||[]).map(n=>[n.tx,n.ty]),(lv.d.doors||[]).map(d=>[d.tx,d.ty])))for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)av1.add((x+a)+','+(y+b));
-  let cars=0;for(let y=1;y<lv.h-1&&cars<4;y++)for(let x=2;x<lv.w-3&&cars<4;x++){if(av1.has(x+','+y)||av1.has((x+1)+','+y))continue;
-    const curbN=c(x,y-1)=='s'&&c(x+1,y-1)=='s',curbS=c(x,y+1)=='s'&&c(x+1,y+1)=='s';if(c(x,y)!='p'||c(x+1,y)!='p'||!(curbN||curbS))continue;
-    if(c(x,y+(curbN?1:-1))!='p'||c(x,y+(curbN?2:-2))!='p')continue;if(hash(x,y,seed+9)%3||out.some(p=>p.kind=='car'&&Math.abs(p.ty-y)<2&&Math.abs(p.tx-x)<6))continue;
-    out.push({kind:'car',tx:x,ty:y,x:(x+1)*TS,z:y*TS+TS/2+(curbN?-.35:.35),yaw:Math.PI/2,solid:[1.75,.85],col:['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30'][hash(x,y,3)%7]});cars++;}
+  const COLS=['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30','#8a8c90','#3a2a20'],inLot=(x,y)=>(lv.d.lots||[]).some(L=>x>=L[0]&&x<=L[2]&&y>=L[1]&&y<=L[3]),curb=q=>q=='s'||q=='t'||q=='l'||q=='M';
+  let cars=0;const maxCars=lv.w>40?20:5,clear=(px,pz,rx,rz)=>!out.some(p=>p.kind=='car'&&Math.abs(p.x-px)<rx+p.solid[0]+.5&&Math.abs(p.z-pz)<rz+p.solid[1]+.3);
+  for(let y=2;y<lv.h-2&&cars<maxCars;y++)for(let x=2;x<lv.w-3&&cars<maxCars;x++){if(c(x,y)!='p'||inLot(x,y)||av1.has(x+','+y)||hash(x,y,seed+9)%3)continue;const k=roadKind(lv,x,y);if(!k.t||k.t=='x')continue;
+    if(k.t=='ew'&&k.n>=3){const side=k.a==0&&curb(c(x,y-1))?-1:k.b==0&&curb(c(x,y+1))?1:0;if(!side||[-2,-1,0,1,2,3].some(d=>roadKind(lv,x+d,y).t!='ew'))continue;const px=(x+1)*TS,pz=y*TS+TS/2-side*.15;
+      if(clear(px,pz,2.2,.9)){out.push({kind:'car',tx:x,ty:y,x:px,z:pz,yaw:side>0?0:Math.PI,solid:[2.2,.9],col:COLS[hash(x,y,3)%COLS.length]});cars++;}}
+    else if(k.t=='ns'&&k.m>=3){const side=k.l==0&&curb(c(x-1,y))?-1:k.r==0&&curb(c(x+1,y))?1:0;if(!side||[-2,-1,0,1,2,3].some(d=>roadKind(lv,x,y+d).t!='ns'))continue;const px=x*TS+TS/2-side*.15,pz=(y+1)*TS;
+      if(clear(px,pz,.9,2.2)){out.push({kind:'car',tx:x,ty:y,x:px,z:pz,yaw:side>0?Math.PI/2:-Math.PI/2,solid:[.9,2.2],col:COLS[hash(x,y,3)%COLS.length]});cars++;}}}
+  for(const L of lv.d.lots||[]){const x0=L[0]*TS,x1=(L[2]+1)*TS,z0=L[1]*TS,z1=(L[3]+1)*TS,rowsZ=z1-z0>=11.5?[[z0+2.5,1],[z1-2.5,-1]]:[[z0+2.5,1]];
+    for(const [pz,dir] of rowsZ)for(let px=x0+1.45,i=0;px<x1-1.3;px+=2.7,i++){if(hash(Math.round(px),Math.round(pz),seed+4)%10<4)continue;out.push({kind:'car',tx:Math.floor(px/TS),ty:Math.floor(pz/TS),x:px,z:pz,yaw:dir>0?Math.PI/2:-Math.PI/2,solid:[.9,2.2],col:COLS[hash(Math.round(px*3),Math.round(pz),3)%COLS.length]});}}
   return out;}
 function propMesh(M,pr){const {x,z}=pr,R=(a,b,c,d,e,f,cells,col)=>{const cs=Math.cos(pr.yaw),sn=Math.sin(pr.yaw);const pts=[[a,c],[d,c],[a,f],[d,f]].map(([u,v])=>[x+u*cs+v*sn,z-u*sn+v*cs]);
     M.box(Math.min(...pts.map(p=>p[0])),b,Math.min(...pts.map(p=>p[1])),Math.max(...pts.map(p=>p[0])),e,Math.max(...pts.map(p=>p[1])),cells,col);};
@@ -152,6 +162,14 @@ function buildMesh(lv){
     }
   }
   for(const L of lv.d.lm||[])landmark(M,lv,L);
+  // parking bays painted in the lots
+  for(const L of lv.d.lots||[]){const x0=L[0]*TS,x1=(L[2]+1)*TS,z0=L[1]*TS,z1=(L[3]+1)*TS,two=z1-z0>=11.5,Wt=[.86,.86,.84];for(let px=x0+.1;px<x1;px+=2.7){M.quad([px-.05,.014,z0+4.9],[px+.05,.014,z0+4.9],[px+.05,.014,z0+.2],[px-.05,.014,z0+.2],'white',Wt);if(two)M.quad([px-.05,.014,z1-.2],[px+.05,.014,z1-.2],[px+.05,.014,z1-4.9],[px-.05,.014,z1-4.9],'white',Wt);}}
+  // traffic signals at the big crossings: a pole on the corner with an arm out over the road
+  if(!room&&streetKind(lv)=='asphalt'){let sig=0;for(let y=2;y<lv.h-2&&sig<8;y++)for(let x=2;x<lv.w-2&&sig<8;x++){const k=roadKind(lv,x,y);if(k.t!='x'||roadKind(lv,x-1,y).t=='x'||roadKind(lv,x,y-1).t=='x')continue;
+      let w=1,hh=1;while(roadKind(lv,x+w,y).t=='x')w++;while(roadKind(lv,x,y+hh).t=='x')hh++;if(w<3||hh<3||w>6||hh>6)continue;sig++;
+      for(const [cx2,cz2,ax,az] of [[x*TS-.45,y*TS-.45,1,0],[(x+w)*TS+.45,(y+hh)*TS+.45,-1,0]]){if(!'st'.includes(src(Math.floor(cx2/TS),Math.floor(cz2/TS))||'#'))continue;const dk=[.12,.13,.14],len=Math.min(w*TS*.55,4.6);
+        M.lathe(cx2,0,cz2,[[0,.13],[.25,.1],[5.6,.07]],8,'white',dk);M.tube([cx2,5.3,cz2],[cx2+ax*len,5.5,cz2],.06,.045,6,'white',dk);
+        for(const f of [.55,1]){const hx2=cx2+ax*len*f;M.box(hx2-.16,4.45,cz2-.14,hx2+.16,5.4,cz2+.14,'white',[.85,.7,.12]);[[.9,.1,.08],[.9,.7,.1],[.1,.8,.3]].forEach((cl,q)=>{for(const sgn of [-1,1])M.sphere(hx2,5.2-q*.28,cz2+sgn*.15,.09,6,3,q==2?'lampglow':'white',q==2?[.3,1,.5]:cl.map(v=>v*.35));});}}}}
   // a green street sign on a pole at each named corner
   for(const [sx,sy] of lv.d.signs||[]){const px=sx*TS+.35,pz=sy*TS+.35,g=[.1,.36,.22];M.tube([px,0,pz],[px,3,pz],.035,.03,6,'chrome');M.box(px-.5,2.72,pz-.015,px+.5,2.92,pz+.015,'paint',g);M.box(px-.015,2.5,pz-.5,px+.015,2.7,pz+.5,'paint',g);M.box(px-.42,2.79,pz-.02,px+.42,2.85,pz+.02,'white');M.box(px-.02,2.57,pz-.42,px+.02,2.63,pz+.42,'white');M.sphere(px,3.02,pz,.045,6,3,'chrome');}
   for(const pr of lv.props||[])propMesh(M,pr);
@@ -166,6 +184,13 @@ function tuftAt(M,x,z,s,cell,yaw){const c=Math.cos(yaw)*s,n=Math.sin(yaw)*s;M.sw
 function groundDetail(M,lv,src,c,x,y,X0,Z0,X1,Z1,cx,cz,h){
   if(c==',')flowerbed(M,X0,Z0,X1,Z1,h);
   if(false){const pth=[[0,-1],[0,1],[-1,0],[1,0]].find(([dx,dy])=>'ps'.includes(src(x+dx,y+dy)||'#'));if(pth){const ox=cx+pth[0]*.45,oz=cz+pth[1]*.45,r=.85;M.quad([ox-r,.012,oz+r],[ox+r,.012,oz+r],[ox+r,.012,oz-r],[ox-r,.012,oz-r],'worn');}}
+  if(c=='p'&&streetKind(lv)=='asphalt'&&!(lv.d.lots||[]).some(L=>x>=L[0]&&x<=L[2]&&y>=L[1]&&y<=L[3])){const k=roadKind(lv,x,y),Y=[.86,.66,.12],Wt=[.86,.86,.84],yy=.014,ew=k.t=='ew',
+      strip=(u0,u1,v0,v1,col)=>{const q=ew?[X0+u0,Z0+v0,X0+u1,Z0+v1]:[X0+v0,Z0+u0,X0+v1,Z0+u1];M.quad([q[0],yy,q[3]],[q[2],yy,q[3]],[q[2],yy,q[1]],[q[0],yy,q[1]],'white',col);};
+    if(k.t=='ew'||k.t=='ns'){const w=ew?k.n:k.m,i=ew?k.a:k.l,X=(d)=>roadKind(lv,ew?x+d:x,ew?y:y+d).t=='x';
+      if(X(1)||X(-1)){for(let q=0;q<4;q++)strip(.25,1.75,.12+q*.5,.4+q*.5,Wt);}// a zebra crossing at the corner
+      else if(w>=2){// a double yellow line down the middle, and broken white lines between lanes on wide streets
+        if(w%2==0){if(i==w/2-1){strip(0,2,1.9,1.98,Y);}else if(i==w/2){strip(0,2,.02,.1,Y);}}else if(i==(w-1)/2){strip(0,2,.86,.94,Y);strip(0,2,1.06,1.14,Y);}
+        if(w>=4&&(i==0||i==w-2)&&i!=w/2-1)strip(.3,1.5,1.95,2.03,Wt);}}}
   if(c=='s')for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]){const n=src(x+dx,y+dy);if(n!='p'&&n!='K')continue;const w=.16,cr=[.86,.84,.8];
     const q=dy==-1?[X0,Z0,X1,Z0+w]:dy==1?[X0,Z1-w,X1,Z1]:dx==-1?[X0,Z0,X0+w,Z1]:[X1-w,Z0,X1,Z1];M.box(q[0],0,q[1],q[2],.15,q[3],'curb',null,{bottom:1});
     const g=dy==-1?[X0,Z0-.28,X1,Z0]:dy==1?[X0,Z1,X1,Z1+.28]:dx==-1?[X0-.28,Z0,X0,Z1]:[X1,Z0,X1+.28,Z1];if(n=='p')M.floor(g[0],g[1],g[2],g[3],.008,'cobble',[.55,.53,.56]);}}

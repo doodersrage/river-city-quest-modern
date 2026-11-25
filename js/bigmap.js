@@ -31,7 +31,7 @@ const BIG={ox:16,oy:11};
     const rd={};for(const k in m.reads||{}){const [a,b]=k.split(',').map(Number);rd[(a+OX)+','+(b+OY)]=m.reads[k];}m.reads=rd;
     for(const k of ['readsT','statue','bossT','reward','solve'])if(Array.isArray(m[k]))m[k]=pair(m[k]);else sh(m[k]);
     // a district with a street plan is laid out by hand after the real streets around its landmarks
-    m.streets=[];m.signs=[];
+    m.streets=[];m.signs=[];m.lots=[];
     if(plan){const core=(x,y)=>x>=OX&&y>=OY&&x<OX+w&&y<OY+h,inb=(x,y)=>x>0&&y>0&&x<W-1&&y<H-1,put=(x,y,c)=>{if(inb(x,y)&&!core(x,y))g[y][x]=c;};
       const api={W,H,g,put,core,
         // a street: roadway, a sidewalk each side, and its name for the street signs
@@ -39,6 +39,7 @@ const BIG={ox:16,oy:11};
           if(!o.bare)for(let y=y0-1;y<=y1+1;y++)for(let x=x0-1;x<=x1+1;x++){if(x>=x0&&x<=x1&&y>=y0&&y<=y1)continue;if(inb(x,y)&&!core(x,y)&&(g[y][x]=='B'||(o.over&&o.over.includes(g[y][x]))))g[y][x]=o.trees&&(horiz?x:y)%6==3&&(horiz?(y<y0||y>y1):(x<x0||x>x1))?'t':'s';}
           m.streets.push({n:name,x0:x0-1,y0:y0-1,x1:x1+1,y1:y1+1});},
         name(n,x0,y0,x1,y1){m.streets.push({n,x0,y0,x1,y1});},
+        lot(x0,y0,x1,y1){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)put(x,y,'p');m.lots.push([x0,y0,x1,y1]);},
         fill(x0,y0,x1,y1,c,every,alt){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)put(x,y,every&&hs(x,y,seed+9)%every==0?alt:c);},
         // a real place: its ground, and a plaque on the sidewalk that tells you what it is
         plaque(key,title,text,x,y){put(x,y,'M');m.reads[x+','+y]='!'+key;RCQ.readx['!'+key]=[title,text];},

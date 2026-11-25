@@ -36,3 +36,7 @@ ok2(open>40&&!joins,'neighbors still join edge to edge ('+open+' open tiles, '+j
 let miss=[],signs=0,pl=0;for(const id in want){const m=M[id],names=new Set(m.streets.map(s=>s.n));for(const n of want[id])if(!names.has(n))miss.push(id+' '+n);signs+=m.signs.length;for(const k in m.reads)if(m.reads[k][0]=='!'&&G.RCQ.readx[m.reads[k]]){const [x,y]=k.split(',').map(Number);if(m.rows[y][x]=='M')pl++;}}
 ok2(!miss.length,'six districts are laid out on their real streets'+(miss.length?' (missing '+miss.join(', ')+')':''));ok2(signs>=40&&pl>=12,signs+' corner street signs and '+pl+' plaques for real places');
 ok2(M['ow:2,1'].lm.some(L=>L.art=='cityhall')&&M['ow:2,1'].lm.some(L=>L.art=='temple'),"Old City Hall and St. Paul's stand by Capitol Square");}
+// parked cars sit wholly on the roadway, parallel to the curb, and never on a corner
+{const ok2=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1;};let n=0,bad=0,lots=0;for(const id of ['ow:2,1','ow:0,1','ow:1,1','ow:2,0','ow:1,0','ow:0,0']){const lv=G.buildLevel(id);for(const c of lv.props.filter(p=>p.kind=='car')){n++;const inLot=(lv.d.lots||[]).some(L=>c.tx>=L[0]&&c.tx<=L[2]&&c.ty>=L[1]&&c.ty<=L[3]);if(inLot)lots++;
+    for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const tx=Math.floor((c.x+sx*c.solid[0])/G.TS),tz=Math.floor((c.z+sz*c.solid[1])/G.TS);if(lv.d.rows[tz][tx]!='p')bad++;}}}
+ok2(n>=60&&!bad&&lots>=8,n+' parked cars, every wheel on the asphalt ('+lots+' of them in parking lots)');}

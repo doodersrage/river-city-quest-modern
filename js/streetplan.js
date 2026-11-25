@@ -15,14 +15,14 @@ const STREETPLAN={};
     a.plaque('libva','Library of Virginia','The state library and archives, on the north side of Broad Street.',20,5);
     a.plaque('morson',"Morson's Row",'Three bow-fronted town houses built in 1853 as rentals. They are the last of the houses that once ringed Capitol Square.',52,14);
     a.plaque('customs','The Old Custom House','Begun before the Civil War and one of the few buildings downtown to come through the 1865 evacuation fire. It grew into the federal courthouse on Main Street.',40,36);
-    a.fill(54,26,61,31,'p');a.fill(54,12,61,16,'B');});
+    a.lot(54,26,61,31);a.fill(53,28,53,29,'p');});
   // Shockoe Bottom: Main Street Station stands on East Main at 15th, with the market two blocks east on 17th
   STREETPLAN['ow:3,1']=town(a=>{
     a.street('E Franklin St',1,6,62,8);a.street('E Cary St',1,36,62,38);a.street('N 14th St',9,1,11,42);a.street('N 17th St',50,1,52,42);a.street('N 18th St',58,9,60,35);
     a.name('N 15th St',29,1,34,10);a.name('S 15th St',29,33,34,43);a.name('E Main St',1,19,63,24);
     a.fill(54,10,56,18,'s',5,'t');a.plaque('market17','17th Street Market','Farmers have sold here, between Main and Franklin on 17th Street, since the 1700s. It is one of the oldest public market sites in the country.',55,18);
     a.plaque('tobaccorow','Tobacco Row','The long brick warehouses and factories south and east of here cured, packed and shipped tobacco. Most are apartments now.',40,39);
-    a.fill(2,26,7,31,'p');a.fill(13,13,13,17,'s');});
+    a.lot(2,26,7,31);});
   // Church Hill: St. John's fills the block between Broad and Grace, 24th and 25th
   STREETPLAN['ow:3,0']=town(a=>{
     a.street('E Broad St',1,6,62,8,{trees:1});a.street('E Grace St',1,35,62,37,{trees:1});a.street('N 24th St',10,1,12,42);a.street('N 25th St',51,1,53,42);
@@ -35,8 +35,8 @@ const STREETPLAN={};
   STREETPLAN['ow:0,1']=town(a=>{
     a.street('S Arthur Ashe Blvd',57,1,61,42,{median:1});a.street('Ellwood Ave',1,6,62,8);a.street('S Colonial Ave',50,9,52,42);a.street('S Belmont Ave',9,1,11,42);a.street('Idlewood Ave',1,39,62,40);
     a.name('W Cary St',1,19,63,24);a.name('S Sheppard St',29,1,35,10);a.name('S Sheppard St',29,33,34,43);
-    a.fill(36,34,48,37,'p');a.plaque('byrddeck','Parking behind the Byrd','The public parking deck behind the theatre, reached from Colonial Avenue.',49,35);
-    a.fill(1,26,7,31,'p');a.plaque('carycourt','Cary Court','Cary Court Park and Shop opened in 1938. It was Richmond\'s first shopping center built around a parking lot.',8,26);});
+    a.lot(36,34,48,37);a.plaque('byrddeck','Parking behind the Byrd','The public parking deck behind the theatre, reached from Colonial Avenue.',49,35);
+    a.lot(1,26,7,31);a.plaque('carycourt','Cary Court','Cary Court Park and Shop opened in 1938. It was Richmond\'s first shopping center built around a parking lot.',8,26);});
   // The Fan: Monument Avenue with its grass median, Grace Street to the north and Park Avenue to the south
   STREETPLAN['ow:1,1']=town(a=>{
     a.street('N Meadow St',9,1,11,42);a.street('N Lombardy St',51,1,53,42);a.street('W Grace St',1,4,62,5,{trees:1});a.street('Park Ave',1,38,62,39,{trees:1});

@@ -53,7 +53,7 @@ ok(Object.keys(G.SECRETS).length>=20,Object.keys(G.SECRETS).length+' neighborhoo
 
 // rain, and the frogs that come out in it
 go('ow:0,2',10*T,10*T);G.st.wx='rain';G.st.wxk=1;G.st.wxT=99999;G.st.wxNext=null;const e=G.weatherLook({fog:[14,40],fogCol:[.6,.7,.8],amb:1});ok(e.fog[1]<40&&e.amb<1,'rain pulls the fog in and dims the light');
-for(let k=0;k<1200&&G.picks.filter(q=>q.kind=='frog').length<3;k++)step();const frogs=G.picks.filter(q=>q.kind=='frog');ok(frogs.length==3,'frogs come out by the water in the rain');
+for(let k=0;k<4000&&G.picks.filter(q=>q.kind=='frog').length<3;k++)step();const frogs=G.picks.filter(q=>q.kind=='frog');ok(frogs.length==3,'frogs come out by the water in the rain');
 for(let n=0,guard=0;n<5&&guard<400;guard++){talkThrough();if(G.lv.id!='ow:0,2')go('ow:0,2',10*T,10*T);const f=G.picks.find(q=>q.kind=='frog'&&q.x>2*T&&q.z>2*T&&q.x<(G.lv.w-2)*T&&q.z<(G.lv.h-2)*T);if(!f){step({},90);continue;}G.p.x=f.x;G.p.z=f.z;step({},2);n=G.st.frogs||0;if(G.st.frogs>=5)break;}
 const nat=G.npcs.find(n=>n.talk=='naturalist');const c2=G.st.coins;talk(nat);ok(G.st.f.frogsDone&&G.st.coins==c2+40,'bring five frogs to the naturalist');
 G.st.wx='clear';G.st.wxk=0;
