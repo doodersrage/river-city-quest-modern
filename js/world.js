@@ -150,4 +150,14 @@ function worldElev(w){if(w.el!==undefined)return w.el;const E=typeof WELEV!='und
 function worldY(w,x,z){const e=w.el===undefined?worldElev(w):w.el;if(!e)return 0;const fx=Math.max(0,Math.min(e.nx-1.001,(x-e.x0)/e.step)),fz=Math.max(0,Math.min(e.nz-1.001,(z-e.z0)/e.step)),i=Math.floor(fx),j=Math.floor(fz),u=fx-i,v=fz-j,h=e.h,k=j*e.nx+i,a=h[k],b=h[k+1],c=h[k+e.nx],d=h[k+e.nx+1];
   return u+v<=1?a+u*(b-a)+v*(c-a):d+(1-u)*(c-d)+(1-v)*(b-d);}
 // the same, for wherever the game is now (zero indoors)
-function gY(x,z){return typeof lv!='undefined'&&lv&&lv.world?worldY(lv.world,x,z):0;}
+function gY(x,z){return typeof lv!='undefined'&&lv&&lv.world?worldY(lv.world,x,z)+deckLift(lv.world,x,z):0;}
+// A bridge at ground level spans from bank to bank instead of dipping to the water. Each is a line with a height at either
+// end; standing on it you are lifted from the land beneath up to the deck.
+function worldSpans(w){if(w.spans)return w.spans;w.spans=[];if(!worldElev(w))return w.spans;for(const r of w.roads){if(!r.b||r.k=='m'||r.ly>=2||r.pp.length<2)continue;const p=r.pp,a=p[0],b=p[p.length-1],wet=q=>w.wf&&waterField(w,q[0],q[1])>.5;
+    let g0=wet(a)?null:worldY(w,a[0],a[1]),g1=wet(b)?null:worldY(w,b[0],b[1]);if(g0==null&&g1==null)continue;if(g0==null)g0=g1;if(g1==null)g1=g0;let L=0;const cum=[0];for(let i=1;i<p.length;i++){L+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);cum.push(L);}
+    let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const q of p){x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);z0=Math.min(z0,q[1]);z1=Math.max(z1,q[1]);}const half=r.wm/2+.45;w.spans.push({r,p,cum,L:L||1,g0,g1,half,bb:[x0-half,z0-half,x1+half,z1+half]});}return w.spans;}
+// the deck height of a span at a point (by how far along the span the point lies), or null when the point is off it
+function spanAt(sp,x,z,pad){if(x<sp.bb[0]-pad||z<sp.bb[1]-pad||x>sp.bb[2]+pad||z>sp.bb[3]+pad)return null;let bd=1e9,bs=0;const p=sp.p;for(let i=0;i<p.length-1;i++){const a=p[i],b=p[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/l2)),d=Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t);if(d<bd){bd=d;bs=sp.cum[i]+Math.sqrt(l2)*t;}}
+  return bd<=sp.half+pad?sp.g0+(sp.g1-sp.g0)*bs/sp.L:null;}
+function deckLift(w,x,z){const S=w.spans||worldSpans(w);let best=0;for(const sp of S){const h=spanAt(sp,x,z,0);if(h!=null){const d=h-worldY(w,x,z);if(d>best)best=d;}}return best;}
+

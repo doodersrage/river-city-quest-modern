@@ -15,6 +15,7 @@ const M4={
   sc:s=>[s,0,0,0,0,s,0,0,0,0,s,0,0,0,0,1]};
 
 function drawModel(parts,base,pose,opt){
+  if(lv&&lv.world&&lv.world.spans&&lv.world.spans.length){const up=deckLift(lv.world,base[12],base[14]);if(up>.01)base=M4.mul(M4.tr(0,up,0),base);}// standing on a bridge: up from the land below to its deck
   if(parts.skel){const b=pose&&pose.body;if(b){if(b.t)base=M4.mul(base,M4.tr(b.t[0],b.t[1],b.t[2]));if(b.y)base=M4.mul(base,M4.ry(b.y));if(b.x)base=M4.mul(base,M4.rx(b.x));}
     const bones=skelPose(parts.skel,pose,frame);parts.skel.last=bones;gl.uniformMatrix4fv(U.uBones,false,bones);if(parts.skel.scale)base=M4.mul(base,M4.sc(parts.skel.scale));gl.uniform1f(U.uSkin,1);for(const pt of parts){if(pt.pal){gl.uniform3fv(U.uPal,pt.pal);gl.uniform1f(U.uPalOn,1);}drawVAO(meshGL(pt.mesh),base,atlasTex,opt);if(pt.pal)gl.uniform1f(U.uPalOn,0);}gl.uniform1f(U.uSkin,0);return;}for(const pt of parts){let m=M4.mul(base,M4.tr(pt.pivot[0],pt.pivot[1],pt.pivot[2]));const ps=pose&&pose[pt.name];
   if(ps){if(ps.t)m=M4.mul(m,M4.tr(ps.t[0],ps.t[1],ps.t[2]));if(ps.y)m=M4.mul(m,M4.ry(ps.y));if(ps.x)m=M4.mul(m,M4.rx(ps.x));if(ps.z)m=M4.mul(m,M4.rz(ps.z));}

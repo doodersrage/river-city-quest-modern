@@ -70,7 +70,8 @@ function worldGround(M,Wm,lv,w){const x0=-w.mx,x1=w.w+w.mx,z0=-w.mz,z1=w.h+w.mz,
 /* ---------- streets, paths, rails, bridges ---------- */
 function worldRoads(M,lv,w){w.level=[];const cob=streetKind(lv)=='cobble',brickWalk=cob||['fan','jward','chill','shockoe'].includes(hood(lv)),walk=brickWalk?'bricksw':'sidewalk',Y=[.86,.66,.12],Wt=[.86,.86,.84];
   worldJunctions(w);const nodes=w.nodes,key=w.nodeKey;
-  for(const r of w.roads){const hw=r.wm/2,p=r.pp;if(p.length<2)continue;
+  let span=null;const closeSpan=()=>{if(span){span[1]=M.count;w.level.push(span);span=null;}};
+  for(const r of w.roads){closeSpan();const hw=r.wm/2,p=r.pp;if(p.length<2)continue;if(r.b&&r.k!='m'&&!(r.ly>=2))span=[M.count,0,p,0,r];
     if(r.b&&(r.k=='m'||r.ly>=2)){// an elevated highway or a high bridge passing overhead: deck, edge walls and piers
       const y=r.k=='m'?6.6:13,s0=M.count;ribbon(M,p,hw,y,'asphalt',null);for(const sd of [-1,1]){const e=offsetLine(p,sd*hw);for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1,nr=[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd];wallQuad(M,e[i],e[i+1],y-1.1,y+.9,'concrete',[.8,.8,.78],0,nr);}}
       const L=lineLen(p);for(let s=6;s<L-4;s+=22){const q=lineAt(p,s);if(waterField(w,q.x,q.z)>.5&&!w.wf)continue;for(const o of [-hw*.6,hw*.6]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-.6,-45,pz-.6,px+.6,y-1.1,pz+.6,'concrete',[.74,.74,.72],{bottom:1,top:1},true);}M.box(q.x-Math.abs(q.dz)*hw-.7,y-1.9,q.z-Math.abs(q.dx)*hw-.7,q.x+Math.abs(q.dz)*hw+.7,y-1.1,q.z+Math.abs(q.dx)*hw+.7,'concrete',[.74,.74,.72]);}w.level.push([s0,M.count,p,y]);continue;}
@@ -91,6 +92,7 @@ function worldRoads(M,lv,w){w.level=[];const cob=streetKind(lv)=='cobble',brickW
     // footpaths, steps and promenades
     const cell=r.k=='d'?walk:r.k=='x'?'steps':r.sw?walk:streetKind(lv)=='park'?'gravel':'sidewalk';ribbon(M,p,hw,r.b?.07:.036,cell,null,true);
     if(r.b)for(const sd of [-1,1]){const e=offsetLine(p,sd*(hw+.05));for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1;wallQuad(M,e[i],e[i+1],.07,1.1,'bars',[.2,.2,.22],0,[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd]);wallQuad(M,e[i],e[i+1],-.5,.07,'planks',[.6,.55,.5],0,[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd]);}}}
+  closeSpan();
   // railways: ballast, sleepers and two rails; on a viaduct where the real one is
   for(const r of w.rails){const p=r.pp,y=r.b?7.2:.07,s0=M.count;if(p.length<2)continue;ribbon(M,p,1.7,y,'gravel',r.x?[.7,.72,.66]:null);if(!r.x||r.b)for(const o of [-.72,.72])ribbon(M,offsetLine(p,o),.05,y+.09,'chrome',[.55,.5,.46]);
     {const L=lineLen(p);for(let s=.4;s<L;s+=WLOW?1.3:.65){const q=lineAt(p,s);ribbon(M,[[q.x-q.dz*1.25,q.z+q.dx*1.25],[q.x+q.dz*1.25,q.z-q.dx*1.25]],.11,y+.03,'wood',[.36,.3,.26]);}}
@@ -267,7 +269,7 @@ function worldFurniture(M,lv,w){// trees and parked cars are not built into the 
 function buildWorldMesh(lv){textDistrict(lv.d.world);const w=lv.world,M=new Mesh(),Wm=new Mesh(),Fm=new Mesh(),Fr=new Mesh(),el=worldElev(w),rigid=[];
   worldGround(M,Wm,lv,w);worldRoads(M,lv,w);
   // a bridge deck or viaduct stays level: it rides clear of the highest ground beneath it
-  if(el)for(const [s0,s1,p,y] of w.level){let lo=1e9,hi=-1e9;const L=lineLen(p);for(let d=0;d<=L;d+=5){const q=lineAt(p,d),g=worldY(w,q.x,q.z);lo=Math.min(lo,g);hi=Math.max(hi,g);}rigid.push([s0,s1,Math.max(hi+1.5,lo+y)-y]);}
+  const spans=worldSpans(w);if(el)for(const [s0,s1,p,y,sr] of w.level){if(sr){const sp=spans.find(q=>q.r===sr);if(sp)rigid.push([s0,s1,(x,z)=>{const h=spanAt(sp,x,z,3);return h==null?worldY(w,x,z):h;}]);continue;}let lo=1e9,hi=-1e9;const L=lineLen(p);for(let d=0;d<=L;d+=5){const q=lineAt(p,d),g=worldY(w,q.x,q.z);lo=Math.min(lo,g);hi=Math.max(hi,g);}rigid.push([s0,s1,Math.max(hi+1.5,lo+y)-y]);}
   // a footing down to the lowest ground a building stands over, so nothing floats on a slope
   const footing=(pp,ay)=>{let lo=ay;for(const q of pp)lo=Math.min(lo,worldY(w,q[0],q[1]));if(ay-lo<.12)return;const n=pp.length;for(let i=0;i<n;i++){const a=pp[i],c=pp[(i+1)%n],l=Math.hypot(c[0]-a[0],c[1]-a[1]);if(l>.1)wallQuad(M,a,c,lo-ay-.4,.02,'granite',[.62,.6,.58],0,[(c[1]-a[1])/l,0,-(c[0]-a[0])/l]);}};
   for(const b of w.bld){if(b.gone||b.lm)continue;const s0=M.count;worldBuilding(M,lv,w,b);if(!el||M.count==s0)continue;
@@ -281,7 +283,7 @@ function buildWorldMesh(lv){textDistrict(lv.d.world);const w=lv.world,M=new Mesh
 /* Fitting the flat-built world to the land. The shader lifts every vertex by the ground height beneath it, so the ground
    only has to be cut finely enough to bend, and anything that must stay level (a building, a bridge deck) has its
    vertices set so that, once lifted, they all end up at one height. */
-function worldDrape(M,w,rigid){const n=M.count,flag=new Float32Array(n).fill(NaN);for(const [s0,s1,ay] of rigid)for(let i=s0;i<s1;i++)flag[i]=ay;
+function worldDrape(M,w,rigid){const n=M.count,flag=new Float32Array(n).fill(NaN);rigid.forEach(([s0,s1,ay],k)=>{for(let i=s0;i<s1;i++)flag[i]=typeof ay=='function'?-1e6-k:ay;});
   const e=w.el,st=e.step,X0=e.x0,Z0=e.z0,NX=e.nx-1,NZ=e.nz-1,X1=X0+NX*st,Z1=Z0+NZ*st,P=M.pos,UV=M.uv,C=M.col,S=M.sw,N=M.nrm,pos=[],uv=[],col=[],sw=[],nrm=[];
   const slope=(x,z,o,i)=>{if(x<X0||x>X1||z<Z0||z>Z1)return;const gx=(worldY(w,x+4,z)-worldY(w,x-4,z))/8,gz=(worldY(w,x,z+4)-worldY(w,x,z-4))/8,l=Math.hypot(gx,1,gz);o[i]=-gx/l;o[i+1]=1/l;o[i+2]=-gz/l;};
   const put=v=>{pos.push(v[0],v[1],v[2]);uv.push(v[3],v[4]);col.push(v[5],v[6],v[7]);sw.push(v[8]);const k=nrm.length;nrm.push(v[9],v[10],v[11]);if(v[10]>.9&&!(v[8]>0))slope(v[0],v[2],nrm,k);},
@@ -293,7 +295,7 @@ function worldDrape(M,w,rigid){const n=M.count,flag=new Float32Array(n).fill(NaN
     for(let i=0;i<poly.length;i++){const j=(i+1)%poly.length,a=poly[i],b=poly[j],da=D[i],db=D[j];if(da<=1e-6)A.push(a);if(da>=-1e-6)B.push(a);if((da<-1e-6&&db>1e-6)||(da>1e-6&&db<-1e-6)){const m=mix(a,b,da/(da-db));A.push(m);B.push(m);}}return[A.length>2?A:null,B.length>2?B:null];};
   const V=i=>[P[i*3],P[i*3+1],P[i*3+2],UV[i*2],UV[i*2+1],C[i*3],C[i*3+1],C[i*3+2],S[i],N[i*3],N[i*3+1],N[i*3+2]],dead=[];
   for(let t=0;t<n;t+=3){const ay=flag[t];if(ay==ay){// level: cancel the lift under each vertex, add the one height
-      for(let i=t;i<t+3;i++)P[i*3+1]+=ay-worldY(w,P[i*3],P[i*3+2]);continue;}
+      for(let i=t;i<t+3;i++){const x=P[i*3],z=P[i*3+2];P[i*3+1]+=(ay<=-1e6?rigid[Math.round(-1e6-ay)][2](x,z):ay)-worldY(w,x,z);}continue;}
     const k0=piece(P[t*3],P[t*3+2]);if(k0==piece(P[t*3+3],P[t*3+5])&&k0==piece(P[t*3+6],P[t*3+8])){for(let i=t;i<t+3;i++)if(N[i*3+1]>.9&&!(S[i]>0))slope(P[i*3],P[i*3+2],N,i*3);continue;}
     // the triangle lies over more than one piece of land: cut it along the grid lines and the diagonals, so each part lies flat on one piece
     let polys=[[V(t),V(t+1),V(t+2)]];const xs=[P[t*3],P[t*3+3],P[t*3+6]],zs=[P[t*3+2],P[t*3+5],P[t*3+8]];
