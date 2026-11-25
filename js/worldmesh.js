@@ -218,7 +218,7 @@ function worldProps(lv){const w=lv.world,out=[];worldJunctions(w);const seed=lv.
   // parked cars along the curb of the ordinary streets, clear of the corners
   let cars=0;for(const r of w.roads){if(!'str'.includes(r.k)||r.b||r.wm<(r.o?7:9)||cars>(WLOW?22:46))continue;const L=lineLen(r.pp);for(const sd of [-1,1]){const e=offsetLine(r.pp,sd*(r.wm/2-1.15));for(let s=9;s<L-9;s+=6.2){const q=lineAt(e,s),hh=hash(Math.round(q.x),Math.round(q.z),seed+9);if(hh%5<2||q.x<3||q.z<3||q.x>w.w-3||q.z>w.h-3)continue;
         if(w.junctions.some(j=>Math.hypot(j.x-q.x,j.z-q.z)<j.w/2+7.5)||[[0,0],[2.2,.9],[-2.2,.9],[2.2,-.9],[-2.2,-.9]].some(([u,v])=>buildingAt(w,q.x+q.dx*u-q.dz*v,q.z+q.dz*u+q.dx*v)))continue;const yaw=Math.atan2(-q.dz,q.dx)+(sd>0?0:Math.PI),c=Math.abs(Math.cos(yaw)),sn=Math.abs(Math.sin(yaw));
-        out.push({kind:'car',tx:Math.floor(q.x/2),ty:Math.floor(q.z/2),x:q.x,z:q.z,yaw,rd:r,solid:[c*2.2+sn*.9,sn*2.2+c*.9],col:['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30','#8a8c90','#3a2a20'][hh%9]});cars++;}}}
+        out.push({kind:'car',tx:Math.floor(q.x/2),ty:Math.floor(q.z/2),x:q.x,z:q.z,yaw,rd:r,solid:[c*2.2+sn*.9,sn*2.2+c*.9],ob:1,col:['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30','#8a8c90','#3a2a20'][hh%9]});cars++;}}}
   // a hydrant every block or so, on the curb
   {let n=0;for(const r of w.roads){if(!'str'.includes(r.k)||r.b||n>(WLOW?6:16))continue;const e=offsetLine(r.pp,r.wm/2+.75),L=lineLen(e);for(let s=24+hash(r.p[0],r.p[1],31)%40;s<L-10;s+=97){const q=lineAt(e,s);if(q.x<3||q.z<3||q.x>w.w-3||q.z>w.h-3||buildingAt(w,q.x,q.z)||w.junctions.some(j=>Math.hypot(j.x-q.x,j.z-q.z)<j.w/2+4))continue;out.push({kind:'hydrant',tx:Math.floor(q.x/2),ty:Math.floor(q.z/2),x:q.x,z:q.z,yaw:0});n++;}}}
   // street lamps: the mapped ones, and one every so often along the streets
@@ -232,15 +232,21 @@ function worldFurniture(M,lv,w){// trees and parked cars are not built into the 
   for(const l of lv.lamps)gasLamp(l.tx*2+1,l.ty*2+1,l.tx,l.ty);
   for(const [x,z] of w.lampsDeco||[]){if(gas){gasLamp(x,z,-1,-1);continue;}const rn=roadNear(w,x,z,12,o=>o.car),dl=rn?Math.hypot(rn.b[0]-rn.a[0],rn.b[1]-rn.a[1])||1:1;let ax=rn?-(rn.b[1]-rn.a[1])/dl:1,az=rn?(rn.b[0]-rn.a[0])/dl:0;if(rn&&segDist(x+ax,z+az,rn.a,rn.b)>segDist(x,z,rn.a,rn.b)){ax=-ax;az=-az;}
     M.lathe(x,0,z,[[0,.14],[.3,.09],[7.6,.06]],6,'white',dk);M.tube([x,7.5,z],[x+ax*2,7.9,z+az*2],.05,.04,5,'white',dk);M.box(x+ax*1.7-.18,7.78,z+az*1.7-.18,x+ax*2.3+.18,7.9,z+az*2.3+.18,'white',dk);M.box(x+ax*1.8-.1,7.74,z+az*1.8-.1,x+ax*2.2+.1,7.78,z+az*2.2+.1,'lampglow');lv.glows.push([x+ax*2,7.6,z+az*2,-1,-1]);}
-  for(const q of w.pts){const x=q.xm,z=q.zm;if(x<-20||z<-20||x>w.w+20||z>w.h+20)continue;
+  // something built facing +z with its length along x, set down turned to run along the street and face it
+  const setDown=(x,z,ax,az,bx,bz,build)=>{const T=new Mesh();build(T);for(let i=0;i<T.pos.length;i+=3){const lx=T.pos[i],lz=T.pos[i+2];T.pos[i]=x+lx*ax+lz*bx;T.pos[i+2]=z+lx*az+lz*bz;const nx=T.nrm[i],nz=T.nrm[i+2];T.nrm[i]=nx*ax+nz*bx;T.nrm[i+2]=nx*az+nz*bz;}M.add(T);};
+  for(const q of w.pts){let x=q.xm,z=q.zm,ax=1,az=0,bx=0,bz=1;if(x<-20||z<-20||x>w.w+20||z>w.h+20)continue;
+    if(q.k!='signal'){// the map often puts a bus stop or a bench on the street's own line: move it to the sidewalk, clear of the curb, and turn it to the street
+      const rn=roadNear(w,x,z,14,o=>o.car&&!o.b);if(rn){const l=Math.hypot(rn.b[0]-rn.a[0],rn.b[1]-rn.a[1])||1,dx=(rn.b[0]-rn.a[0])/l,dz=(rn.b[1]-rn.a[1])/l,t=Math.max(0,Math.min(l,(x-rn.a[0])*dx+(z-rn.a[1])*dz)),fx=rn.a[0]+dx*t,fz=rn.a[1]+dz*t;let nx=x-fx,nz=z-fz,nl=Math.hypot(nx,nz);if(nl<.05){nx=-dz;nz=dx;nl=1;}nx/=nl;nz/=nl;
+        const need=rn.r.wm/2+(q.k=='bus'?1.7:q.k=='bench'?1.5:q.k=='statue'||q.k=='fountain'?2.4:.75);if(rn.d<need){x=fx+nx*need;z=fz+nz*need;}if(rn.d<need+6){ax=dx;az=dz;bx=-nx;bz=-nz;if(ax*bz-az*bx<0){ax=-ax;az=-az;}}}
+      if(buildingAt(w,x,z))continue;}
     if(q.k=='signal'){// a mast on the corner with its arm out over the street it controls
       const rn=roadNear(w,x,z,8,o=>o.car);if(!rn)continue;const dl=Math.hypot(rn.b[0]-rn.a[0],rn.b[1]-rn.a[1])||1,dx=(rn.b[0]-rn.a[0])/dl,dz=(rn.b[1]-rn.a[1])/dl,hw=rn.r.wm/2,cx=x-dz*(hw+.7),cz=z+dx*(hw+.7),len=Math.min(hw*1.5,5.5);
       M.lathe(cx,0,cz,[[0,.13],[.25,.1],[5.6,.07]],8,'white',dk);M.tube([cx,5.3,cz],[cx+dz*len,5.5,cz-dx*len],.06,.045,6,'white',dk);for(const f of [.6,1]){const hx=cx+dz*len*f,hz=cz-dx*len*f;M.box(hx-.16,4.45,hz-.16,hx+.16,5.4,hz+.16,'white',[.85,.7,.12]);lv.sigHeads.push({x:hx,z:hz,ax:Math.abs(dx)>Math.abs(dz)?'x':'z',dx,dz});}}
-    else if(q.k=='bench'){M.box(x-.75,.38,z-.22,x+.75,.46,z+.22,'wood',[.5,.36,.24]);M.box(x-.75,.46,z-.22,x+.75,.86,z-.16,'wood',[.5,.36,.24]);for(const o of [-.6,.6])M.box(x+o-.04,0,z-.2,x+o+.04,.38,z+.2,'black');}
+    else if(q.k=='bench')setDown(x,z,ax,az,bx,bz,T=>{T.box(-.75,.38,-.22,.75,.46,.22,'wood',[.5,.36,.24]);T.box(-.75,.46,-.22,.75,.86,-.16,'wood',[.5,.36,.24]);for(const o of [-.6,.6])T.box(o-.04,0,-.2,o+.04,.38,.2,'black');});
     else if(q.k=='statue'){M.box(x-.7,0,z-.7,x+.7,1.5,z+.7,'granite');statue(M,x,1.5,z);}
     else if(q.k=='flag'){M.tube([x,0,z],[x,8,z],.06,.035,6,'chrome');M.sphere(x,8.05,z,.08,6,3,'gold');M.quad([x,6.6,z],[x+1.5,6.6,z],[x+1.5,7.6,z],[x,7.6,z],'white',[[.72,.12,.14],[.14,.2,.5],[.9,.9,.9]][hash(q.x,q.z,3)%3]);}
     else if(q.k=='fountain'){M.cone(x,0,z,1.6,.55,1.6,12,'granite');M.lathe(x,.5,z,[[0,.3],[.9,.22],[1,.7],[1.1,.7],[1.2,.2]],10,'granite');}
-    else if(q.k=='bus'){M.box(x-1.4,2.2,z-.7,x+1.4,2.3,z+.7,'tin',[.3,.32,.36]);for(const [a,b] of [[-1.3,-.6],[1.3,-.6],[-1.3,.6],[1.3,.6]])M.tube([x+a,0,z+b],[x+a,2.2,z+b],.04,.04,5,'chrome');M.box(x-1.2,.4,z-.5,x+1.2,.46,z-.2,'wood',[.5,.36,.24]);}
+    else if(q.k=='bus'){(w.shelters=w.shelters||[]).push([x,z,bx,bz]);setDown(x,z,ax,az,bx,bz,T=>{T.box(-1.4,2.2,-.7,1.4,2.3,.7,'tin',[.3,.32,.36]);for(const [a,b] of [[-1.3,-.6],[1.3,-.6],[-1.3,.6],[1.3,.6]])T.tube([a,0,b],[a,2.2,b],.04,.04,5,'chrome');T.box(-1.3,.3,-.66,1.3,2.1,-.62,'pane');T.box(-1.2,.4,-.5,1.2,.46,-.2,'wood',[.5,.36,.24]);});}
     else if(q.k=='bollard'){M.lathe(x,0,z,[[0,.1],[.85,.09],[.9,.06]],6,'white',dk);}
     else if(q.k=='stop'){M.tube([x,0,z],[x,2.3,z],.03,.03,5,'chrome');M.lathe(x,2.3,z,[[0,.01],[0,.34],[.02,.34],[.02,.01]],8,'white',[.75,.1,.1]);}
     else if(q.k=='pole'){M.lathe(x,0,z,[[0,.15],[1,.13],[8.4,.09]],8,'wood',[.34,.27,.2]);M.box(x-.9,7.7,z-.06,x+.9,7.82,z+.06,'wood',[.34,.27,.2]);}}
