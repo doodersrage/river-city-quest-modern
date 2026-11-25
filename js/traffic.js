@@ -53,12 +53,12 @@ function wTrafficInit(){const w=lv.world;worldJunctions(w);const key=w.nodeKey,i
       for(let i=0;i<src.length;i++){if(i)sAt+=Math.hypot(src[i][0]-src[i-1][0],src[i][1]-src[i-1][1]);const n=w.nodes.get(key(src[i]));if(!n||n.n<2||i==0)continue;let cw=0;for(const o of n.rs)if(o!==r&&'pstr'.includes(o.k))cw=Math.max(cw,o.wm);if(cw<6.5)continue;
         const a=src[i-1],b=src[i],ax=Math.abs(b[0]-a[0])>=Math.abs(b[1]-a[1])?'x':'z';if(inMap(src[i]))stops.push({s:sAt-cw/2-2.7,ax});}
       TLANES.push({pts,len:lineLen(pts),stops,road:r});}}
-  const n=Math.min(TLANES.length*2,16),COLS=['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30','#8a8c90','#b8a070'];
+  const n=Math.min(TLANES.length*2,typeof WLOW!='undefined'&&WLOW?12:24),COLS=['#7a1818','#1c2a4a','#c4c6ca','#1e1e20','#e8e6e0','#4a4c52','#2e3e30','#8a8c90','#b8a070'];
   for(let i=0;i<n&&TLANES.length;i++){const L=TLANES[hash(i,lv.d.ax*7+lv.d.ay,41)%TLANES.length],s=L.len*((hash(i,3,lv.d.ay)%100)/100);if(traffic.some(c=>c.lane==L&&Math.abs(c.s-s)<9))continue;const q=lineAt(L.pts,s);traffic.push({lane:L,s,v:.08,col:COLS[hash(i,5,lv.d.ax)%COLS.length],seed:i,x:q.x,z:q.z,dx:q.dx,dz:q.dz});}
   // people out walking the sidewalks of the longer streets
   for(const r of w.roads){if(!'str'.includes(r.k)||r.b||lineLen(r.pp)<50)continue;for(const sd of [-1,1]){const pts=offsetLine(r.pp,sd*(r.wm/2+1.4)),L=lineLen(pts);let lo=-1,hi=-1;for(let s=2;s<L-2;s+=2){const q=lineAt(pts,s),ok=q.x>3&&q.z>3&&q.x<w.w-3&&q.z<w.h-3&&!worldBlocked(w,q.x,q.z,.5);if(ok){if(lo<0)lo=s;hi=s;}else if(lo>=0){if(hi-lo>=24)WPATHS.push({pts,lo,hi});lo=-1;}}if(lo>=0&&hi-lo>=24)WPATHS.push({pts,lo,hi});}}
   const FOLK=[['#6a4020','#3d63c8'],['#2e2e3a','#b84a3a'],['#8a5a30','#58a850'],['#3a2414','#d8b03a'],['#4a2c14','#7a5ab8'],['#20242c','#d8692a'],['#5a3a20','#c8c8c8']];
-  for(let i=0;i<Math.min(WPATHS.length,9);i++){const P=WPATHS[hash(i,lv.d.ax*5+lv.d.ay,63)%WPATHS.length];if(walkers.some(q=>q.path==P))continue;const c=FOLK[i%FOLK.length],s=P.lo+(P.hi-P.lo)*((hash(i,9,lv.d.ax)%100)/100),q=lineAt(P.pts,s);
+  for(let i=0;i<Math.min(WPATHS.length,typeof WLOW!='undefined'&&WLOW?8:16);i++){const P=WPATHS[hash(i,lv.d.ax*5+lv.d.ay,63)%WPATHS.length];if(walkers.some(q=>q.path==P))continue;const c=FOLK[i%FOLK.length],s=P.lo+(P.hi-P.lo)*((hash(i,9,lv.d.ax)%100)/100),q=lineAt(P.pts,s);
     walkers.push({path:P,s,dir:i%2?1:-1,off:(i%3-1)*.3,walk:i*2,wait:0,skirt:i%3==1,hat:c[0],shirt:c[1],skin:['#d9a57e','#8a5a3a','#f0c8a0','#5a3a28','#c08a60'][i%5],x:q.x,z:q.z,dx:q.dx,dz:q.dz});}}
 function wTrafficUpdate(){for(const c of traffic){const L=c.lane;let vt=.105;
     for(const sp of L.stops){const dd=sp.s-c.s;if(dd>-.4&&dd<10&&sigState(sp.ax)!=2)vt=Math.min(vt,dd<.5?0:Math.max(.012,dd*.018));}

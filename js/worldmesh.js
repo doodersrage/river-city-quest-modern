@@ -71,7 +71,8 @@ function worldGround(M,Wm,lv,w){const x0=-w.mx,x1=w.w+w.mx,z0=-w.mz,z1=w.h+w.mz,
 function worldRoads(M,lv,w){w.level=[];const cob=streetKind(lv)=='cobble',brickWalk=cob||['fan','jward','chill','shockoe'].includes(hood(lv)),walk=brickWalk?'bricksw':'sidewalk',Y=[.86,.66,.12],Wt=[.86,.86,.84];
   worldJunctions(w);const nodes=w.nodes,key=w.nodeKey;
   let span=null;const closeSpan=()=>{if(span){span[1]=M.count;w.level.push(span);span=null;}};
-  for(const r of w.roads){closeSpan();const hw=r.wm/2,p=r.pp;if(p.length<2)continue;if(r.b&&r.k!='m'&&!(r.ly>=2))span=[M.count,0,p,0,r];
+  for(const r of w.roads){closeSpan();const hw=r.wm/2,p=r.pp;if(p.length<2)continue;if(r.b&&r.k!='m'&&!(r.ly>=2)){span=[M.count,0,p,0,r];// piers down into the water or the ground, a pair every so often
+      const L=lineLen(p),gap=r.car?16:11,t=r.car?.45:.16;for(let s=gap/2;s<L-2;s+=gap){const q=lineAt(p,s);for(const o of r.wm>4?[-hw*.7,hw*.7]:[0]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-t,-45,pz-t,px+t,-.3,pz+t,r.car?'concrete':'wood',r.car?[.72,.72,.7]:[.36,.3,.26],{bottom:1,top:1},true);}if(r.wm>4)M.box(q.x-Math.abs(q.dz)*hw-t,-.75,q.z-Math.abs(q.dx)*hw-t,q.x+Math.abs(q.dz)*hw+t,-.3,q.z+Math.abs(q.dx)*hw+t,r.car?'concrete':'wood',r.car?[.72,.72,.7]:[.36,.3,.26]);}}
     if(r.b&&(r.k=='m'||r.ly>=2)){// an elevated highway or a high bridge passing overhead: deck, edge walls and piers
       const y=r.k=='m'?6.6:13,s0=M.count;ribbon(M,p,hw,y,'asphalt',null);for(const sd of [-1,1]){const e=offsetLine(p,sd*hw);for(let i=0;i<e.length-1;i++){const l=Math.hypot(e[i+1][0]-e[i][0],e[i+1][1]-e[i][1])||1,nr=[(e[i+1][1]-e[i][1])/l*sd,0,-(e[i+1][0]-e[i][0])/l*sd];wallQuad(M,e[i],e[i+1],y-1.1,y+.9,'concrete',[.8,.8,.78],0,nr);}}
       const L=lineLen(p);for(let s=6;s<L-4;s+=22){const q=lineAt(p,s);if(waterField(w,q.x,q.z)>.5&&!w.wf)continue;for(const o of [-hw*.6,hw*.6]){const px=q.x-q.dz*o,pz=q.z+q.dx*o;M.box(px-.6,-45,pz-.6,px+.6,y-1.1,pz+.6,'concrete',[.74,.74,.72],{bottom:1,top:1},true);}M.box(q.x-Math.abs(q.dz)*hw-.7,y-1.9,q.z-Math.abs(q.dx)*hw-.7,q.x+Math.abs(q.dz)*hw+.7,y-1.1,q.z+Math.abs(q.dx)*hw+.7,'concrete',[.74,.74,.72]);}w.level.push([s0,M.count,p,y]);continue;}
@@ -162,6 +163,7 @@ function worldBuilding(M,lv,w,b){const p=b.pp,n=p.length,hd=hood(lv),h=hash(b.i*
         fLedge(M,F,w0-.14,w1+.14,wy-.1,wy,.11,'granite',stone);if(f<2||deep)fQuad(M,F,w0-.1,w1+.1,wy+wh,wy+wh+.2,.03,'granite',stone);}
         if(ws==3&&hd!='works'&&f<3&&!WLOW)for(const [s0,s1] of [[w0-.08-ww*.46,w0-.08],[w1+.08,w1+.08+ww*.46]])fQuad(M,F,s0,s1,wy,wy+wh,.04,'planks',[.17,.26,.19]);}}
     if(nf>=3&&!resid&&street&&hash(b.i,i,43)%5==0&&L>5){for(let f=1;f<nf;f++){const py=.4+f*fh+.6;fBox(M,F,m0+.2,m0+2.2,py,py+.05,0,.8,'grille',[.07,.07,.08]);fQuad(M,F,m0+.2,m0+2.2,py+.05,py+.95,.8,'bars',[.07,.07,.08]);if(f<nf-1)M.quad(F.P(m0+.4,py+.05,.2),F.P(m0+.4,py+.05,.65),F.P(m0+2,py+fh+.05,.65),F.P(m0+2,py+fh+.05,.2),'grille',[.07,.07,.08]);}}}
+  if(front>=0&&frn&&resid&&!shop&&!small){const a=p[front],c=p[(front+1)%n],l=Math.hypot(c[0]-a[0],c[1]-a[1])||1;b.fr={x:(a[0]+c[0])/2,z:(a[1]+c[1])/2,nx:(c[1]-a[1])/l,nz:-(c[0]-a[0])/l,d:frn.d-frn.r.wm/2-2.5};}
   // a front porch, the way Richmond's row houses have them: a low deck, slim columns and a flat roof over the door
   if(resid&&!shop&&!small&&!tower&&nf<=3&&front>=0&&frn&&frn.d>frn.r.wm/2+3.4&&hash(b.i,11,5)%5&&!(WLOW&&hash(b.i,1,2)%2)){const F=wallFrame(p[front],p[(front+1)%n]),L=F.len;if(L>=4.2){const pw=Math.min(L-.3,L>7?L*.62:5.2),u0=L/2-pw/2,u1=L/2+pw/2,dp=Math.min(2,frn.d-frn.r.wm/2-2.7),o=F.P(L/2,0,dp+.3);
       if(dp>=1.2&&!buildingAt(w,o[0],o[2])){const wood=[.93,.92,.88],ph=Math.min(2.85,fh+.15),cn=pw>4.4?4:3;fBox(M,F,u0,u1,0,.2,0,dp,'planks',[.62,.6,.56],true);fLedge(M,F,L/2-.8,L/2+.8,0,.1,dp+.32,'granite',stone);
@@ -277,6 +279,8 @@ function buildWorldMesh(lv){textDistrict(lv.d.world);const w=lv.world,M=new Mesh
     let ax=b.c[0],az=b.c[1];if(b.door){ax=b.door.x;az=b.door.z;}else{let bd=1e9;const pp=b.pp,n=pp.length;for(let i=0;i<n;i++){const mx=(pp[i][0]+pp[(i+1)%n][0])/2,mz=(pp[i][1]+pp[(i+1)%n][1])/2,rn=roadNear(w,mx,mz,40,q=>q.car);if(rn&&rn.d<bd){bd=rn.d;ax=mx;az=mz;}}}
     const ay=worldY(w,ax,az);footing(b.pp,ay);rigid.push([s0,M.count,ay]);}
   for(const lm of w.landmarks||[]){const s0=M.count;worldLandmark(M,lv,w,lm);if(!el||M.count==s0)continue;const f=lm.front||{x:lm.obb.cx,z:lm.obb.cz},ay=worldY(w,f.x,f.z);if(lm.b&&lm.b.pp)footing(lm.b.pp,ay);rigid.push([s0,M.count,ay]);}
+  // a path from each house's door to the sidewalk
+  {const bw=['fan','jward','chill','shockoe'].includes(hood(lv))?'bricksw':'sidewalk';for(const b of w.bld){const f=b.fr;if(!f||b.gone||f.d<1.2||f.d>14)continue;const ex=f.x+f.nx*(f.d+.2),ez=f.z+f.nz*(f.d+.2);if(buildingAt(w,f.x+f.nx*f.d*.5,f.z+f.nz*f.d*.5))continue;ribbon(M,[[f.x+f.nx*.05,f.z+f.nz*.05],[ex,ez]],.55,.022,bw,[.94,.93,.9]);}}
   worldFurniture(M,lv,w);for(const pr of lv.props||[])if(pr.kind!='car')propMesh(M,pr);
   if(el){worldDrape(M,w,rigid);worldDrape(Wm,w,[]);}
   return{main:M,water:Wm,foam:Fm,froth:Fr};}
@@ -310,7 +314,7 @@ function worldDrape(M,w,rigid){const n=M.count,flag=new Float32Array(n).fill(NaN
 function wTreeModel(con,v){return getModel('wtree:'+con+':'+v,()=>{const m=new Mesh();if(con){conifer(m,0,0,v*7919+7,1);m.lathe(0,0,0,[[1.3,1.25],[4.6,.75],[7.4,.06]],7,'leaves2',[.42,.55,.42]);}else deciduous(m,0,0,v*7919+13,1);return[{mesh:m,pivot:[0,0,0],name:'t'}];});}
 function worldDraw(){const w=lv.world,sh=PASS=='shadow',V=sh?LVP:PV,far=sh?50:(WLOW?85:150),f2=far*far,cx=sh?p.x:camPos[0],cz=sh?p.z:camPos[2];let n=0;
   for(const t of w.trees||[]){const x=t[0],z=t[1],dx=x-cx,dz=z-cz;if(dx*dx+dz*dz>f2)continue;const ty=worldY(w,x,z);if(!boxVisible(V,[x-5,ty-1,z-5],[x+5,ty+11,z+5],sh))continue;const h=t[2]>>>0,con=h%7==0&&!t[3]?1:0,sc=con?.95+((h>>>9)%4)*.06:t[3]?.72+((h>>>9)%4)*.05:.9+((h>>>9)%4)*.07;
-    drawModel(wTreeModel(con,con?h%2:h%6),M4.mul(M4.mul(M4.tr(x,0,z),M4.ry((h%628)/100)),M4.sc(sc)));n++;}
+    drawModel(wTreeModel(con,con?h%3:(h>>>4)%12),M4.mul(M4.mul(M4.tr(x,0,z),M4.ry((h%628)/100)),M4.sc(sc)));n++;}
   const cf=sh?40:(WLOW?70:110);for(const c of lv.props||[]){if(c.kind!='car')continue;const dx=c.x-cx,dz=c.z-cz;if(dx*dx+dz*dz>cf*cf)continue;const cy=worldY(w,c.x,c.z);if(!boxVisible(V,[c.x-2.6,cy-.5,c.z-2.6],[c.x+2.6,cy+2,c.z+2.6],sh))continue;
     drawModel(getModel('pcar:'+c.col+':'+(c.tx%3),()=>[{mesh:sedan(c.col,(c.tx%3)*7+3),pivot:[0,0,0],name:'body'}]),M4.mul(M4.tr(c.x,.065,c.z),M4.ry(c.yaw)));}
   if(!sh)w.drawn=n;}
