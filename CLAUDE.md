@@ -2,6 +2,8 @@
 
 A Zelda-like set in Richmond, Virginia. Plain JavaScript, hand-written WebGL2, no build step. Live on GitHub Pages from `main`.
 
+**Read `ROADMAP.md` before starting work.** It says what the aim is (shine on desktop; phone is the test device for now), which stage is current, and its checklist. Work on the current stage unless the user says otherwise, and tick items off as they are finished.
+
 ## Hard rules
 
 - **No Adobe-licensed assets.** No Mixamo, no Adobe Stock, nothing under Adobe terms. Check the licence of anything brought in.
