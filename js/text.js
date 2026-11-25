@@ -2,10 +2,15 @@
 /* River City Quest Modern: lettering. Street names, shop signs and the Byrd's marquee are drawn as real text
    into a few texture layers, sixteen labels to a layer, and signs in the world show the piece that is theirs. */
 const SHOPSIGNS=['BAKERY','RECORDS','BOOKS','DINER','HARDWARE','PHARMACY','BARBER','CAFE','FLORIST','THRIFT','TAILOR','BIKE SHOP','MARKET','LAUNDRY','PIZZA','ANTIQUES'];
-const TEXT_LAYERS=5,TEXT_PER=16;let TEXTS=null;
+const TEXT_LAYERS=8,TEXT_PER=16;let TEXTS=null;
+// a street name as it reads on a sign: E BROAD ST
+function stAbbr(n){const W={STREET:'ST',AVENUE:'AVE',BOULEVARD:'BLVD',ROAD:'RD',DRIVE:'DR',PARKWAY:'PKWY',PLACE:'PL',LANE:'LN',COURT:'CT',HIGHWAY:'HWY',TURNPIKE:'TPKE',TERRACE:'TER',ALLEY:'ALY'},D={NORTH:'N',SOUTH:'S',EAST:'E',WEST:'W'};
+  const p=n.toUpperCase().replace(/[^A-Z0-9 ']/g,' ').split(/\s+/).filter(Boolean);if(p.length>2&&D[p[0]])p[0]=D[p[0]];if(p.length>1&&W[p[p.length-1]])p[p.length-1]=W[p[p.length-1]];return p.join(' ');}
 function textList(){if(TEXTS)return TEXTS;const L=[],seen={},add=(s,style)=>{if(!seen[s]&&L.length<TEXT_LAYERS*TEXT_PER){seen[s]=1;L.push({s,style});}};
   add('BYRD THEATRE','marq');add('BYRD','blade');for(const s of SHOPSIGNS)add(s,'shop');
-  for(const id in RCQ.maps)for(const st of RCQ.maps[id].streets||[])if(st.n!='alley'&&st.n!='Capitol Square'&&st.n.indexOf('Churchyard')<0)add(st.n,'st');
+  // the real street names: each neighborhood's longest streets first, taken in turn so every district gets its share
+  if(typeof WORLD!='undefined'){const per=[];for(const id in WORLD){const W=WORLD[id],len={};for(const r of W.roads){if(!r.n||!'pstr'.includes(r.k))continue;let l=0;for(let i=0;i+3<r.p.length;i+=2){const x=(r.p[i]+r.p[i+2])/20,z=(r.p[i+1]+r.p[i+3])/20;if(x>0&&z>0&&x<W.w&&z<W.h)l+=Math.hypot(r.p[i+2]-r.p[i],r.p[i+3]-r.p[i+1])/10;}if(l>25){const a=stAbbr(r.n);len[a]=(len[a]||0)+l;}}per.push(Object.entries(len).sort((a,b)=>b[1]-a[1]).map(e=>e[0]));}
+    for(let k=0;k<12;k++)for(const names of per)if(names[k]&&names[k].length<=18)add(names[k],'st');}
   TEXTS=L;TEXTS.idx={};L.forEach((t,i)=>TEXTS.idx[t.s]=i);return L;}
 // where a label sits: [u0,v0,u1,v1] with the layer folded into u, or null if there is no such label
 function textUV(s){const L=textList(),i=L.idx[s];if(i==null)return null;const [c0]=cellUV('text'+(1+Math.floor(i/TEXT_PER))),layer=Math.floor(c0),k=i%TEXT_PER,col=k%2,row=k>>1,p=.006;

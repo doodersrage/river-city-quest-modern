@@ -8,7 +8,7 @@ const TS=2;
 const CELLS=['grass','grass2','flowers','dirt','sand','cobble','sidewalk','steps','rails','planks','brick','brickwin','brickwin2','storefront','roof','stone',
   'stonewall','marble','column','white','door','doorlit','bark','leaves','leaves2','rock','fence','floor','qwall','rubble','sign','gold','glass','wood','black','clock',
   'copper','chest','face','eyes','awning','awning2','sign2','grille','tuft','bloom','worn','pigeon','tilefl','woodfl','plaster','mural','bars','vine','marquee','seat','arcade','engine','concrete','case','hair','shell','lock','crack','tin','clap','clap2','water','foam','keystone','paper','lampglow','sky',
-  'cloth','knit','denim','leather','skin','hairs','brass','asphalt','gravel','bricksw','curb','leafcard','needles','mulch','granite','pane','panelit','fur','feather','carapace','paint','tire','chrome','text1','text2','text3','text4','text5'];
+  'cloth','knit','denim','leather','skin','hairs','brass','asphalt','gravel','bricksw','curb','leafcard','needles','mulch','granite','pane','panelit','fur','feather','carapace','paint','tire','chrome','text1','text2','text3','text4','text5','text6','text7','text8'];
 const CELL={};CELLS.forEach((n,i)=>CELL[n]=i);
 const ATLAS_N=16,ATLAS_PX=32;
 // round things get this many times more segments than the PS1 version gave them

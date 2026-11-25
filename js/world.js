@@ -118,7 +118,14 @@ function worldReady(id){const m=RCQ.maps[id];if(!m||m.world||typeof WORLD=='unde
     const w=WORLD[id],s=SECRETS[id],q=m.toWorld(s[0],s[1],c=>c=='.',true);SECRETS[id]=q;}
   m.loadMs=Date.now()-t0;return m;}
 // where streets meet: any point two of them share
-function worldJunctions(w){if(w.junctions)return w.junctions;const nodes=new Map(),key=q=>Math.round(q[0]*10)+','+Math.round(q[1]*10);for(const r of w.roads){if(!r.car||r.b&&r.k=='m')continue;const seen=new Set();for(const q of r.pp){const k=key(q);if(seen.has(k))continue;seen.add(k);const n=nodes.get(k)||{n:0,w:0,rs:[]};n.n++;n.w=Math.max(n.w,r.wm);n.rs.push(r);nodes.set(k,n);}}
+function worldJunctions(w){if(w.junctions)return w.junctions;
+  // the map data drops a street's middle points where it runs straight, so two streets that cross may share no point: give them one
+  {const cr=w.roads.filter(r=>r.car&&!r.b&&'pstrva'.includes(r.k)&&r.pp.length>1),ins=cr.map(()=>[]),near=(P,q)=>Math.hypot(P[0]-q[0],P[1]-q[1])<.45;
+    for(let i=0;i<cr.length;i++)for(let j=i+1;j<cr.length;j++){const A=cr[i].pp,B=cr[j].pp;for(let a=0;a<A.length-1;a++)for(let b=0;b<B.length-1;b++){const p0=A[a],p1=A[a+1],q0=B[b],q1=B[b+1],rx=p1[0]-p0[0],rz=p1[1]-p0[1],sx=q1[0]-q0[0],sz=q1[1]-q0[1],den=rx*sz-rz*sx,la=Math.hypot(rx,rz),lb=Math.hypot(sx,sz);
+        if(Math.abs(den)<1e-6*la*lb+1e-9||la<.01||lb<.01)continue;const t=((q0[0]-p0[0])*sz-(q0[1]-p0[1])*sx)/den,u=((q0[0]-p0[0])*rz-(q0[1]-p0[1])*rx)/den,ea=.5/la,eb=.5/lb;if(t<-ea||t>1+ea||u<-eb||u>1+eb)continue;
+        let P=[p0[0]+rx*Math.max(0,Math.min(1,t)),p0[1]+rz*Math.max(0,Math.min(1,t))];for(const v of [p0,p1,q0,q1])if(near(P,v)){P=v;break;}ins[i].push([a,t,P]);ins[j].push([b,u,P]);}}
+    cr.forEach((r,i)=>{ins[i].sort((x,y)=>y[0]-x[0]||y[1]-x[1]);for(const [a,t,P] of ins[i]){const pp=r.pp;if(pp.some(v=>v[0]==P[0]&&v[1]==P[1]))continue;if(near(P,pp[a])){pp[a]=P;continue;}if(near(P,pp[a+1])){pp[a+1]=P;continue;}pp.splice(a+1,0,P);}});}
+  const nodes=new Map(),key=q=>Math.round(q[0]*10)+','+Math.round(q[1]*10);for(const r of w.roads){if(!r.car||r.b&&r.k=='m')continue;const seen=new Set();for(const q of r.pp){const k=key(q);if(seen.has(k))continue;seen.add(k);const n=nodes.get(k)||{n:0,w:0,rs:[]};n.n++;n.w=Math.max(n.w,r.wm);n.rs.push(r);nodes.set(k,n);}}
   w.nodes=nodes;w.nodeKey=key;w.junctions=[];for(const [k,n] of nodes)if(n.n>1){const [x,z]=k.split(',').map(v=>v/10);w.junctions.push({x,z,w:n.w,rs:n.rs});}return w.junctions;}
 // the name of the street you are standing on or beside
 function worldStreet(w,x,z){const rn=roadNear(w,x,z,14,r=>r.n&&r.car);return rn&&rn.d<rn.r.wm/2+3.5?rn.r.n:null;}
