@@ -43,7 +43,7 @@ function worldBlocked(w,x,z,r){let hit=null;
   for(const q of w.solid||[])if(Math.abs(x-q[0])<r+q[2]&&Math.abs(z-q[1])<r+q[2]&&Math.hypot(x-q[0],z-q[1])<r+q[2])return'T';
   if(w.wf&&waterField(w,x,z)>.5&&!(typeof passable=='function'&&passable('~'))&&!onDeck(w,x,z))return'~';
   return null;}
-function onDeck(w,x,z){let ok=false;w.rh.near(x,z,12,s=>{if(s.o.b&&s.o.k!='m'&&segDist(x,z,s.a,s.b)<s.o.wm/2+.3){ok=true;return true;}});if(ok)return true;for(const a of w.areas)if(a.k=='deck'&&inPolygon(a.pp,x,z))return true;return false;}
+function onDeck(w,x,z){let ok=false;w.rh.near(x,z,12,s=>{if(s.o.b&&s.o.k!='m'&&!(s.o.ly>=2)&&segDist(x,z,s.a,s.b)<s.o.wm/2+.3){ok=true;return true;}});if(ok)return true;for(const a of w.areas)if(a.k=='deck'&&inPolygon(a.pp,x,z))return true;return false;}
 
 /* ---------- the notebook grid and the move from the old maps ---------- */
 const OLD_SCALE=5;// one square of an original map stands for this many metres of the real place
