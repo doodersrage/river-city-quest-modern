@@ -153,7 +153,7 @@ function buildMesh(lv){
   for(const L of lv.d.lm||[])landmark(M,lv,L);
   for(const pr of lv.props||[])propMesh(M,pr);
   // doorways on whatever building face is open to the street
-  for(const dr of lv.doors||[]){if(!room&&rows[dr.ty][dr.tx]=='D'&&!lmAt(lv,dr.tx,dr.ty))continue;const fd=faceDir(lv,dr.tx,dr.ty),X0=dr.tx*TS,Z0=dr.ty*TS,cx=X0+TS/2,cz=Z0+TS/2,o=.03,w=.75;
+  for(const dr of lv.doors||[]){if(!room&&rows[dr.ty][dr.tx]=='D'&&!lmAt(lv,dr.tx,dr.ty))continue;if(!room&&typeof LMK!='undefined'&&lmAt(lv,dr.tx,dr.ty)&&LMK[lmAt(lv,dr.tx,dr.ty).art])continue;const fd=faceDir(lv,dr.tx,dr.ty),X0=dr.tx*TS,Z0=dr.ty*TS,cx=X0+TS/2,cz=Z0+TS/2,o=.03,w=.75;
     if(fd[1]==1)M.quad([cx-w,0,Z0+TS+o],[cx+w,0,Z0+TS+o],[cx+w,2.4,Z0+TS+o],[cx-w,2.4,Z0+TS+o],'planks',[.22,.15,.1]);
     else if(fd[1]==-1)M.quad([cx+w,0,Z0-o],[cx-w,0,Z0-o],[cx-w,2.4,Z0-o],[cx+w,2.4,Z0-o],'planks',[.22,.15,.1]);
     else if(fd[0]==1)M.quad([X0+TS+o,0,cz+w],[X0+TS+o,0,cz-w],[X0+TS+o,2.4,cz-w],[X0+TS+o,2.4,cz+w],'door');
@@ -288,7 +288,7 @@ function fenestrate(M,x0,z0,x1,z1,y0,y1,seed){const trim=[.93,.92,.88],stone=[.9
     for(let f=0;(f+1)*FH<=y1-y0+.4;f++)for(let i=0;i<n;i++){if(f==0&&nz==1&&Math.abs((i+.5)*step-len/2)<step*.6)continue;const uc=(i+.5)*step,v0=y0+f*FH+(f==0?1.05:.95),v1=v0+1.8;if(v1>y1-.5)continue;
       const lit=hash(i,f,seed+nx*3+nz*5)%5==0?'panelit':'pane';fb(uc-.5,uc+.5,v0,v1,0,.03,lit);for(const u of [uc-.56,uc+.5])fb(u,u+.06,v0-.04,v1+.04,0,.08,'white',trim);
       fb(uc-.56,uc+.56,v1,v1+.06,0,.08,'white',trim);fb(uc-.6,uc+.6,v0-.1,v0,0,.14,'granite',stone);fb(uc-.6,uc+.6,v1+.06,v1+.24,0,.06,'granite',stone);fb(uc-.5,uc+.5,(v0+v1)/2-.025,(v0+v1)/2+.025,0,.06,'white',trim);}}}
-function landmark(M,lv,L){const box=M.box;let seed=hash(L.x,L.y,lv.d.ax*7+lv.d.ay);
+function landmark(M,lv,L){if(typeof LMK!='undefined'&&LMK[L.art]){LMK[L.art](M,L.x*TS,L.y*TS,(L.x+L.w)*TS,(L.y+L.h)*TS);return;}const box=M.box;let seed=hash(L.x,L.y,lv.d.ax*7+lv.d.ay);
   M.box=function(x0,y0,z0,x1,y1,z1,cells,col,skip,tile){if(cells&&typeof cells=='object'){const c=Object.assign({},cells);for(const k of ['side','south','north','east','west'])if(c[k]=='brickwin'||c[k]=='brickwin2')c[k]='brick';cells=c;}else if(cells=='brickwin')cells='brick';
     box.call(this,x0,y0,z0,x1,y1,z1,cells,col,skip,tile);const side=typeof cells=='object'?cells.side:cells;
     if(tile&&y0<=.01&&y1-y0>=4.4&&x1-x0>=3.5&&z1-z0>=3.5&&['brick','stone','marble','white','clap','concrete','storefront'].includes(side))fenestrate(this,x0,z0,x1,z1,y0,y1,seed++);};
